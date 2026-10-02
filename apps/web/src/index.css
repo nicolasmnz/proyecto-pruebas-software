@@ -1,7 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+
 :root {
   --sans: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  --sans: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+  font: 14px/1.5 var(--sans);
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
   font-synthesis: none;
@@ -14,10 +18,10 @@
   }
 }
 
-body {
-  margin: 0;
-}
-
 code {
   font-family: var(--mono);
+}
+
+body {
+  margin: 0;
 }

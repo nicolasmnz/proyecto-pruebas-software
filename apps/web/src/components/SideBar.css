@@ -9,6 +9,10 @@
   border-right: 1px solid #dfe1e6;
 }
 
+.sidebar-action {
+  padding: 4px 4px 16px;
+}
+
 .sidebar ul {
   list-style: none;
   margin: 0;
@@ -19,12 +23,21 @@
 }
 
 .sidebar a {
-  display: block;
-  padding: 8px 12px;
+  display: flex; /* clave: alinea ícono y texto */
+  align-items: center; /* centrado vertical */
+  gap: 8px; /* espacio entre ícono y texto */
+  padding: 6px 8px;
   border-radius: 6px;
   color: #292a2e;
   text-decoration: none;
   font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.sidebar a svg {
+  flex-shrink: 0; /* evita que el ícono se achique */
 }
 
 .sidebar a:hover {
