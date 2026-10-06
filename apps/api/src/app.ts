@@ -1,4 +1,5 @@
 import express from "express";
+import projectRoutes from './routes/project.routes.js';
 
 const app = express();
 
@@ -9,5 +10,7 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
   });
 });
+
+app.use('/api/projects', projectRoutes);
 
 export default app;
