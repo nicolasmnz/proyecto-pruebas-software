@@ -1,8 +1,21 @@
 import request from "supertest";
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test, beforeEach } from "@jest/globals";
 import app from "../src/app.js";
+import pool from "../src/config/database.js";
+
+const TEST_EMAIL = "usuario.test@pruebas.cl";
 
 describe("Users API", () => {
+
+    beforeEach(async () => {
+        await pool.query(
+            `
+            DELETE FROM users
+            WHERE email = $1
+            `,
+            [TEST_EMAIL]
+        );
+    });
 
     test("GET /api/users responde 200", async () => {
         const response = await request(app)
@@ -45,7 +58,6 @@ describe("Users API", () => {
     expect(response.status).toBe(201);
     expect(response.body.email).toBe("usuario.test@pruebas.cl");
     });
-    
     test("POST /api/users rechaza email duplicado", async () => {
     const response = await request(app)
         .post("/api/users")
