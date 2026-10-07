@@ -1,0 +1,30 @@
+.btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px 16px 18px;
+  border: 1px solid #1f1f1f;
+  border-radius: 16px;
+  background: #fff;
+  color: #1f1f1f;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    box-shadow 0.2s,
+    background 0.2s;
+}
+
+.btn-new:hover {
+  background: #f8fafd;
+}
+
+.btn-new:active {
+  background: #eef2f9;
+}
+
+.btn-new:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}

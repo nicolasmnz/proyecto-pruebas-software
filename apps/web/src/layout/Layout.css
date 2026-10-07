@@ -1,0 +1,10 @@
+.app-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+}
+
+.app-layout main {
+  padding: 24px;
+  min-width: 0;
+}
