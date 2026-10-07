@@ -18,7 +18,7 @@ function renderPage() {
       <Routes>
         <Route path="/projects/new" element={<CreateProjectPage />} />
 
-        <Route path="/" element={<h1>Todos los proyectos</h1>} />
+        <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -83,7 +83,7 @@ describe("CreateProjectPage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Todos los proyectos",
+        name: "Proyecto",
       }),
     ).toBeInTheDocument();
   });
