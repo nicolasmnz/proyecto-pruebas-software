@@ -4,8 +4,20 @@ import { Settings, FolderClosed } from "lucide-react";
 import Button from "./components/Button";
 import "./App.css";
 
+const recentProjects = [
+  { label: "Kanban", path: "/projects/1" },
+  { label: "Scrum", path: "/projects/2" },
+  { label: "Product Roadmap", path: "/projects/3" },
+];
+
 const sideBarItems = [
-  { label: "Proyectos", path: "/ProjectPage", icon: FolderClosed },
+  {
+    label: "Proyectos",
+    icon: FolderClosed,
+    children: recentProjects,
+    viewAllLabel: "Ver todos los proyectos",
+    viewAllPath: "/ProjectPage",
+  },
   { label: "Configuración", path: "/settings", icon: Settings },
 ];
 

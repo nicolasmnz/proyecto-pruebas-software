@@ -48,3 +48,37 @@
   background: #e9f2ff;
   color: #0c66e4;
 }
+
+.sidebar-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #292a2e;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-dropdown-trigger span {
+  flex: 1; /* empuja el chevron a la derecha */
+}
+
+.sidebar-dropdown-trigger:hover {
+  background: #f1f2f4;
+}
+
+.sidebar-submenu {
+  padding-left: 26px !important; /* alinea con el texto, no con el ícono */
+}
+
+.sidebar a.view-all {
+  color: #0c66e4;
+}
