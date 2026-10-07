@@ -8,7 +8,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "npm run test:unit",
+    "test:unit": "jest --testPathPatterns=tests/unit --passWithNoTests",
+    "test:integration": "jest --testPathPatterns=tests/integration --runInBand",
     "test:coverage": "jest --coverage"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import request from "supertest";
 
-import app from "../src/app.js";
+import app from "../../src/app.js";
 
 describe("GET /api/health", () => {
   it("debe responder 200 OK", async () => {
