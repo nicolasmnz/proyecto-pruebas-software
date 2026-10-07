@@ -15,9 +15,9 @@ permissions:
   contents: read
 
 jobs:
+  # 1. Calidad y pruebas unitarias
   quality:
     name: Quality checks
-
     runs-on: ubuntu-latest
 
     steps:
@@ -45,18 +45,80 @@ jobs:
       - name: Build
         run: npm run build
 
+  # 2. Pruebas de integración con PostgreSQL
+  integration:
+    name: Integration tests
+    needs: quality
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: proyecto_pruebas_test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U test_user -d proyecto_pruebas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5434
+      DB_NAME: proyecto_pruebas_test
+      DB_USER: test_user
+      DB_PASSWORD: test_password
+      PGPASSWORD: test_password
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure PostgreSQL client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y postgresql-client
+          fi
+
+      - name: Initialize test database
+        run: |
+          psql -v ON_ERROR_STOP=1 \
+            -h "$DB_HOST" \
+            -p "$DB_PORT" \
+            -U "$DB_USER" \
+            -d "$DB_NAME" \
+            -f apps/api/bd/schema.sql
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+  # 3. Pruebas End-to-End
   e2e:
     name: E2E tests
-
-    needs: quality
+    needs: [quality, integration]
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
