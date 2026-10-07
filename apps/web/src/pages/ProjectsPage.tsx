@@ -5,8 +5,13 @@ import "./ProjectsPage.css";
 //   { label: "FESW - App", path: "./" },
 // ];
 
-function ProjectsPage() {
-  return <div className="app-layout"></div>;
+function ProjectPage() {
+  return (
+    <section>
+      <h1>Proyecto</h1>
+      <p>Vista del proyecto en desarrollo.</p>
+    </section>
+  );
 }
 
-export default ProjectsPage;
+export default ProjectPage;
