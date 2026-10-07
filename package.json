@@ -26,10 +26,8 @@
   },
   "dependencies": {
     "cors": "^2.8.6",
-    "pg": "^8.23.1"
-    "@playwright/test": "^1.63.0"
-  },
-  "dependencies": {
+    "pg": "^8.23.1",
+    "@playwright/test": "^1.63.0",
     "lucide-react": "^1.50.0",
     "react-router-dom": "^7.18.4"
   }
