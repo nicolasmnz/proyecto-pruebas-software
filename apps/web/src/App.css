@@ -1,14 +1,3 @@
 body {
   margin: 0; /* quita el margen por defecto del navegador */
 }
-
-.app-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr; /* sidebar fija + contenido flexible */
-  min-height: 100vh;
-}
-
-.app-layout main {
-  padding: 24px;
-  min-width: 0; /* evita que el contenido desborde la columna */
-}

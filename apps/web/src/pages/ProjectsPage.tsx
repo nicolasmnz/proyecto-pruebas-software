@@ -1,18 +1,12 @@
-import SideBar from "../components/SideBar";
+import "./ProjectsPage.css";
 
-import "./ProjectPage.css";
-
-const sideBarItems = [
-  { label: "Proyecto pruebas de software", path: "./" },
-  { label: "FESW - App", path: "./" },
-];
+// const sideBarItems = [
+//   { label: "Proyecto pruebas de software", path: "./" },
+//   { label: "FESW - App", path: "./" },
+// ];
 
 function ProjectsPage() {
-  return (
-    <div className="app-layout">
-      <SideBar items={sideBarItems} />
-    </div>
-  );
+  return <div className="app-layout"></div>;
 }
 
 export default ProjectsPage;

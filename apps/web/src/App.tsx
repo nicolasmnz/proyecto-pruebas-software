@@ -1,41 +1,9 @@
-import SideBar from "./components/SideBar";
-import { useNavigate } from "react-router-dom";
-import { Settings, FolderClosed } from "lucide-react";
-import Button from "./components/Button";
-import "./App.css";
-
-const recentProjects = [
-  { label: "Kanban", path: "/projects/1" },
-  { label: "Scrum", path: "/projects/2" },
-  { label: "Product Roadmap", path: "/projects/3" },
-];
-
-const sideBarItems = [
-  {
-    label: "Proyectos",
-    icon: FolderClosed,
-    children: recentProjects,
-    viewAllLabel: "Ver todos los proyectos",
-    viewAllPath: "/ProjectPage",
-  },
-  { label: "Configuración", path: "/settings", icon: Settings },
-];
-
 function App() {
-  const navigate = useNavigate();
-
   return (
-    <div className="app-layout">
-      <SideBar items={sideBarItems}>
-        <Button
-          content="Nuevo proyecto"
-          onClick={() => navigate("/CreateProjectPage")}
-        />
-      </SideBar>
-      <main>
-        <a>HOLA</a>
-      </main>
-    </div>
+    <section>
+      <h1>Inicio</h1>
+      <a>HOLA</a>
+    </section>
   );
 }
 

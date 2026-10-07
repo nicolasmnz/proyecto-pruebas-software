@@ -1,25 +1,38 @@
-import ProjectCard from "../components/ProjectCard";
-
 import "./CreateProjectPage.css";
-
-const projects = [
-  { name: "Kanban", description: "", image: "" },
-  { name: "Scrum", description: "", image: "" },
-  { name: "Product Roadmap", description: "", image: "" },
-];
 
 function CreateProjectPage() {
   return (
-    <main>
-      {projects.map((p) => (
-        <ProjectCard
-          key={p.name}
-          name={p.name}
-          description={p.description}
-          image={p.image}
-        />
-      ))}
-    </main>
+    <section className="create-project">
+      <h1>Nuevo proyecto</h1>
+
+      <p className="create-project-hint">
+        Los campos marcados con <span aria-hidden="true">*</span> son
+        obligatorios.
+      </p>
+
+      <form className="create-project-form">
+        <div className="field">
+          <label htmlFor="name">
+            Nombre{" "}
+            <span className="required" aria-hidden="true">
+              *
+            </span>
+          </label>
+          <input id="name" name="name" type="text" required />
+        </div>
+
+        <div className="field">
+          <label htmlFor="description">Descripción</label>
+          <textarea id="description" name="description" rows={4} />
+        </div>
+
+        <div className="actions">
+          <button type="submit" className="btn-primary">
+            Guardar
+          </button>
+        </div>
+      </form>
+    </section>
   );
 }
 
