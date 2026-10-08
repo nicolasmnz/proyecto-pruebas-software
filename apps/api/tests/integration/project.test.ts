@@ -103,4 +103,126 @@ describe("Projects API", () => {
     expect(savedProject.rowCount).toBe(1);
     expect(savedProject.rows[0].created_by).toBe(userId);
   });
+
+  describe("edición y archivado", () => {
+    async function createTestProject(name = "Proyecto Original") {
+      const user = await pool.query(
+        `
+        INSERT INTO users (name, email, password_hash)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        `,
+        ["Usuario Test", `usuario-${Date.now()}@test.cl`, "hash-de-prueba"],
+      );
+
+      const project = await pool.query(
+        `
+        INSERT INTO projects (name, description, created_by)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        `,
+        [name, "Descripción original", user.rows[0].id],
+      );
+
+      return project.rows[0].id as string;
+    }
+
+    test("PUT /api/projects/:id actualiza nombre y descripción", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name: "  Nombre Nuevo  ", description: "Descripción nueva" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe("Nombre Nuevo");
+      expect(response.body.description).toBe("Descripción nueva");
+    });
+
+    test("PUT /api/projects/:id guarda null si la descripción queda vacía", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name: "Proyecto", description: "   " });
+
+      expect(response.status).toBe(200);
+      expect(response.body.description).toBeNull();
+    });
+
+    test.each([
+      ["vacío", ""],
+      ["solo espacios", "   "],
+      ["más de 150 caracteres", "a".repeat(151)],
+    ])("PUT /api/projects/:id rechaza un nombre %s", async (_case, name) => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name });
+
+      expect(response.status).toBe(400);
+    });
+
+    test("POST /api/projects rechaza un nombre de más de 150 caracteres", async () => {
+      const response = await request(app)
+        .post("/api/projects")
+        .send({
+          name: "a".repeat(151),
+          createdBy: "11111111-1111-1111-1111-111111111111",
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    test("PUT /api/projects/:id responde 404 si no existe", async () => {
+      const response = await request(app)
+        .put("/api/projects/99999999-9999-9999-9999-999999999999")
+        .send({ name: "Proyecto" });
+
+      expect(response.status).toBe(404);
+    });
+
+    test("DELETE /api/projects/:id archiva y lo mueve a la lista de archivados", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app).delete(`/api/projects/${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.project.is_archived).toBe(true);
+
+      const active = await request(app).get("/api/projects");
+      const archived = await request(app).get("/api/projects?archived=true");
+
+      expect(active.body).toEqual([]);
+      expect(archived.body.map((p: { id: string }) => p.id)).toEqual([
+        projectId,
+      ]);
+    });
+
+    test("PATCH /api/projects/:id/restore vuelve a activar el proyecto", async () => {
+      const projectId = await createTestProject();
+
+      await request(app).delete(`/api/projects/${projectId}`);
+
+      const response = await request(app).patch(
+        `/api/projects/${projectId}/restore`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.is_archived).toBe(false);
+
+      const active = await request(app).get("/api/projects");
+
+      expect(active.body.map((p: { id: string }) => p.id)).toEqual([projectId]);
+    });
+
+    test("PATCH /api/projects/:id/restore responde 404 si no existe", async () => {
+      const response = await request(app).patch(
+        "/api/projects/99999999-9999-9999-9999-999999999999/restore",
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
 
-export async function findAllProjects() {
+export async function findAllProjects(archived = false) {
     const result = await pool.query(`
         SELECT
             id,
@@ -11,9 +11,9 @@ export async function findAllProjects() {
             created_at,
             updated_at
         FROM projects
-        WHERE is_archived = FALSE
+        WHERE is_archived = $1
         ORDER BY created_at DESC
-    `);
+    `, [archived]);
 
     return result.rows;
 }
@@ -91,16 +91,24 @@ export async function updateProject(
     return result.rows[0];
 }
 
-export async function archiveProject(id: string) {
+export async function setProjectArchived(id: string, archived: boolean) {
     const result = await pool.query(
         `
         UPDATE projects
-        SET is_archived = TRUE
+        SET is_archived = $2
         WHERE id = $1
         RETURNING *
         `,
-        [id]
+        [id, archived]
     );
 
     return result.rows[0];
+}
+
+export function archiveProject(id: string) {
+    return setProjectArchived(id, true);
+}
+
+export function restoreProject(id: string) {
+    return setProjectArchived(id, false);
 }

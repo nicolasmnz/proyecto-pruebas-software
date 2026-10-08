@@ -7,16 +7,40 @@ import {
     findProjectById,
     createProject,
     updateProject,
-    archiveProject
+    archiveProject,
+    restoreProject
 } from '../repositories/project.repository.js';
+
+// Coincide con VARCHAR(150) de projects.name
+const MAX_NAME_LENGTH = 150;
+
+function validateName(name: unknown): string | null {
+    if (typeof name !== 'string' || !name.trim()) {
+        return 'name es obligatorio';
+    }
+
+    if (name.trim().length > MAX_NAME_LENGTH) {
+        return `name no puede superar ${MAX_NAME_LENGTH} caracteres`;
+    }
+
+    return null;
+}
+
+function normalizeDescription(description: unknown): string | null {
+    return typeof description === 'string' && description.trim()
+        ? description.trim()
+        : null;
+}
 
 
 export async function getProjects(
-    _req: Request,
+    req: Request,
     res: Response
 ) {
     try {
-        const projects = await findAllProjects();
+        const projects = await findAllProjects(
+            req.query.archived === 'true'
+        );
 
         return res.status(200).json(projects);
 
@@ -75,15 +99,23 @@ export async function postProject(
             createdBy
         } = req.body;
 
-        if (!name || !createdBy) {
+        if (!createdBy) {
             return res.status(400).json({
-                message: 'name y createdBy son obligatorios'
+                message: 'createdBy es obligatorio'
+            });
+        }
+
+        const nameError = validateName(name);
+
+        if (nameError) {
+            return res.status(400).json({
+                message: nameError
             });
         }
 
         const project = await createProject({
-            name,
-            description,
+            name: name.trim(),
+            description: normalizeDescription(description) ?? undefined,
             createdBy
         });
 
@@ -115,16 +147,18 @@ export async function putProject(
             description
         } = req.body;
 
-        if (!name) {
+        const nameError = validateName(name);
+
+        if (nameError) {
             return res.status(400).json({
-                message: 'name es obligatorio'
+                message: nameError
             });
         }
 
         const project = await updateProject(
             req.params.id,
-            name,
-            description ?? null
+            name.trim(),
+            normalizeDescription(description)
         );
 
         if (!project) {
@@ -176,6 +210,39 @@ export async function deleteProject(
 
         return res.status(500).json({
             message: 'Error archivando proyecto'
+        });
+    }
+}
+
+
+export async function patchRestoreProject(
+    req: Request<IdParams>,
+    res: Response
+) {
+    try {
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
+        const project = await restoreProject(
+            req.params.id
+        );
+
+        if (!project) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
+        return res.status(200).json(project);
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'Error restaurando proyecto'
         });
     }
 }

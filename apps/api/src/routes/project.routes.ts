@@ -5,7 +5,8 @@ import {
     getProject,
     postProject,
     putProject,
-    deleteProject
+    deleteProject,
+    patchRestoreProject
 } from '../controllers/project.controller.js';
 
 const router = Router();
@@ -19,5 +20,7 @@ router.post('/', postProject);
 router.put('/:id', putProject);
 
 router.delete('/:id', deleteProject);
+
+router.patch('/:id/restore', patchRestoreProject);
 
 export default router;
