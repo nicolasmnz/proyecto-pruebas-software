@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { IdParams } from '../types/request.js';
+import { isUuid } from '../utils/uuid.js';
 
 import {
     findAllProjects,
@@ -34,6 +35,13 @@ export async function getProject(
     res: Response
 ) {
     try {
+        // Un id con formato inválido no puede existir: evita el error 500 de PostgreSQL
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
         const project = await findProjectById(
             req.params.id
         );
@@ -96,6 +104,12 @@ export async function putProject(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
         const {
             name,
             description
@@ -136,6 +150,12 @@ export async function deleteProject(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
         const project = await archiveProject(
             req.params.id
         );

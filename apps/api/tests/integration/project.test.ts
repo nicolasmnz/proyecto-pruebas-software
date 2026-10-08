@@ -33,6 +33,12 @@ describe("Projects API", () => {
     expect(response.status).toBe(404);
   });
 
+  test("GET /api/projects/:id responde 404 si el id no es un UUID", async () => {
+    const response = await request(app).get("/api/projects/1");
+
+    expect(response.status).toBe(404);
+  });
+
   test("GET /api/projects/:id obtiene un proyecto existente", async () => {
     // Crear un usuario para asociarlo al proyecto
     const user = await pool.query(
