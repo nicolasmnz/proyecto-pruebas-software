@@ -78,26 +78,5 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-}
-
-.btn-primary {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  background: #0c66e4;
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-primary:hover {
-  background: #0055cc;
-}
-
-.btn-primary:focus-visible {
-  outline: 2px solid #0c66e4;
-  outline-offset: 2px;
+  gap: 8px;
 }

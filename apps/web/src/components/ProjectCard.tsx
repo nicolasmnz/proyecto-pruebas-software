@@ -1,24 +1,43 @@
+import { Link } from "react-router-dom";
+
+import type { Project } from "../api/projects";
+import { formatDate } from "../utils/format";
+import ProjectAvatar from "./ProjectAvatar";
+
 import "./ProjectCard.css";
 
-interface Project {
-  name: string;
-  description: string;
-  image: string;
+interface ProjectCardProps {
+  project: Project;
 }
-//   const projects = [
-//     { name: "Kanban", description: "", image: "" },
-//     { name: "Scrum", description: "", image: "" },
-//     { name: "Product Roadmap", description: "", image: "" },
-//   ];
 
-function ProjectCard({ name, description, image }: Project) {
+function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <article className="card">
-      <img alt={name} src={image} />
-      <section className="card-body">
-        <h3 className="name">{name}</h3>
-        <p className="description">{description}</p>
-      </section>
+    <article className="project-card">
+      <ProjectAvatar id={project.id} name={project.name} />
+
+      <div className="project-card-body">
+        <h2 className="project-card-name">
+          {/* El enlace cubre toda la tarjeta mediante ::after */}
+          <Link to={`/projects/${project.id}`}>{project.name}</Link>
+        </h2>
+
+        <p
+          className={
+            project.description
+              ? "project-card-description"
+              : "project-card-description is-empty"
+          }
+        >
+          {project.description || "Sin descripción"}
+        </p>
+
+        <p className="project-card-meta">
+          Creado el{" "}
+          <time dateTime={project.created_at}>
+            {formatDate(project.created_at)}
+          </time>
+        </p>
+      </div>
     </article>
   );
 }

@@ -82,3 +82,9 @@
 .sidebar a.view-all {
   color: #0c66e4;
 }
+
+.sidebar-link-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis; /* nombres largos de proyecto en una sola línea */
+}

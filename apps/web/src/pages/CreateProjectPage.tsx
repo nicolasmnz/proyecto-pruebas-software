@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { SubmitEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { createProject } from "../api/projects";
+import { useProjects } from "../context/projectsContext";
 
 import "./CreateProjectPage.css";
 
@@ -10,6 +11,7 @@ const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
 
 function CreateProjectPage() {
   const navigate = useNavigate();
+  const { reload } = useProjects();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +38,9 @@ function CreateProjectPage() {
         description: description || undefined,
         createdBy: TEMP_USER_ID,
       });
+
+      // Actualiza la lista y la barra lateral con el proyecto nuevo
+      void reload();
 
       navigate(`/projects/${project.id}`);
     } catch (error) {
@@ -83,6 +88,9 @@ function CreateProjectPage() {
         )}
 
         <div className="actions">
+          <Link to="/projects" className="btn-secondary">
+            Cancelar
+          </Link>
           <button type="submit" className="btn-primary" disabled={isSubmitting}>
             {isSubmitting ? "Guardando..." : "Guardar"}
           </button>

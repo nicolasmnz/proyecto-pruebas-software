@@ -14,22 +14,55 @@ export interface Project {
   updated_at: string;
 }
 
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 const API_URL = import.meta.env.VITE_API_URL;
 
-export async function createProject(data: CreateProjectData): Promise<Project> {
-  const response = await fetch(`${API_URL}/projects`, {
+async function request<T>(
+  path: string,
+  fallbackMessage: string,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(`${API_URL}${path}`, init);
+
+  if (!response.ok) {
+    // El cuerpo de error puede venir vacío o no ser JSON
+    const body = await response.json().catch(() => null);
+
+    throw new ApiError(body?.message ?? fallbackMessage, response.status);
+  }
+
+  return response.json();
+}
+
+export function getProjects(signal?: AbortSignal): Promise<Project[]> {
+  return request("/projects", "No fue posible cargar los proyectos", {
+    signal,
+  });
+}
+
+export function getProject(id: string, signal?: AbortSignal): Promise<Project> {
+  return request(
+    `/projects/${encodeURIComponent(id)}`,
+    "No fue posible cargar el proyecto",
+    { signal },
+  );
+}
+
+export function createProject(data: CreateProjectData): Promise<Project> {
+  return request("/projects", "No fue posible crear el proyecto", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(data),
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-
-    throw new Error(error.message ?? "No fue posible crear el proyecto");
-  }
-
-  return response.json();
 }

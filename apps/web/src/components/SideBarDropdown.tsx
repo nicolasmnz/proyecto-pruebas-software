@@ -25,7 +25,7 @@ function SideBarDropdown({
   viewAllPath,
   maxItems = 3,
 }: SideBarDropdownProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   return (
     <li>
@@ -44,11 +44,13 @@ function SideBarDropdown({
         <ul className="sidebar-submenu">
           {items.slice(0, maxItems).map((item) => (
             <li key={item.path}>
-              <NavLink to={item.path}>{item.label}</NavLink>
+              <NavLink to={item.path} end>
+                <span className="sidebar-link-label">{item.label}</span>
+              </NavLink>
             </li>
           ))}
           <li>
-            <NavLink to={viewAllPath} className="view-all">
+            <NavLink to={viewAllPath} className="view-all" end>
               {viewAllLabel}
             </NavLink>
           </li>

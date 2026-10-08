@@ -5,6 +5,7 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 
 import CreateProjectPage from "./CreateProjectPage";
 import { createProject } from "../api/projects";
+import { ProjectsContext } from "../context/projectsContext";
 
 vi.mock("../api/projects", () => ({
   createProject: vi.fn(),
@@ -12,15 +13,27 @@ vi.mock("../api/projects", () => ({
 
 const mockedCreateProject = vi.mocked(createProject);
 
+const reloadProjects = vi.fn(async () => {});
+
 function renderPage() {
   render(
-    <MemoryRouter initialEntries={["/projects/new"]}>
-      <Routes>
-        <Route path="/projects/new" element={<CreateProjectPage />} />
+    <ProjectsContext.Provider
+      value={{
+        projects: [],
+        isLoading: false,
+        error: null,
+        reload: reloadProjects,
+      }}
+    >
+      <MemoryRouter initialEntries={["/projects/new"]}>
+        <Routes>
+          <Route path="/projects/new" element={<CreateProjectPage />} />
 
-        <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
-      </Routes>
-    </MemoryRouter>,
+          <Route path="/projects" element={<h1>Listado</h1>} />
+          <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </ProjectsContext.Provider>,
   );
 }
 
@@ -86,6 +99,22 @@ describe("CreateProjectPage", () => {
         name: "Proyecto",
       }),
     ).toBeInTheDocument();
+
+    // La lista y la barra lateral se actualizan con el proyecto nuevo
+    expect(reloadProjects).toHaveBeenCalledTimes(1);
+  });
+
+  test("permite cancelar y volver al listado", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(screen.getByRole("link", { name: "Cancelar" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado" }),
+    ).toBeInTheDocument();
+    expect(mockedCreateProject).not.toHaveBeenCalled();
   });
 
   test("muestra un error si la API falla", async () => {

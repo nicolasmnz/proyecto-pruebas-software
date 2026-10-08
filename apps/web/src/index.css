@@ -25,3 +25,53 @@ code {
 body {
   margin: 0;
 }
+
+/* Botones compartidos */
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary {
+  border: none;
+  background: #0c66e4;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #0055cc;
+}
+
+.btn-primary:disabled {
+  background: #8fb8f6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  border: 1px solid #dfe1e6;
+  background: #fff;
+  color: #292a2e;
+}
+
+.btn-secondary:hover {
+  background: #f1f2f4;
+}
+
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}
