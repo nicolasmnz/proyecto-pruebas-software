@@ -22,6 +22,8 @@ export async function getUsers(
         return res.status(200).json(users);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: "Error obteniendo usuarios"
         });
@@ -47,6 +49,8 @@ export async function getUser(
         return res.status(200).json(user);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: "Error obteniendo usuario"
         });
@@ -91,6 +95,8 @@ export async function postUser(
         return res.status(201).json(user);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: "Error creando usuario"
         });
@@ -131,6 +137,8 @@ export async function putUser(
         return res.status(200).json(user);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message:
                 "Error actualizando usuario"
@@ -162,6 +170,8 @@ export async function deleteUser(
         });
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message:
                 "Error desactivando usuario"

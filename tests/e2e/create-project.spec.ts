@@ -30,8 +30,8 @@ test("usuario puede crear un proyecto", async ({ page, request }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Proyecto",
-      exact: true,
+      level: 1,
+      name: projectName,
     }),
   ).toBeVisible();
 

@@ -79,6 +79,17 @@
   padding-left: 26px !important; /* alinea con el texto, no con el ícono */
 }
 
+/* El color azul queda reservado para el enlace activo (.active) */
 .sidebar a.view-all {
+  color: #44546f;
+}
+
+.sidebar a.view-all.active {
   color: #0c66e4;
+}
+
+.sidebar-link-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis; /* nombres largos de proyecto en una sola línea */
 }

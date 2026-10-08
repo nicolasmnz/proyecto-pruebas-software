@@ -5,22 +5,37 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 
 import CreateProjectPage from "./CreateProjectPage";
 import { createProject } from "../api/projects";
+import { ProjectsContext } from "../context/projectsContext";
 
-vi.mock("../api/projects", () => ({
+vi.mock("../api/projects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/projects")>()),
   createProject: vi.fn(),
 }));
 
 const mockedCreateProject = vi.mocked(createProject);
 
+const reloadProjects = vi.fn(async () => {});
+
 function renderPage() {
   render(
-    <MemoryRouter initialEntries={["/projects/new"]}>
-      <Routes>
-        <Route path="/projects/new" element={<CreateProjectPage />} />
+    <ProjectsContext.Provider
+      value={{
+        projects: [],
+        archivedProjects: [],
+        isLoading: false,
+        error: null,
+        reload: reloadProjects,
+      }}
+    >
+      <MemoryRouter initialEntries={["/projects/new"]}>
+        <Routes>
+          <Route path="/projects/new" element={<CreateProjectPage />} />
 
-        <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
-      </Routes>
-    </MemoryRouter>,
+          <Route path="/projects" element={<h1>Listado</h1>} />
+          <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </ProjectsContext.Provider>,
   );
 }
 
@@ -39,6 +54,7 @@ describe("CreateProjectPage", () => {
     ).toBeInTheDocument();
 
     expect(screen.getByLabelText(/Nombre/)).toBeRequired();
+    expect(screen.getByLabelText(/Nombre/)).toHaveAttribute("maxLength", "150");
 
     expect(screen.getByLabelText("Descripción")).toBeInTheDocument();
 
@@ -86,6 +102,22 @@ describe("CreateProjectPage", () => {
         name: "Proyecto",
       }),
     ).toBeInTheDocument();
+
+    // La lista y la barra lateral se actualizan con el proyecto nuevo
+    expect(reloadProjects).toHaveBeenCalledTimes(1);
+  });
+
+  test("permite cancelar y volver al listado", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado" }),
+    ).toBeInTheDocument();
+    expect(mockedCreateProject).not.toHaveBeenCalled();
   });
 
   test("muestra un error si la API falla", async () => {
@@ -106,5 +138,19 @@ describe("CreateProjectPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Error creando proyecto",
     );
+  });
+
+  test("no envía el formulario si el nombre solo tiene espacios", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.type(screen.getByLabelText(/Nombre/), "   ");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "El nombre del proyecto es obligatorio.",
+    );
+    expect(mockedCreateProject).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -15,6 +15,7 @@ interface SideBarDropdownProps {
   viewAllLabel: string;
   viewAllPath: string;
   maxItems?: number;
+  defaultOpen?: boolean;
 }
 
 function SideBarDropdown({
@@ -24,8 +25,19 @@ function SideBarDropdown({
   viewAllLabel,
   viewAllPath,
   maxItems = 3,
+  defaultOpen = true,
 }: SideBarDropdownProps) {
-  const [open, setOpen] = useState(false);
+  const { pathname } = useLocation();
+  // null = el usuario aún no la abrió ni cerró a mano
+  const [toggledOpen, setToggledOpen] = useState<boolean | null>(null);
+
+  const visibleItems = items.slice(0, maxItems);
+  const containsCurrentPage =
+    pathname === viewAllPath ||
+    visibleItems.some((item) => item.path === pathname);
+
+  // Se abre sola si contiene la página actual, para que se vea el enlace activo
+  const open = toggledOpen ?? (defaultOpen || containsCurrentPage);
 
   return (
     <li>
@@ -33,7 +45,7 @@ function SideBarDropdown({
         type="button"
         className="sidebar-dropdown-trigger"
         aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setToggledOpen(!open)}
       >
         <Icon size={18} aria-hidden="true" />
         <span>{label}</span>
@@ -42,13 +54,15 @@ function SideBarDropdown({
 
       {open && (
         <ul className="sidebar-submenu">
-          {items.slice(0, maxItems).map((item) => (
+          {visibleItems.map((item) => (
             <li key={item.path}>
-              <NavLink to={item.path}>{item.label}</NavLink>
+              <NavLink to={item.path} end>
+                <span className="sidebar-link-label">{item.label}</span>
+              </NavLink>
             </li>
           ))}
           <li>
-            <NavLink to={viewAllPath} className="view-all">
+            <NavLink to={viewAllPath} className="view-all" end>
               {viewAllLabel}
             </NavLink>
           </li>

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import type { SubmitEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { createProject } from "../api/projects";
+import ProjectForm from "../components/ProjectForm";
+import type { ProjectFormValues } from "../components/ProjectForm";
+import { useProjects } from "../context/projectsContext";
 
 import "./CreateProjectPage.css";
 
@@ -10,43 +11,18 @@ const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
 
 function CreateProjectPage() {
   const navigate = useNavigate();
+  const { reload } = useProjects();
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  async function handleSubmit(values: ProjectFormValues) {
+    const project = await createProject({
+      ...values,
+      createdBy: TEMP_USER_ID,
+    });
 
-  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
+    // Actualiza la lista y la barra lateral con el proyecto nuevo
+    void reload();
 
-    const formData = new FormData(event.currentTarget);
-
-    const name = String(formData.get("name") ?? "").trim();
-    const description = String(formData.get("description") ?? "").trim();
-
-    if (!name) {
-      setError("El nombre del proyecto es obligatorio.");
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      setError(null);
-
-      const project = await createProject({
-        name,
-        description: description || undefined,
-        createdBy: TEMP_USER_ID,
-      });
-
-      navigate(`/projects/${project.id}`);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError("No fue posible crear el proyecto.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    navigate(`/projects/${project.id}`);
   }
 
   return (
@@ -58,36 +34,12 @@ function CreateProjectPage() {
         obligatorios.
       </p>
 
-      <form className="create-project-form" onSubmit={handleSubmit}>
-        <div className="field">
-          <label htmlFor="name">
-            Nombre{" "}
-            <span className="required" aria-hidden="true">
-              *
-            </span>
-          </label>
-
-          <input id="name" name="name" type="text" required />
-        </div>
-
-        <div className="field">
-          <label htmlFor="description">Descripción</label>
-
-          <textarea id="description" name="description" rows={4} />
-        </div>
-
-        {error && (
-          <p role="alert" className="form-error">
-            {error}
-          </p>
-        )}
-
-        <div className="actions">
-          <button type="submit" className="btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? "Guardando..." : "Guardar"}
-          </button>
-        </div>
-      </form>
+      <ProjectForm
+        submitLabel="Guardar"
+        submittingLabel="Guardando..."
+        onSubmit={handleSubmit}
+        onCancel={() => navigate("/projects")}
+      />
     </section>
   );
 }

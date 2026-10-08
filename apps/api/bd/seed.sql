@@ -1,5 +1,6 @@
 BEGIN;
 -- USERS
+-- Contraseña de todos los usuarios de prueba: 123456 (hash scrypt)
 
 INSERT INTO users (
     id,
@@ -12,35 +13,35 @@ INSERT INTO users (
     '11111111-1111-1111-1111-111111111111',
     'Ana Torres',
     'ana@pruebas.cl',
-    '123456',
+    'scrypt$63485651aa2b1421306684a7c21c935a$206b8dd091c5de24343f2b16a93342cfe0160b2cc6b26da80be7b6f4fda58068500f920d00b8c966a6a31f40e872c775b27b3b56a2c5c8e1ed9febb39f9a421d',
     TRUE
 ),
 (
     '22222222-2222-2222-2222-222222222222',
     'Carlos Muñoz',
     'carlos@pruebas.cl',
-    '123456',
+    'scrypt$63485651aa2b1421306684a7c21c935a$206b8dd091c5de24343f2b16a93342cfe0160b2cc6b26da80be7b6f4fda58068500f920d00b8c966a6a31f40e872c775b27b3b56a2c5c8e1ed9febb39f9a421d',
     TRUE
 ),
 (
     '33333333-3333-3333-3333-333333333333',
     'María González',
     'maria@pruebas.cl',
-    '123456',
+    'scrypt$63485651aa2b1421306684a7c21c935a$206b8dd091c5de24343f2b16a93342cfe0160b2cc6b26da80be7b6f4fda58068500f920d00b8c966a6a31f40e872c775b27b3b56a2c5c8e1ed9febb39f9a421d',
     TRUE
 ),
 (
     '44444444-4444-4444-4444-444444444444',
     'Diego Soto',
     'diego@pruebas.cl',
-    '123456',
+    'scrypt$63485651aa2b1421306684a7c21c935a$206b8dd091c5de24343f2b16a93342cfe0160b2cc6b26da80be7b6f4fda58068500f920d00b8c966a6a31f40e872c775b27b3b56a2c5c8e1ed9febb39f9a421d',
     TRUE
 ),
 (
     '55555555-5555-5555-5555-555555555555',
     'Sofía Rojas',
     'sofia@pruebas.cl',
-    '123456',
+    'scrypt$63485651aa2b1421306684a7c21c935a$206b8dd091c5de24343f2b16a93342cfe0160b2cc6b26da80be7b6f4fda58068500f920d00b8c966a6a31f40e872c775b27b3b56a2c5c8e1ed9febb39f9a421d',
     FALSE
 );
 

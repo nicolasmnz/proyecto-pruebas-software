@@ -1,0 +1,77 @@
+.project-card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.project-card:hover {
+  border-color: #c1c7d0;
+  box-shadow: 0 2px 8px rgb(9 30 66 / 12%);
+}
+
+.project-card:focus-within {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}
+
+.project-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.project-card-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.project-card-name a {
+  color: #292a2e;
+  text-decoration: none;
+}
+
+.project-card-name a:focus-visible {
+  outline: none; /* el foco se muestra en la tarjeta completa */
+}
+
+.project-card-name a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.project-card-description {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: #44546f;
+  font-size: 14px;
+  line-height: 20px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.project-card-description.is-empty {
+  color: #626f86;
+  font-style: italic;
+}
+
+.project-card-meta {
+  margin: 4px 0 0;
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+}

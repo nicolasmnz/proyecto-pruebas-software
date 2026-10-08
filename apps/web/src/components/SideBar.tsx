@@ -17,6 +17,7 @@ interface SideBarGroup {
   children: { label: string; path: string }[];
   viewAllLabel: string;
   viewAllPath: string;
+  defaultOpen?: boolean;
 }
 
 type SideBarItem = SideBarLink | SideBarGroup;
@@ -41,6 +42,7 @@ function SideBar({ items, children }: SideBarProps) {
                 items={item.children}
                 viewAllLabel={item.viewAllLabel}
                 viewAllPath={item.viewAllPath}
+                defaultOpen={item.defaultOpen}
               />
             ) : (
               <li key={item.path}>
