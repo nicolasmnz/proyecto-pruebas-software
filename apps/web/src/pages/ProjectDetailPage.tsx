@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
 
 import { ApiError, getProject } from "../api/projects";
 import type { Project } from "../api/projects";
-import ProjectAvatar from "../components/ProjectAvatar";
-import { formatDate } from "../utils/format";
+import ProjectDetails from "../components/ProjectDetails";
 
 import "./ProjectDetailPage.css";
 
@@ -94,61 +92,14 @@ function ProjectDetailPage() {
     );
   }
 
-  const { project } = state;
-
   return (
-    <article className="project-detail">
-      <nav aria-label="Ruta de navegación" className="breadcrumb">
-        <ol>
-          <li>
-            <Link to="/projects">Proyectos</Link>
-            <ChevronRight size={14} aria-hidden="true" />
-          </li>
-          <li aria-current="page">{project.name}</li>
-        </ol>
-      </nav>
-
-      <header className="project-detail-header">
-        <ProjectAvatar id={project.id} name={project.name} size="lg" />
-        <h1>{project.name}</h1>
-        {project.is_archived && <span className="badge">Archivado</span>}
-      </header>
-
-      <div className="project-detail-layout">
-        <section aria-labelledby="description-title" className="panel">
-          <h2 id="description-title">Descripción</h2>
-          {project.description ? (
-            <p className="project-detail-description">{project.description}</p>
-          ) : (
-            <p className="project-detail-description is-empty">
-              Este proyecto no tiene descripción.
-            </p>
-          )}
-        </section>
-
-        <aside aria-labelledby="details-title" className="panel">
-          <h2 id="details-title">Detalles</h2>
-          <dl className="project-detail-meta">
-            <div>
-              <dt>Creado</dt>
-              <dd>
-                <time dateTime={project.created_at}>
-                  {formatDate(project.created_at)}
-                </time>
-              </dd>
-            </div>
-            <div>
-              <dt>Última actualización</dt>
-              <dd>
-                <time dateTime={project.updated_at}>
-                  {formatDate(project.updated_at)}
-                </time>
-              </dd>
-            </div>
-          </dl>
-        </aside>
-      </div>
-    </article>
+    <ProjectDetails
+      key={state.project.id}
+      project={state.project}
+      onProjectChange={(project) =>
+        setResult({ key: requestKey, result: { status: "success", project } })
+      }
+    />
   );
 }
 

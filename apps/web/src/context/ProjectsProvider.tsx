@@ -1,15 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { getProjects } from "../api/projects";
+import { getArchivedProjects, getProjects } from "../api/projects";
 import type { Project } from "../api/projects";
 import { ProjectsContext } from "./projectsContext";
 
-type LoadResult = { projects: Project[] } | { error: string };
+type LoadResult =
+  | { projects: Project[]; archivedProjects: Project[] }
+  | { error: string };
 
 async function loadProjects(signal?: AbortSignal): Promise<LoadResult> {
   try {
-    return { projects: await getProjects(signal) };
+    const [projects, archivedProjects] = await Promise.all([
+      getProjects(signal),
+      getArchivedProjects(signal),
+    ]);
+
+    return { projects, archivedProjects };
   } catch (error) {
     return {
       error:
@@ -26,12 +33,14 @@ interface ProjectsProviderProps {
 
 function ProjectsProvider({ children }: ProjectsProviderProps) {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [archivedProjects, setArchivedProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const applyResult = useCallback((result: LoadResult) => {
     if ("projects" in result) {
       setProjects(result.projects);
+      setArchivedProjects(result.archivedProjects);
       setError(null);
     } else {
       setError(result.error);
@@ -59,8 +68,8 @@ function ProjectsProvider({ children }: ProjectsProviderProps) {
   }, [applyResult]);
 
   const value = useMemo(
-    () => ({ projects, isLoading, error, reload }),
-    [projects, isLoading, error, reload],
+    () => ({ projects, archivedProjects, isLoading, error, reload }),
+    [projects, archivedProjects, isLoading, error, reload],
   );
 
   return (

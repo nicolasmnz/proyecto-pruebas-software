@@ -19,6 +19,10 @@ createRoot(document.getElementById("root")!).render(
 
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/projects/new" element={<CreateProjectPage />} />
+            <Route
+              path="/projects/archived"
+              element={<ProjectsPage archived />}
+            />
             <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
 
             <Route path="/settings" element={<div>Configuracion</div>} />

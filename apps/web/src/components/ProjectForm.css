@@ -1,0 +1,71 @@
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #626f86;
+}
+
+.required {
+  color: #c9372c;
+}
+
+.field input,
+.field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  background: #fff;
+  color: #292a2e;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.field input:hover,
+.field textarea:hover {
+  background: #f8f9fa;
+}
+
+.field input:focus,
+.field textarea:focus {
+  outline: none;
+  background: #fff;
+  border-color: #0c66e4;
+  box-shadow: 0 0 0 1px #0c66e4;
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.form-error {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #ffeceb;
+  color: #ae2e24;
+  font-size: 14px;
+  line-height: 20px;
+}

@@ -5,14 +5,16 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectsPage from "./ProjectsPage";
 import ProjectsProvider from "../context/ProjectsProvider";
-import { getProjects } from "../api/projects";
+import { getArchivedProjects, getProjects } from "../api/projects";
 import type { Project } from "../api/projects";
 
 vi.mock("../api/projects", () => ({
   getProjects: vi.fn(),
+  getArchivedProjects: vi.fn(),
 }));
 
 const mockedGetProjects = vi.mocked(getProjects);
+const mockedGetArchivedProjects = vi.mocked(getArchivedProjects);
 
 function buildProject(overrides: Partial<Project>): Project {
   return {
@@ -40,12 +42,22 @@ const projects = [
   }),
 ];
 
+const archivedProject = buildProject({
+  id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+  name: "Proyecto Antiguo",
+  is_archived: true,
+});
+
 function renderPage(initialEntry = "/projects") {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <ProjectsProvider>
         <Routes>
           <Route path="/projects" element={<ProjectsPage />} />
+          <Route
+            path="/projects/archived"
+            element={<ProjectsPage archived />}
+          />
           <Route path="/projects/new" element={<h1>Nuevo proyecto</h1>} />
           <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
         </Routes>
@@ -57,6 +69,7 @@ function renderPage(initialEntry = "/projects") {
 describe("ProjectsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetArchivedProjects.mockResolvedValue([archivedProject]);
   });
 
   test("muestra un indicador de carga mientras obtiene los proyectos", () => {
@@ -69,7 +82,7 @@ describe("ProjectsPage", () => {
     ).toBeInTheDocument();
   });
 
-  test("lista los proyectos con su nombre, descripción y cantidad", async () => {
+  test("lista los proyectos activos con su nombre y descripción", async () => {
     mockedGetProjects.mockResolvedValue(projects);
 
     renderPage();
@@ -77,7 +90,9 @@ describe("ProjectsPage", () => {
     const list = await screen.findByRole("list", { name: "Proyectos" });
 
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
-    expect(screen.getByText("2 proyectos")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Proyecto Antiguo" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByText("Aplicación web para administrar sprints."),
     ).toBeInTheDocument();
@@ -92,7 +107,6 @@ describe("ProjectsPage", () => {
     renderPage();
 
     expect(await screen.findByText("Sin descripción")).toBeInTheDocument();
-    expect(screen.getByText("1 proyecto")).toBeInTheDocument();
   });
 
   test("navega al detalle al hacer clic en un proyecto", async () => {
@@ -220,5 +234,57 @@ describe("ProjectsPage", () => {
         "listitem",
       ),
     ).toHaveLength(2);
+  });
+
+  test("las pestañas muestran cuántos proyectos activos y archivados hay", async () => {
+    mockedGetProjects.mockResolvedValue(projects);
+
+    renderPage();
+
+    const tabs = screen.getByRole("navigation", {
+      name: "Estado de los proyectos",
+    });
+
+    expect(
+      await within(tabs).findByRole("link", { name: "Activos 2" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(tabs).getByRole("link", { name: "Archivados 1" }),
+    ).toHaveAttribute("href", "/projects/archived");
+  });
+
+  test("la vista de archivados lista solo los proyectos archivados", async () => {
+    const user = userEvent.setup();
+    mockedGetProjects.mockResolvedValue(projects);
+
+    renderPage();
+
+    await user.click(await screen.findByRole("link", { name: "Archivados 1" }));
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Proyectos archivados" }),
+    ).toBeInTheDocument();
+
+    const list = screen.getByRole("list", { name: "Proyectos archivados" });
+
+    expect(
+      within(list).getByRole("link", { name: "Proyecto Antiguo" }),
+    ).toBeInTheDocument();
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    // En archivados no se ofrece crear proyectos
+    expect(
+      screen.queryByRole("link", { name: /Crear proyecto/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  test("muestra un estado vacío propio cuando no hay archivados", async () => {
+    mockedGetProjects.mockResolvedValue(projects);
+    mockedGetArchivedProjects.mockResolvedValue([]);
+
+    renderPage("/projects/archived");
+
+    expect(
+      await screen.findByText("No hay proyectos archivados"),
+    ).toBeInTheDocument();
   });
 });

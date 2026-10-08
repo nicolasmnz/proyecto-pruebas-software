@@ -1,4 +1,4 @@
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, NavLink, useSearchParams } from "react-router-dom";
 import { Plus, Search, X } from "lucide-react";
 
 import ProjectCard from "../components/ProjectCard";
@@ -7,9 +7,21 @@ import { normalizeText } from "../utils/format";
 
 import "./ProjectsPage.css";
 
-function ProjectsPage() {
-  const { projects, isLoading, error, reload } = useProjects();
+interface ProjectsPageProps {
+  archived?: boolean;
+}
+
+function ProjectsPage({ archived = false }: ProjectsPageProps) {
+  const {
+    projects: activeProjects,
+    archivedProjects,
+    isLoading,
+    error,
+    reload,
+  } = useProjects();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const projects = archived ? archivedProjects : activeProjects;
 
   const query = searchParams.get("q") ?? "";
   const normalizedQuery = normalizeText(query);
@@ -51,6 +63,15 @@ function ProjectsPage() {
       );
     }
 
+    if (projects.length === 0 && archived) {
+      return (
+        <div className="projects-message">
+          <p className="projects-message-title">No hay proyectos archivados</p>
+          <p>Los proyectos que archives aparecerán aquí.</p>
+        </div>
+      );
+    }
+
     if (projects.length === 0) {
       return (
         <div className="projects-message">
@@ -81,7 +102,10 @@ function ProjectsPage() {
     }
 
     return (
-      <ul className="projects-grid" aria-label="Proyectos">
+      <ul
+        className="projects-grid"
+        aria-label={archived ? "Proyectos archivados" : "Proyectos"}
+      >
         {filteredProjects.map((project) => (
           <li key={project.id}>
             <ProjectCard project={project} />
@@ -95,21 +119,26 @@ function ProjectsPage() {
     <section className="projects-page">
       <header className="projects-header">
         <div>
-          <h1>Proyectos</h1>
-          {!isLoading && !error && (
-            <p className="projects-count">
-              {projects.length === 1
-                ? "1 proyecto"
-                : `${projects.length} proyectos`}
-            </p>
-          )}
+          <h1>{archived ? "Proyectos archivados" : "Proyectos"}</h1>
         </div>
 
-        <Link to="/projects/new" className="btn-primary">
-          <Plus size={16} aria-hidden="true" />
-          Crear proyecto
-        </Link>
+        {!archived && (
+          <Link to="/projects/new" className="btn-primary">
+            <Plus size={16} aria-hidden="true" />
+            Crear proyecto
+          </Link>
+        )}
       </header>
+
+      <nav aria-label="Estado de los proyectos" className="projects-tabs">
+        <NavLink to="/projects" end>
+          Activos <span className="tab-count">{activeProjects.length}</span>
+        </NavLink>
+        <NavLink to="/projects/archived" end>
+          Archivados{" "}
+          <span className="tab-count">{archivedProjects.length}</span>
+        </NavLink>
+      </nav>
 
       <div className="projects-search">
         <Search size={16} aria-hidden="true" className="projects-search-icon" />

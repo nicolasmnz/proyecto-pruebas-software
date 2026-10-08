@@ -19,6 +19,8 @@ function buildProject(id: string, name: string): Project {
   };
 }
 
+const archivedProjects = [buildProject("9", "Proyecto Viejo")];
+
 const projects = [
   buildProject("1", "Proyecto Uno"),
   buildProject("2", "Proyecto Dos"),
@@ -26,16 +28,24 @@ const projects = [
   buildProject("4", "Proyecto Cuatro"),
 ];
 
-function renderLayout() {
+function renderLayout(initialEntry = "/projects") {
   render(
     <ProjectsContext.Provider
-      value={{ projects, isLoading: false, error: null, reload: async () => {} }}
+      value={{
+        projects,
+        archivedProjects,
+        isLoading: false,
+        error: null,
+        reload: async () => {},
+      }}
     >
-      <MemoryRouter initialEntries={["/projects"]}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route element={<Layout />}>
             <Route path="/projects" element={<h1>Listado</h1>} />
             <Route path="/projects/new" element={<h1>Formulario</h1>} />
+            <Route path="/projects/archived" element={<h1>Archivados</h1>} />
+            <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -110,5 +120,65 @@ describe("Layout", () => {
     expect(
       screen.getByRole("button", { name: "Abrir menú" }),
     ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  test("la carpeta Archivados está cerrada y al abrirla muestra los archivados", async () => {
+    const user = userEvent.setup();
+
+    renderLayout();
+
+    const nav = screen.getByRole("navigation", {
+      name: "Navegación principal",
+    });
+    const folder = within(nav).getByRole("button", { name: "Archivados" });
+
+    expect(folder).toHaveAttribute("aria-expanded", "false");
+    expect(
+      within(nav).queryByRole("link", { name: "Proyecto Viejo" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(folder);
+
+    expect(folder).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(nav).getByRole("link", { name: "Proyecto Viejo" }),
+    ).toHaveAttribute("href", "/projects/9");
+    expect(
+      within(nav).getByRole("link", { name: "Ver todos los archivados" }),
+    ).toHaveAttribute("href", "/projects/archived");
+  });
+
+  test("Ver todos los proyectos solo se marca activo en el listado", () => {
+    renderLayout("/projects/1");
+
+    const nav = screen.getByRole("navigation", {
+      name: "Navegación principal",
+    });
+
+    expect(
+      within(nav).getByRole("link", { name: "Proyecto Uno" }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(nav).getByRole("link", { name: "Ver todos los proyectos" }),
+    ).not.toHaveAttribute("aria-current");
+  });
+
+  test("Ver todos los proyectos se marca activo en /projects", () => {
+    renderLayout("/projects");
+
+    expect(
+      screen.getByRole("link", { name: "Ver todos los proyectos" }),
+    ).toHaveAttribute("aria-current", "page");
+  });
+
+  test("la carpeta Archivados se abre sola al estar en la vista de archivados", () => {
+    renderLayout("/projects/archived");
+
+    expect(
+      screen.getByRole("button", { name: "Archivados" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("link", { name: "Ver todos los archivados" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });

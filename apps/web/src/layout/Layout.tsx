@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Settings, FolderClosed, Menu, X } from "lucide-react";
+import { Archive, Settings, FolderClosed, Menu, X } from "lucide-react";
 
 import SideBar from "../components/SideBar";
 import Button from "../components/Button";
@@ -10,23 +10,31 @@ import "./Layout.css";
 
 function Layout() {
   const navigate = useNavigate();
-  const { projects } = useProjects();
+  const { projects, archivedProjects } = useProjects();
   // Solo tiene efecto en pantallas pequeñas, donde la barra lateral se oculta
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // La API devuelve los proyectos ordenados del más reciente al más antiguo
-  const recentProjects = projects.map((project) => ({
+  const toLink = (project: { id: string; name: string }) => ({
     label: project.name,
     path: `/projects/${project.id}`,
-  }));
+  });
 
   const sideBarItems = [
     {
       label: "Proyectos",
       icon: FolderClosed,
-      children: recentProjects,
+      children: projects.map(toLink),
       viewAllLabel: "Ver todos los proyectos",
       viewAllPath: "/projects",
+    },
+    {
+      label: "Archivados",
+      icon: Archive,
+      children: archivedProjects.map(toLink),
+      viewAllLabel: "Ver todos los archivados",
+      viewAllPath: "/projects/archived",
+      defaultOpen: false,
     },
     {
       label: "Configuración",

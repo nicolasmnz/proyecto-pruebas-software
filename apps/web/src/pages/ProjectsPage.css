@@ -20,11 +20,57 @@
   line-height: 32px;
 }
 
-.projects-count {
-  margin: 2px 0 0;
-  color: #626f86;
+
+.projects-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #dfe1e6;
+}
+
+.projects-tabs a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: -2px;
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  color: #44546f;
   font-size: 14px;
+  font-weight: 500;
   line-height: 20px;
+  text-decoration: none;
+}
+
+.projects-tabs a:hover {
+  color: #292a2e;
+  border-bottom-color: #c1c7d0;
+}
+
+.projects-tabs a.active {
+  color: #0c66e4;
+  border-bottom-color: #0c66e4;
+}
+
+.projects-tabs a:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: -2px;
+}
+
+.tab-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #f1f2f4;
+  color: #44546f;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.projects-tabs a.active .tab-count {
+  background: #e9f2ff;
+  color: #0c66e4;
 }
 
 .projects-search {

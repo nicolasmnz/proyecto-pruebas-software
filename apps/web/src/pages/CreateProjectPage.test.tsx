@@ -7,7 +7,8 @@ import CreateProjectPage from "./CreateProjectPage";
 import { createProject } from "../api/projects";
 import { ProjectsContext } from "../context/projectsContext";
 
-vi.mock("../api/projects", () => ({
+vi.mock("../api/projects", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/projects")>()),
   createProject: vi.fn(),
 }));
 
@@ -20,6 +21,7 @@ function renderPage() {
     <ProjectsContext.Provider
       value={{
         projects: [],
+        archivedProjects: [],
         isLoading: false,
         error: null,
         reload: reloadProjects,
@@ -52,6 +54,7 @@ describe("CreateProjectPage", () => {
     ).toBeInTheDocument();
 
     expect(screen.getByLabelText(/Nombre/)).toBeRequired();
+    expect(screen.getByLabelText(/Nombre/)).toHaveAttribute("maxLength", "150");
 
     expect(screen.getByLabelText("Descripción")).toBeInTheDocument();
 
@@ -109,7 +112,7 @@ describe("CreateProjectPage", () => {
 
     renderPage();
 
-    await user.click(screen.getByRole("link", { name: "Cancelar" }));
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(
       await screen.findByRole("heading", { name: "Listado" }),
@@ -135,5 +138,19 @@ describe("CreateProjectPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Error creando proyecto",
     );
+  });
+
+  test("no envía el formulario si el nombre solo tiene espacios", async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.type(screen.getByLabelText(/Nombre/), "   ");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "El nombre del proyecto es obligatorio.",
+    );
+    expect(mockedCreateProject).not.toHaveBeenCalled();
   });
 });

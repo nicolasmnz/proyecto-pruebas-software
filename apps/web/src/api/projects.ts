@@ -4,6 +4,14 @@ export interface CreateProjectData {
   createdBy: string;
 }
 
+export interface UpdateProjectData {
+  name: string;
+  description?: string;
+}
+
+// Coincide con el límite de la API (VARCHAR(150))
+export const MAX_PROJECT_NAME_LENGTH = 150;
+
 export interface Project {
   id: string;
   name: string;
@@ -49,6 +57,14 @@ export function getProjects(signal?: AbortSignal): Promise<Project[]> {
   });
 }
 
+export function getArchivedProjects(signal?: AbortSignal): Promise<Project[]> {
+  return request(
+    "/projects?archived=true",
+    "No fue posible cargar los proyectos archivados",
+    { signal },
+  );
+}
+
 export function getProject(id: string, signal?: AbortSignal): Promise<Project> {
   return request(
     `/projects/${encodeURIComponent(id)}`,
@@ -65,4 +81,39 @@ export function createProject(data: CreateProjectData): Promise<Project> {
     },
     body: JSON.stringify(data),
   });
+}
+
+export function updateProject(
+  id: string,
+  data: UpdateProjectData,
+): Promise<Project> {
+  return request(
+    `/projects/${encodeURIComponent(id)}`,
+    "No fue posible actualizar el proyecto",
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function archiveProject(id: string): Promise<Project> {
+  const body = await request<{ project: Project }>(
+    `/projects/${encodeURIComponent(id)}`,
+    "No fue posible archivar el proyecto",
+    { method: "DELETE" },
+  );
+
+  return body.project;
+}
+
+export function restoreProject(id: string): Promise<Project> {
+  return request(
+    `/projects/${encodeURIComponent(id)}/restore`,
+    "No fue posible restaurar el proyecto",
+    { method: "PATCH" },
+  );
 }
