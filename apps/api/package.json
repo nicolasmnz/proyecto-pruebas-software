@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit",
-    "test:unit": "jest --testPathPatterns=tests/unit --passWithNoTests",
+    "test:unit": "jest --testPathPatterns=tests/unit",
     "test:integration": "jest --testPathPatterns=tests/integration --runInBand",
     "test:coverage": "jest --coverage"
   },

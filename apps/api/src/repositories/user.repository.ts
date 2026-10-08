@@ -1,4 +1,5 @@
 import pool from "../config/database.js";
+import { hashPassword } from "../utils/password.js";
 
 export async function findAllUsers() {
     const result = await pool.query(`
@@ -56,6 +57,8 @@ export async function createUser(
     email: string,
     password: string
 ) {
+    const passwordHash = await hashPassword(password);
+
     const result = await pool.query(
         `
         INSERT INTO users (
@@ -75,7 +78,7 @@ export async function createUser(
         [
             name,
             email,
-            password
+            passwordHash
         ]
     );
 

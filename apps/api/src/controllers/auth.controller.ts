@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import {
     findUserByEmail
 } from "../repositories/user.repository.js";
+import { verifyPassword } from "../utils/password.js";
 
 
 export async function login(
@@ -35,8 +36,12 @@ export async function login(
             });
         }
 
-        // password_hash es texto plano
-        if (user.password_hash !== password) {
+        const isValidPassword = await verifyPassword(
+            password,
+            user.password_hash
+        );
+
+        if (!isValidPassword) {
             return res.status(401).json({
                 message: "Correo o contraseña incorrectos"
             });
