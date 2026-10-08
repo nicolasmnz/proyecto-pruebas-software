@@ -8,3 +8,90 @@
   padding: 24px;
   min-width: 0;
 }
+
+/* Barra superior y menú desplegable: solo en pantallas pequeñas */
+.topbar,
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .app-layout main {
+    padding: 16px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #dfe1e6;
+    background: #fff;
+  }
+
+  .topbar-menu {
+    display: inline-flex;
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #292a2e;
+    cursor: pointer;
+  }
+
+  .topbar-menu:hover {
+    background: #f1f2f4;
+  }
+
+  .topbar-menu:focus-visible {
+    outline: 2px solid #0c66e4;
+  }
+
+  .topbar-brand {
+    color: #292a2e;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .sidebar-container {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+    visibility: hidden; /* fuera del orden de tabulación mientras está cerrado */
+    transition:
+      transform 0.2s ease,
+      visibility 0.2s;
+  }
+
+  .sidebar-container.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    box-shadow: 0 8px 24px rgb(9 30 66 / 25%);
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: block;
+    background: rgb(9 30 66 / 40%);
+  }
+}
+
+@media (max-width: 768px) and (prefers-reduced-motion: reduce) {
+  .sidebar-container {
+    transition: none;
+  }
+}
