@@ -1,0 +1,38 @@
+.board-page {
+  color: #292a2e;
+}
+
+.board-title {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.board-status {
+  color: #626f86;
+  font-size: 14px;
+}
+
+.board-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 480px;
+  margin: 48px auto;
+  color: #44546f;
+  font-size: 14px;
+  text-align: center;
+}
+
+.board-message h1 {
+  margin: 0;
+  color: #292a2e;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.board-message p {
+  margin: 0 0 8px;
+}

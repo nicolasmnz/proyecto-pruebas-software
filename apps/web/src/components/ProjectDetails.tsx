@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Archive, ArchiveRestore, ChevronRight, Pencil } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ChevronRight,
+  KanbanSquare,
+  Pencil,
+} from "lucide-react";
 
 import { archiveProject, restoreProject, updateProject } from "../api/projects";
 import type { Project } from "../api/projects";
@@ -146,6 +152,10 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
 
         {!project.is_archived && !isEditing && (
           <div className="project-detail-actions">
+            <Link to={`/projects/${project.id}/board`} className="btn-primary">
+              <KanbanSquare size={16} aria-hidden="true" />
+              Ver tablero
+            </Link>
             <button
               ref={editButtonRef}
               type="button"
