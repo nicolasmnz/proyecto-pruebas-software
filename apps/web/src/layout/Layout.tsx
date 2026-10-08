@@ -17,9 +17,13 @@ const sideBarItems = [
     icon: FolderClosed,
     children: recentProjects,
     viewAllLabel: "Ver todos los proyectos",
-    viewAllPath: "/ProjectsPage",
+    viewAllPath: "/projects",
   },
-  { label: "Configuración", path: "/settings", icon: Settings },
+  {
+    label: "Configuración",
+    path: "/settings",
+    icon: Settings,
+  },
 ];
 
 function Layout() {
@@ -30,7 +34,7 @@ function Layout() {
       <SideBar items={sideBarItems}>
         <Button
           content="Nuevo proyecto"
-          onClick={() => navigate("/CreateProjectPage")}
+          onClick={() => navigate("/projects/new")}
         />
       </SideBar>
       <main>

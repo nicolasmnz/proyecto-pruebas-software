@@ -7,7 +7,7 @@ test("frontend está disponible", async ({ page }) => {
 });
 
 test("API está disponible", async ({ request }) => {
-  const response = await request.get("http://127.0.0.1:3000/api/health");
+  const response = await request.get("http://localhost:3000/api/health");
 
   expect(response.ok()).toBeTruthy();
 });

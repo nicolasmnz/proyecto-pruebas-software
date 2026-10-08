@@ -14,8 +14,11 @@ createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<App />} />
-          <Route path="/ProjectsPage" element={<ProjectPage />} />
-          <Route path="/CreateProjectPage" element={<CreateProjectPage />} />
+
+          <Route path="/projects" element={<ProjectPage />} />
+          <Route path="/projects/new" element={<CreateProjectPage />} />
+          <Route path="/projects/:projectId" element={<ProjectPage />} />
+
           <Route path="/settings" element={<div>Configuracion</div>} />
         </Route>
       </Routes>
