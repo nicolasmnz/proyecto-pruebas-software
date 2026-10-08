@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { env } from "./config/env.js";
 import projectRoutes from './routes/project.routes.js';
 import userRoutes from './routes/user.routes.js'
 import authRoutes from './routes/auth.routes.js'
@@ -7,7 +8,7 @@ import authRoutes from './routes/auth.routes.js'
 const app = express();
 
 app.use(cors({
-    origin: "http://localhost:5173"
+    origin: env.corsOrigin
 }));
 
 app.use(express.json());

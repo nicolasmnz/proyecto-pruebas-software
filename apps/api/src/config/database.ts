@@ -1,7 +1,5 @@
 import { Pool } from "pg";
-import dotenv from "dotenv";
-
-dotenv.config({ quiet: true });
+import "./env.js";
 
 const pool = new Pool({
   host: process.env.DB_HOST,
