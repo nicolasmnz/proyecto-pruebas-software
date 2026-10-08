@@ -20,6 +20,8 @@ export async function getProjects(
         return res.status(200).json(projects);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: 'Error obteniendo proyectos'
         });
@@ -45,6 +47,8 @@ export async function getProject(
         return res.status(200).json(project);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: 'Error obteniendo proyecto'
         });
@@ -78,6 +82,8 @@ export async function postProject(
         return res.status(201).json(project);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: 'Error creando proyecto'
         });
@@ -116,6 +122,8 @@ export async function putProject(
         return res.status(200).json(project);
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: 'Error actualizando proyecto'
         });
@@ -144,6 +152,8 @@ export async function deleteProject(
         });
 
     } catch (error) {
+        console.error(error);
+
         return res.status(500).json({
             message: 'Error archivando proyecto'
         });
