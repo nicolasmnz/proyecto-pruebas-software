@@ -28,3 +28,66 @@ export async function findBoardItems(projectId: string) {
 
     return result.rows;
 }
+
+interface CreateWorkItemData {
+    projectId: string;
+    createdBy: string;
+    type: string;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    estimate: number | null;
+}
+
+// La tarea nueva queda al final de su columna
+export async function createWorkItem(data: CreateWorkItemData) {
+    const result = await pool.query(
+        `
+        INSERT INTO work_items (
+            project_id,
+            created_by,
+            type,
+            title,
+            description,
+            status,
+            priority,
+            estimate,
+            position
+        )
+        VALUES (
+            $1, $2, $3, $4, $5, $6::varchar, $7, $8,
+            (
+                SELECT COALESCE(MAX(position) + 1, 0)
+                FROM work_items
+                WHERE project_id = $1 AND status = $6::varchar
+            )
+        )
+        RETURNING
+            id,
+            project_id,
+            sprint_id,
+            type,
+            title,
+            status,
+            priority,
+            estimate,
+            position,
+            due_date::text AS due_date,
+            assignee_id,
+            NULL::text AS assignee_name
+        `,
+        [
+            data.projectId,
+            data.createdBy,
+            data.type,
+            data.title,
+            data.description,
+            data.status,
+            data.priority,
+            data.estimate
+        ]
+    );
+
+    return result.rows[0];
+}

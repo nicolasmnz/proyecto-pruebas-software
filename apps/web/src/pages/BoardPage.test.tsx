@@ -1,16 +1,21 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
-import { getBoard } from "../api/board";
+import { createWorkItem, getBoard } from "../api/board";
 import type { Board, BoardItem } from "../api/board";
 import { ApiError } from "../api/projects";
 
-vi.mock("../api/board", () => ({ getBoard: vi.fn() }));
+vi.mock("../api/board", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/board")>()),
+  getBoard: vi.fn(),
+  createWorkItem: vi.fn(),
+}));
 
 const mockedGetBoard = vi.mocked(getBoard);
+const mockedCreateWorkItem = vi.mocked(createWorkItem);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -98,7 +103,9 @@ describe("BoardPage", () => {
     expect(within(todo).getByText("Prioridad alta")).toBeInTheDocument();
     expect(within(todo).getByText("Error")).toBeInTheDocument();
     expect(within(inProgress).getByText("8 pts")).toBeInTheDocument();
-    expect(within(inProgress).getByLabelText("Asignado a Ana Pérez")).toBeInTheDocument();
+    expect(
+      within(inProgress).getByLabelText("Asignado a Ana Pérez"),
+    ).toBeInTheDocument();
     expect(within(todo).getAllByLabelText("Sin asignar")).toHaveLength(2);
     expect(within(done).getByText("Sin elementos")).toBeInTheDocument();
   });
@@ -141,5 +148,134 @@ describe("BoardPage", () => {
       await screen.findByRole("region", { name: "Por hacer" }),
     ).toBeInTheDocument();
     expect(mockedGetBoard).toHaveBeenCalledTimes(2);
+  });
+
+  describe("crear tareas", () => {
+    test("crea una tarea en la columna elegida y la muestra al final", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedCreateWorkItem.mockResolvedValue(
+        buildItem({
+          id: "99",
+          title: "Preparar demo",
+          type: "STORY",
+          priority: "HIGH",
+          estimate: 5,
+          status: "IN_PROGRESS",
+        }),
+      );
+
+      renderPage();
+
+      const inProgress = await screen.findByRole("region", {
+        name: "En progreso",
+      });
+
+      await userEvent.click(
+        within(inProgress).getByRole("button", { name: /Crear tarea/ }),
+      );
+
+      await userEvent.type(screen.getByLabelText(/Título/), "  Preparar demo ");
+      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "STORY");
+      await userEvent.selectOptions(screen.getByLabelText("Prioridad"), "HIGH");
+      await userEvent.type(screen.getByLabelText("Puntos"), "5");
+      await userEvent.click(screen.getByRole("button", { name: "Crear" }));
+
+      expect(mockedCreateWorkItem).toHaveBeenCalledWith(PROJECT_ID, {
+        title: "Preparar demo",
+        description: undefined,
+        type: "STORY",
+        priority: "HIGH",
+        estimate: 5,
+        status: "IN_PROGRESS",
+        createdBy: expect.any(String),
+      });
+
+      const items = await within(inProgress).findAllByRole("listitem");
+
+      expect(items).toHaveLength(2);
+      expect(within(items[1]).getByText("Preparar demo")).toBeInTheDocument();
+      expect(screen.queryByLabelText(/Título/)).not.toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        'Tarea "Preparar demo" creada.',
+      );
+    });
+
+    test("no envía el formulario sin título", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+
+      await userEvent.click(
+        within(todo).getByRole("button", { name: /Crear tarea/ }),
+      );
+      await userEvent.type(screen.getByLabelText(/Título/), "   ");
+      await userEvent.click(screen.getByRole("button", { name: "Crear" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "El título es obligatorio.",
+      );
+      expect(mockedCreateWorkItem).not.toHaveBeenCalled();
+    });
+
+    test("muestra el error de la API y conserva lo escrito", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedCreateWorkItem.mockRejectedValue(new Error("Error creando tarea"));
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+
+      await userEvent.click(
+        within(todo).getByRole("button", { name: /Crear tarea/ }),
+      );
+      await userEvent.type(screen.getByLabelText(/Título/), "Mi tarea");
+      await userEvent.click(screen.getByRole("button", { name: "Crear" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error creando tarea",
+      );
+      expect(screen.getByLabelText(/Título/)).toHaveValue("Mi tarea");
+      expect(within(todo).getAllByRole("listitem")).toHaveLength(2);
+    });
+
+    test("Cancelar y Escape cierran el formulario y devuelven el foco", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+      const addButton = () =>
+        within(todo).getByRole("button", { name: /Crear tarea/ });
+
+      await userEvent.click(addButton());
+      await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+      expect(screen.queryByLabelText(/Título/)).not.toBeInTheDocument();
+      await waitFor(() => expect(addButton()).toHaveFocus());
+
+      await userEvent.click(addButton());
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByLabelText(/Título/)).not.toBeInTheDocument();
+      await waitFor(() => expect(addButton()).toHaveFocus());
+    });
+
+    test("un proyecto archivado no permite crear tareas", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        project: { ...board.project, is_archived: true },
+      });
+
+      renderPage();
+
+      expect(
+        await screen.findByText(/Restáuralo para agregar tareas/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Crear tarea/ }),
+      ).not.toBeInTheDocument();
+    });
   });
 });

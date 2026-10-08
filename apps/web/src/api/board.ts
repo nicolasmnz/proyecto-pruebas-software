@@ -38,3 +38,33 @@ export function getBoard(
     { signal },
   );
 }
+
+export interface CreateWorkItemData {
+  title: string;
+  description?: string;
+  type: Exclude<WorkItemType, "EPIC">;
+  priority: WorkItemPriority;
+  status: WorkItemStatus;
+  estimate?: number;
+  createdBy: string;
+}
+
+// Coincide con el límite de la API (VARCHAR(200))
+export const MAX_WORK_ITEM_TITLE_LENGTH = 200;
+
+export function createWorkItem(
+  projectId: string,
+  data: CreateWorkItemData,
+): Promise<BoardItem> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/work-items`,
+    "No fue posible crear la tarea",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    },
+  );
+}

@@ -53,3 +53,34 @@
   font-size: 14px;
   text-align: center;
 }
+
+.kanban-column-list + .kanban-add-button,
+.kanban-column-list + .add-item-form,
+.kanban-column-empty + .kanban-add-button {
+  margin-top: 8px;
+}
+
+.kanban-add-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #44546f;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.kanban-add-button:hover {
+  background: #dfe1e6;
+}
+
+.kanban-add-button:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}

@@ -3,8 +3,9 @@ import { Link, useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import { ApiError } from "../api/projects";
-import { getBoard } from "../api/board";
-import type { Board } from "../api/board";
+import { createWorkItem, getBoard } from "../api/board";
+import type { Board, WorkItemStatus } from "../api/board";
+import type { AddItemValues } from "../components/AddItemForm";
 import KanbanBoard from "../components/KanbanBoard";
 
 import "./BoardPage.css";
@@ -14,9 +15,13 @@ type Result =
   | { status: "not-found" }
   | { status: "error"; message: string };
 
+const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
+
 function BoardPage() {
   const { projectId = "" } = useParams();
   const [attempt, setAttempt] = useState(0);
+  // Mensaje para lectores de pantalla tras crear una tarea
+  const [announcement, setAnnouncement] = useState("");
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -92,6 +97,34 @@ function BoardPage() {
 
   const { project, columns } = state.board;
 
+  async function handleCreateItem(
+    status: WorkItemStatus,
+    values: AddItemValues,
+  ) {
+    const item = await createWorkItem(project.id, {
+      ...values,
+      status,
+      createdBy: TEMP_USER_ID,
+    });
+
+    // La tarea nueva queda al final de su columna, sin recargar el tablero
+    setResult({
+      key: requestKey,
+      result: {
+        status: "success",
+        board: {
+          project,
+          columns: columns.map((column) =>
+            column.status === status
+              ? { ...column, items: [...column.items, item] }
+              : column,
+          ),
+        },
+      },
+    });
+    setAnnouncement(`Tarea "${item.title}" creada.`);
+  }
+
   return (
     <div className="board-page">
       <nav aria-label="Ruta de navegación" className="breadcrumb">
@@ -112,7 +145,20 @@ function BoardPage() {
 
       <h1 className="board-title">Tablero</h1>
 
-      <KanbanBoard columns={columns} />
+      <p className="sr-only" role="status">
+        {announcement}
+      </p>
+
+      {project.is_archived && (
+        <p className="board-archived">
+          Este proyecto está archivado. Restáuralo para agregar tareas.
+        </p>
+      )}
+
+      <KanbanBoard
+        columns={columns}
+        onCreateItem={project.is_archived ? undefined : handleCreateItem}
+      />
     </div>
   );
 }

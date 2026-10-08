@@ -36,3 +36,12 @@
 .board-message p {
   margin: 0 0 8px;
 }
+
+.board-archived {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #f1f2f4;
+  color: #44546f;
+  font-size: 14px;
+}
