@@ -1,0 +1,104 @@
+.task-dialog {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.task-dialog:focus {
+  outline: none;
+}
+
+.task-dialog-status {
+  margin: 0;
+  color: #44546f;
+  font-size: 14px;
+}
+
+.task-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.task-dialog-header h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.task-dialog-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.task-dialog-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #44546f;
+  cursor: pointer;
+}
+
+.task-dialog-close:hover {
+  background: #f1f2f4;
+}
+
+.task-dialog-close:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
+}
+
+.task-dialog-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px 16px;
+  margin: 0 0 16px;
+}
+
+.task-dialog-meta dt {
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.task-dialog-meta dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.task-dialog-section {
+  margin: 0 0 4px;
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.task-dialog-description {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.task-dialog-description.is-empty {
+  color: #626f86;
+}
+
+.task-dialog-actions {
+  margin-top: 16px;
+}

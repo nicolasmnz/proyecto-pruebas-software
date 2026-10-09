@@ -8,6 +8,14 @@ export function formatDate(value: string): string {
   return dateFormatter.format(new Date(value));
 }
 
+// Fecha sin hora (AAAA-MM-DD): se interpreta como día local, no como UTC,
+// para que no se corra al día anterior en husos al oeste de Greenwich
+export function formatDueDate(value: string): string {
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+
+  return dateFormatter.format(new Date(year, month - 1, day));
+}
+
 export function getInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
 
@@ -46,9 +54,5 @@ export function getAvatarColor(id: string): string {
 
 // Minúsculas y sin tildes, para que "gestion" encuentre "Gestión"
 export function normalizeText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }

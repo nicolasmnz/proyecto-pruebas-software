@@ -27,8 +27,17 @@ CREATE TABLE projects (
 
     is_archived BOOLEAN NOT NULL DEFAULT FALSE,
 
+    -- Límite de trabajo en curso por columna del tablero, p. ej.
+    -- {"IN_PROGRESS": 3}. Una columna sin clave no tiene límite
+    wip_limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_projects_wip_limits
+        CHECK (
+            jsonb_typeof(wip_limits) = 'object'
+        ),
 
     CONSTRAINT fk_projects_created_by
         FOREIGN KEY (created_by)
@@ -146,6 +155,13 @@ CREATE TABLE work_items (
     -- Story Points / estimación
     estimate INTEGER,
 
+    -- Identificador legible, correlativo por proyecto (#1, #2, ...).
+    -- Lo asigna el trigger trg_work_items_item_number al insertar
+    item_number INTEGER NOT NULL,
+
+    -- Las tareas terminadas se archivan para despejar el tablero
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+
     -- Orden dentro de una columna Kanban
     position INTEGER NOT NULL DEFAULT 0,
 
@@ -217,6 +233,14 @@ CREATE TABLE work_items (
     CONSTRAINT chk_work_items_position
         CHECK (
             position >= 0
+        ),
+
+    CONSTRAINT uq_work_items_project_number
+        UNIQUE (project_id, item_number),
+
+    CONSTRAINT chk_work_items_item_number
+        CHECK (
+            item_number > 0
         ),
 
     -- Evita que un elemento sea padre de sí mismo
@@ -432,6 +456,32 @@ CREATE TRIGGER trg_comments_updated_at
 BEFORE UPDATE ON comments
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+
+-- FUNCION PARA NUMERAR work_items POR PROYECTO
+
+CREATE OR REPLACE FUNCTION assign_work_item_number()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.item_number IS NULL THEN
+        -- Serializa las altas del mismo proyecto para no repetir números
+        PERFORM pg_advisory_xact_lock(hashtext(NEW.project_id::text));
+
+        SELECT COALESCE(MAX(item_number), 0) + 1
+        INTO NEW.item_number
+        FROM work_items
+        WHERE project_id = NEW.project_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trg_work_items_item_number
+BEFORE INSERT ON work_items
+FOR EACH ROW
+EXECUTE FUNCTION assign_work_item_number();
 
 
 COMMIT;
