@@ -14,6 +14,7 @@ import {
 import type { Board, BoardItem, WorkItemStatus } from "../api/board";
 import type { AddItemValues } from "../components/AddItemForm";
 import ArchivedItems from "../components/ArchivedItems";
+import BoardProgress from "../components/BoardProgress";
 import KanbanBoard from "../components/KanbanBoard";
 
 import "./BoardPage.css";
@@ -260,6 +261,11 @@ function BoardPage() {
           {actionError}
         </p>
       )}
+
+      <BoardProgress
+        columns={state.board.columns}
+        archived={state.board.archived}
+      />
 
       <KanbanBoard
         columns={state.board.columns}

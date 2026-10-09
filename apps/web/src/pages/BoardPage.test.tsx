@@ -615,4 +615,78 @@ describe("BoardPage", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("progreso", () => {
+    test("la barra refleja las tareas hechas y se actualiza al mover y archivar", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({
+          id: "1",
+          item_number: 1,
+          title: "Diseñar login",
+          status: "DONE",
+        }),
+      );
+      mockedArchiveWorkItem.mockResolvedValue(
+        buildItem({
+          id: "1",
+          item_number: 1,
+          title: "Diseñar login",
+          status: "DONE",
+          is_archived: true,
+        }),
+      );
+
+      renderPage();
+
+      // 3 tareas, ninguna hecha
+      expect(
+        await screen.findByText("0 de 3 tareas hechas · 0 %"),
+      ).toBeInTheDocument();
+
+      await userEvent.selectOptions(
+        screen.getByLabelText("Mover «Diseñar login» a"),
+        "Hecho",
+      );
+
+      expect(
+        await screen.findByText("1 de 3 tareas hechas · 33 %"),
+      ).toBeInTheDocument();
+
+      // Archivar no cambia el progreso: sigue contando como hecha
+      await userEvent.click(
+        screen.getByRole("button", { name: "Archivar «Diseñar login»" }),
+      );
+
+      await screen.findByRole("button", { name: "Archivadas (1)" });
+
+      expect(
+        screen.getByText("1 de 3 tareas hechas · 33 %"),
+      ).toBeInTheDocument();
+    });
+
+    test("crear una tarea aumenta el total", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedCreateWorkItem.mockResolvedValue(
+        buildItem({ id: "99", item_number: 4, title: "Nueva" }),
+      );
+
+      renderPage();
+
+      await screen.findByText("0 de 3 tareas hechas · 0 %");
+
+      await userEvent.click(
+        within(screen.getByRole("region", { name: "Por hacer" })).getByRole(
+          "button",
+          { name: /Crear tarea/ },
+        ),
+      );
+      await userEvent.type(screen.getByLabelText(/Título/), "Nueva");
+      await userEvent.click(screen.getByRole("button", { name: "Crear" }));
+
+      expect(
+        await screen.findByText("0 de 4 tareas hechas · 0 %"),
+      ).toBeInTheDocument();
+    });
+  });
 });

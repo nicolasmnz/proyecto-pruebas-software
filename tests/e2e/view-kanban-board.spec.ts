@@ -172,6 +172,11 @@ test.describe("archivar tareas terminadas", () => {
 
     await expect(done.getByText("Sin elementos")).toBeVisible();
 
+    // Archivar no cambia el progreso: la tarea sigue contando como hecha
+    await expect(
+      page.getByRole("progressbar", { name: "Progreso" }),
+    ).toHaveAttribute("aria-valuenow", "100");
+
     // El archivado persiste al recargar
     await page.reload();
 
