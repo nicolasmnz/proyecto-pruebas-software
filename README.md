@@ -26,11 +26,11 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 ## Integrantes
 
-| Nombre | Rol | GitHub |
-| ------ | --- | ------ |
-| _pendiente_ | Líder de equipo | |
-| _pendiente_ | | |
-| _pendiente_ | | |
+| Nombre        | Rol en el Equipo      | Rol USM | GitHub |
+| ------        | ---                   | ------  | ---  |
+| Nicolas Muñoz | Testing y Ambiente    | 202104641-0| [nicolasmnz](https://github.com/nicolasmnz)|
+| Sergio Rojas  | Desarrollador FrontEnd| 202273619-4| [Mochytk](https://github.com/Mochytk)|
+| Hans Toledo   | Desarrollador BackEnd | 201704591-4| [HanstoC](https://github.com/HanstoC)|
 
 ## Stack
 
