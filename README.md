@@ -117,7 +117,7 @@ El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql
 
 ### Migraciones
 
-Una base **nueva** (o tras `npm run db:reset`) ya incluye todo. Si tienes una base creada con un esquema anterior y no quieres perder sus datos, aplica en orden los scripts de `apps/api/bd/migrations/` (son idempotentes):
+Una base **nueva** (o tras `npm run db:reset`) ya incluye todo. Se tiene una base creada con un esquema anterior y no quieres perder sus datos, aplica en orden los scripts de `apps/api/bd/migrations/` (son idempotentes):
 
 ```bash
 docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/bd/migrations/001-work-item-number.sql
@@ -166,7 +166,7 @@ npm run build
 
 ### Integración
 
-Usan una base de datos PostgreSQL **aislada** (`proyecto_pruebas_test`, puerto 5434) que se vacía entre pruebas; nunca toca la base de desarrollo.
+Se usa una base de datos PostgreSQL **aislada** (`proyecto_pruebas_test`, puerto 5434) que se vacía entre pruebas; nunca toca la base de desarrollo.
 
 ```bash
 npm run db:test:up
@@ -179,6 +179,19 @@ npm run test:integration
 > docker compose -f compose.test.yml down -v
 > npm run db:test:up
 > ```
+## Ejecucion
+Para ejecutar todas las pruebas necesarias, se debe de
+
+```bash
+docker compose -f compose.test.yml ps
+npm run db:test:up
+
+npm run lint
+npm run typecheck
+npm run build
+
+npm run test:all
+```
 
 ### E2E
 
