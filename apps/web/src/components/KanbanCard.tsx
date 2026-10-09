@@ -1,5 +1,11 @@
 import { useId } from "react";
-import { Bug, CheckSquare, BookOpen } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  BookOpen,
+  Bug,
+  CheckSquare,
+} from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
 import type {
@@ -42,6 +48,10 @@ interface KanbanCardProps {
   item: BoardItem;
   // Sin esta función la tarjeta es de solo lectura
   onMove?: (item: BoardItem, status: WorkItemStatus) => void;
+  // Solo en tareas terminadas: la sacan del tablero
+  onArchive?: (item: BoardItem) => void;
+  // Solo en tareas archivadas: la devuelven a Hecho
+  onRestore?: (item: BoardItem) => void;
   onDragStart?: (item: BoardItem) => void;
   onDragEnd?: () => void;
   isDragging?: boolean;
@@ -50,6 +60,8 @@ interface KanbanCardProps {
 function KanbanCard({
   item,
   onMove,
+  onArchive,
+  onRestore,
   onDragStart,
   onDragEnd,
   isDragging = false,
@@ -133,6 +145,30 @@ function KanbanCard({
               ))}
           </select>
         </div>
+      )}
+
+      {onArchive && (
+        <button
+          type="button"
+          className="kanban-card-action"
+          aria-label={`Archivar «${item.title}»`}
+          onClick={() => onArchive(item)}
+        >
+          <Archive size={14} aria-hidden="true" />
+          Archivar
+        </button>
+      )}
+
+      {onRestore && (
+        <button
+          type="button"
+          className="kanban-card-action"
+          aria-label={`Restaurar «${item.title}»`}
+          onClick={() => onRestore(item)}
+        >
+          <ArchiveRestore size={14} aria-hidden="true" />
+          Restaurar
+        </button>
       )}
     </article>
   );

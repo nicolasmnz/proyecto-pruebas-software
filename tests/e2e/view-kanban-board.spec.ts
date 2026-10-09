@@ -115,7 +115,9 @@ test.describe("mover tareas entre columnas", () => {
 
     await expect(done.getByText("Tarea a mover")).toBeVisible();
     await expect(
-      page.getByRole("region", { name: "Por hacer" }).getByText("Sin elementos"),
+      page
+        .getByRole("region", { name: "Por hacer" })
+        .getByText("Sin elementos"),
     ).toBeVisible();
 
     await page.reload();
@@ -126,3 +128,64 @@ test.describe("mover tareas entre columnas", () => {
   });
 });
 
+test.describe("archivar tareas terminadas", () => {
+  let project: { id: string };
+
+  test.beforeEach(async ({ request }) => {
+    const created = await request.post(`${API_URL}/projects`, {
+      data: {
+        name: `Proyecto Archivar ${Date.now()}`,
+        createdBy: SEED_USER_ID,
+      },
+    });
+
+    expect(created.status()).toBe(201);
+
+    project = await created.json();
+
+    const item = await request.post(
+      `${API_URL}/projects/${project.id}/work-items`,
+      {
+        data: {
+          title: "Tarea terminada",
+          status: "DONE",
+          createdBy: SEED_USER_ID,
+        },
+      },
+    );
+
+    expect(item.status()).toBe(201);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${API_URL}/projects/${project.id}`);
+  });
+
+  test("usuario archiva y restaura una tarea de Hecho", async ({ page }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    const done = page.getByRole("region", { name: "Hecho" });
+
+    await page
+      .getByRole("button", { name: "Archivar «Tarea terminada»" })
+      .click();
+
+    await expect(done.getByText("Sin elementos")).toBeVisible();
+
+    // El archivado persiste al recargar
+    await page.reload();
+
+    await expect(
+      page.getByRole("region", { name: "Hecho" }).getByText("Sin elementos"),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Archivadas (1)" }).click();
+    await page
+      .getByRole("button", { name: "Restaurar «Tarea terminada»" })
+      .click();
+
+    await expect(
+      page.getByRole("region", { name: "Hecho" }).getByText("Tarea terminada"),
+    ).toBeVisible();
+  });
+});

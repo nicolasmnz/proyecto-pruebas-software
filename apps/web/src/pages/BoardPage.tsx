@@ -5,12 +5,15 @@ import { ChevronRight } from "lucide-react";
 import { ApiError } from "../api/projects";
 import {
   STATUS_LABELS,
+  archiveWorkItem,
   createWorkItem,
   getBoard,
   moveWorkItem,
+  restoreWorkItem,
 } from "../api/board";
 import type { Board, BoardItem, WorkItemStatus } from "../api/board";
 import type { AddItemValues } from "../components/AddItemForm";
+import ArchivedItems from "../components/ArchivedItems";
 import KanbanBoard from "../components/KanbanBoard";
 
 import "./BoardPage.css";
@@ -27,7 +30,7 @@ function BoardPage() {
   const [attempt, setAttempt] = useState(0);
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
-  const [moveError, setMoveError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -101,7 +104,21 @@ function BoardPage() {
     );
   }
 
-  const { project, columns } = state.board;
+  const { project } = state.board;
+
+  // Aplica un cambio al tablero ya cargado, sin volver a pedirlo
+  function updateBoard(change: (board: Board) => Board) {
+    setResult((current) => {
+      if (current?.key !== requestKey || current.result.status !== "success") {
+        return current;
+      }
+
+      return {
+        key: requestKey,
+        result: { status: "success", board: change(current.result.board) },
+      };
+    });
+  }
 
   async function handleCreateItem(
     status: WorkItemStatus,
@@ -114,20 +131,14 @@ function BoardPage() {
     });
 
     // La tarea nueva queda al final de su columna, sin recargar el tablero
-    setResult({
-      key: requestKey,
-      result: {
-        status: "success",
-        board: {
-          project,
-          columns: columns.map((column) =>
-            column.status === status
-              ? { ...column, items: [...column.items, item] }
-              : column,
-          ),
-        },
-      },
-    });
+    updateBoard((board) => ({
+      ...board,
+      columns: board.columns.map((column) =>
+        column.status === status
+          ? { ...column, items: [...column.items, item] }
+          : column,
+      ),
+    }));
     setAnnouncement(`Tarea "${item.title}" creada.`);
   }
 
@@ -137,46 +148,79 @@ function BoardPage() {
     }
 
     try {
-      setMoveError(null);
+      setActionError(null);
 
       const moved = await moveWorkItem(project.id, item.id, status);
 
       // La tarea sale de su columna y queda al final de la de destino
-      setResult((current) => {
-        if (
-          current?.key !== requestKey ||
-          current.result.status !== "success"
-        ) {
-          return current;
-        }
-
-        const { board } = current.result;
-
-        return {
-          key: requestKey,
-          result: {
-            status: "success",
-            board: {
-              ...board,
-              columns: board.columns.map((column) => ({
-                ...column,
-                items:
-                  column.status === status
-                    ? [...column.items, moved]
-                    : column.items.filter(({ id }) => id !== item.id),
-              })),
-            },
-          },
-        };
-      });
+      updateBoard((board) => ({
+        ...board,
+        columns: board.columns.map((column) => ({
+          ...column,
+          items:
+            column.status === status
+              ? [...column.items, moved]
+              : column.items.filter(({ id }) => id !== item.id),
+        })),
+      }));
       setAnnouncement(
         `Tarea "${item.title}" movida a ${STATUS_LABELS[status]}.`,
       );
     } catch (error) {
-      setMoveError(
+      setActionError(
         error instanceof Error
           ? error.message
           : "No fue posible mover la tarea.",
+      );
+    }
+  }
+
+  async function handleArchiveItem(item: BoardItem) {
+    try {
+      setActionError(null);
+
+      const archived = await archiveWorkItem(project.id, item.id);
+
+      updateBoard((board) => ({
+        ...board,
+        columns: board.columns.map((column) => ({
+          ...column,
+          items: column.items.filter(({ id }) => id !== item.id),
+        })),
+        archived: [archived, ...board.archived],
+      }));
+      setAnnouncement(`Tarea "${item.title}" archivada.`);
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible archivar la tarea.",
+      );
+    }
+  }
+
+  async function handleRestoreItem(item: BoardItem) {
+    try {
+      setActionError(null);
+
+      const restored = await restoreWorkItem(project.id, item.id);
+
+      // Vuelve al final de su columna (Hecho)
+      updateBoard((board) => ({
+        ...board,
+        columns: board.columns.map((column) =>
+          column.status === restored.status
+            ? { ...column, items: [...column.items, restored] }
+            : column,
+        ),
+        archived: board.archived.filter(({ id }) => id !== item.id),
+      }));
+      setAnnouncement(`Tarea "${item.title}" restaurada.`);
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible restaurar la tarea.",
       );
     }
   }
@@ -211,16 +255,22 @@ function BoardPage() {
         </p>
       )}
 
-      {moveError && (
+      {actionError && (
         <p role="alert" className="form-error board-error">
-          {moveError}
+          {actionError}
         </p>
       )}
 
       <KanbanBoard
-        columns={columns}
+        columns={state.board.columns}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
+        onArchiveItem={project.is_archived ? undefined : handleArchiveItem}
+      />
+
+      <ArchivedItems
+        items={state.board.archived}
+        onRestore={project.is_archived ? undefined : handleRestoreItem}
       />
     </div>
   );

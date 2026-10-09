@@ -410,4 +410,126 @@ describe("Tablero Kanban API", () => {
       expect(response.status).toBe(409);
     });
   });
+
+  describe("archivado de tareas", () => {
+    async function createItem(title: string, status: string, position = 0) {
+      const result = await pool.query(
+        `
+        INSERT INTO work_items
+          (project_id, created_by, type, title, status, position)
+        VALUES ($1, $2, 'TASK', $3, $4, $5)
+        RETURNING id
+        `,
+        [projectId, userId, title, status, position],
+      );
+
+      return result.rows[0].id as string;
+    }
+
+    const base = (itemId: string) =>
+      `/api/projects/${projectId}/work-items/${itemId}`;
+
+    test("archivar saca la tarea de las columnas y la lista como archivada", async () => {
+      const done = await createItem("Terminada", "DONE");
+      await createItem("Pendiente", "TODO");
+
+      const response = await request(app).patch(`${base(done)}/archive`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({ id: done, is_archived: true });
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.columns[2].items).toEqual([]);
+      expect(board.body.columns[0].items).toHaveLength(1);
+      expect(
+        board.body.archived.map((item: { title: string }) => item.title),
+      ).toEqual(["Terminada"]);
+    });
+
+    test("solo se pueden archivar tareas en Hecho", async () => {
+      const todo = await createItem("Pendiente", "TODO");
+
+      const response = await request(app).patch(`${base(todo)}/archive`);
+
+      expect(response.status).toBe(409);
+    });
+
+    test("restaurar devuelve la tarea al final de Hecho", async () => {
+      const first = await createItem("Primera", "DONE", 0);
+      await request(app).patch(`${base(first)}/archive`);
+      await createItem("Segunda", "DONE", 0);
+
+      const response = await request(app).patch(`${base(first)}/restore`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        is_archived: false,
+        status: "DONE",
+        position: 1,
+      });
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(
+        board.body.columns[2].items.map((item: { title: string }) => item.title),
+      ).toEqual(["Segunda", "Primera"]);
+      expect(board.body.archived).toEqual([]);
+    });
+
+    test("archivar y restaurar dos veces es inocuo", async () => {
+      const done = await createItem("Terminada", "DONE");
+
+      const archive = await request(app).patch(`${base(done)}/archive`);
+      const archiveAgain = await request(app).patch(`${base(done)}/archive`);
+      const restore = await request(app).patch(`${base(done)}/restore`);
+      const restoreAgain = await request(app).patch(`${base(done)}/restore`);
+
+      expect(archive.status).toBe(200);
+      expect(archiveAgain.status).toBe(200);
+      expect(restore.status).toBe(200);
+      expect(restoreAgain.status).toBe(200);
+      expect(restoreAgain.body.is_archived).toBe(false);
+    });
+
+    test("una tarea archivada no se puede mover", async () => {
+      const done = await createItem("Terminada", "DONE");
+      await request(app).patch(`${base(done)}/archive`);
+
+      const response = await request(app)
+        .patch(base(done))
+        .send({ status: "TODO" });
+
+      expect(response.status).toBe(409);
+    });
+
+    test("responde 404 si la tarea o el proyecto no existen", async () => {
+      const done = await createItem("Terminada", "DONE");
+
+      const missingItem = await request(app).patch(
+        `${base("99999999-9999-9999-9999-999999999999")}/archive`,
+      );
+      const invalidItem = await request(app).patch(`${base("nope")}/restore`);
+      const missingProject = await request(app).patch(
+        `/api/projects/99999999-9999-9999-9999-999999999999/work-items/${done}/archive`,
+      );
+
+      expect(missingItem.status).toBe(404);
+      expect(invalidItem.status).toBe(404);
+      expect(missingProject.status).toBe(404);
+    });
+
+    test("responde 409 si el proyecto está archivado", async () => {
+      const done = await createItem("Terminada", "DONE");
+
+      await pool.query("UPDATE projects SET is_archived = TRUE WHERE id = $1", [
+        projectId,
+      ]);
+
+      const response = await request(app).patch(`${base(done)}/archive`);
+
+      expect(response.status).toBe(409);
+    });
+  });
 });
+

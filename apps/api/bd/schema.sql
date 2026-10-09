@@ -150,6 +150,9 @@ CREATE TABLE work_items (
     -- Lo asigna el trigger trg_work_items_item_number al insertar
     item_number INTEGER NOT NULL,
 
+    -- Las tareas terminadas se archivan para despejar el tablero
+    is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+
     -- Orden dentro de una columna Kanban
     position INTEGER NOT NULL DEFAULT 0,
 

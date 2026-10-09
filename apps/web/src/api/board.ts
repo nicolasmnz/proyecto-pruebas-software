@@ -15,6 +15,7 @@ export interface BoardItem {
   id: string;
   // Identificador correlativo dentro del proyecto (#1, #2, ...)
   item_number: number;
+  is_archived: boolean;
   type: WorkItemType;
   title: string;
   status: WorkItemStatus;
@@ -34,6 +35,8 @@ export interface BoardColumn {
 export interface Board {
   project: Project;
   columns: BoardColumn[];
+  // Tareas terminadas que se sacaron del tablero
+  archived: BoardItem[];
 }
 
 export function getBoard(
@@ -92,5 +95,42 @@ export function moveWorkItem(
       },
       body: JSON.stringify({ status }),
     },
+  );
+}
+
+function setArchived(
+  projectId: string,
+  itemId: string,
+  action: "archive" | "restore",
+  fallbackMessage: string,
+): Promise<BoardItem> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}/${action}`,
+    fallbackMessage,
+    { method: "PATCH" },
+  );
+}
+
+export function archiveWorkItem(
+  projectId: string,
+  itemId: string,
+): Promise<BoardItem> {
+  return setArchived(
+    projectId,
+    itemId,
+    "archive",
+    "No fue posible archivar la tarea",
+  );
+}
+
+export function restoreWorkItem(
+  projectId: string,
+  itemId: string,
+): Promise<BoardItem> {
+  return setArchived(
+    projectId,
+    itemId,
+    "restore",
+    "No fue posible restaurar la tarea",
   );
 }

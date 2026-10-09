@@ -10,7 +10,13 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
-import { createWorkItem, getBoard, moveWorkItem } from "../api/board";
+import {
+  archiveWorkItem,
+  createWorkItem,
+  getBoard,
+  moveWorkItem,
+  restoreWorkItem,
+} from "../api/board";
 import type { Board, BoardItem } from "../api/board";
 import { ApiError } from "../api/projects";
 
@@ -19,11 +25,15 @@ vi.mock("../api/board", async (importOriginal) => ({
   getBoard: vi.fn(),
   createWorkItem: vi.fn(),
   moveWorkItem: vi.fn(),
+  archiveWorkItem: vi.fn(),
+  restoreWorkItem: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
 const mockedCreateWorkItem = vi.mocked(createWorkItem);
 const mockedMoveWorkItem = vi.mocked(moveWorkItem);
+const mockedArchiveWorkItem = vi.mocked(archiveWorkItem);
+const mockedRestoreWorkItem = vi.mocked(restoreWorkItem);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -31,6 +41,7 @@ function buildItem(overrides: Partial<BoardItem>): BoardItem {
   return {
     id: "30000000-0000-0000-0000-000000000010",
     item_number: 1,
+    is_archived: false,
     type: "TASK",
     title: "Tarea",
     status: "TODO",
@@ -87,6 +98,7 @@ const board: Board = {
     },
     { status: "DONE", items: [] },
   ],
+  archived: [],
 };
 
 function renderPage() {
@@ -444,6 +456,163 @@ describe("BoardPage", () => {
         screen.queryByLabelText(/Mover «Diseñar login» a/),
       ).not.toBeInTheDocument();
       expect(card).toHaveAttribute("draggable", "false");
+    });
+  });
+
+  describe("archivar tareas", () => {
+    const doneItem = buildItem({
+      id: "10",
+      item_number: 10,
+      title: "Crear proyectos",
+      status: "DONE",
+    });
+
+    const boardWithDone: Board = {
+      ...board,
+      columns: board.columns.map((column) =>
+        column.status === "DONE" ? { ...column, items: [doneItem] } : column,
+      ),
+    };
+
+    test("solo las tareas de Hecho tienen botón Archivar", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+
+      renderPage();
+
+      await screen.findByRole("region", { name: "Hecho" });
+
+      expect(
+        screen.getAllByRole("button", { name: /^Archivar «/ }),
+      ).toHaveLength(1);
+      expect(
+        screen.getByRole("button", { name: "Archivar «Crear proyectos»" }),
+      ).toBeInTheDocument();
+    });
+
+    test("archivar saca la tarea de Hecho y la lista en Archivadas", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+      mockedArchiveWorkItem.mockResolvedValue({
+        ...doneItem,
+        is_archived: true,
+      });
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: "Archivar «Crear proyectos»",
+        }),
+      );
+
+      expect(mockedArchiveWorkItem).toHaveBeenCalledWith(PROJECT_ID, "10");
+
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      await waitFor(() =>
+        expect(within(done).getByText("Sin elementos")).toBeInTheDocument(),
+      );
+      expect(
+        screen.getByRole("button", { name: "Archivadas (1)" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        'Tarea "Crear proyectos" archivada.',
+      );
+    });
+
+    test("restaurar devuelve la tarea a Hecho", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        archived: [{ ...doneItem, is_archived: true }],
+      });
+      mockedRestoreWorkItem.mockResolvedValue(doneItem);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Archivadas (1)" }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "Restaurar «Crear proyectos»" }),
+      );
+
+      expect(mockedRestoreWorkItem).toHaveBeenCalledWith(PROJECT_ID, "10");
+
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      expect(
+        await within(done).findByText("Crear proyectos"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Archivadas (0)" }),
+      ).toBeInTheDocument();
+    });
+
+    test("la sección Archivadas está plegada y se despliega", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        archived: [{ ...doneItem, is_archived: true }],
+      });
+
+      renderPage();
+
+      const toggle = await screen.findByRole("button", {
+        name: "Archivadas (1)",
+      });
+
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByText("Crear proyectos")).not.toBeVisible();
+
+      await userEvent.click(toggle);
+
+      expect(toggle).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByText("Crear proyectos")).toBeVisible();
+    });
+
+    test("si la API falla muestra el error y la tarea sigue en Hecho", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+      mockedArchiveWorkItem.mockRejectedValue(
+        new Error("Error archivando tarea"),
+      );
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: "Archivar «Crear proyectos»",
+        }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error archivando tarea",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Hecho" })).getByText(
+          "Crear proyectos",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("un proyecto archivado no permite archivar ni restaurar", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...boardWithDone,
+        project: { ...board.project, is_archived: true },
+        archived: [
+          { ...doneItem, id: "11", title: "Vieja", is_archived: true },
+        ],
+      });
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Archivadas (1)" }),
+      );
+
+      expect(
+        screen.queryByRole("button", { name: /^Archivar «/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /^Restaurar «/ }),
+      ).not.toBeInTheDocument();
     });
   });
 });

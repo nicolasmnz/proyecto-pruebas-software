@@ -5,9 +5,11 @@ import { isUuid } from '../utils/uuid.js';
 import { findProjectById } from '../repositories/project.repository.js';
 import {
     createWorkItem,
+    findArchivedItems,
     findBoardItem,
     findBoardItems,
-    moveWorkItem
+    moveWorkItem,
+    setWorkItemArchived
 } from '../repositories/workitem.repository.js';
 
 // Coinciden con los CHECK y VARCHAR de work_items; las épicas no se crean desde el tablero
@@ -37,14 +39,18 @@ export async function getBoard(
             });
         }
 
-        const items = await findBoardItems(project.id);
+        const [items, archived] = await Promise.all([
+            findBoardItems(project.id),
+            findArchivedItems(project.id)
+        ]);
 
         return res.status(200).json({
             project,
             columns: BOARD_STATUSES.map((status) => ({
                 status,
                 items: items.filter((item) => item.status === status)
-            }))
+            })),
+            archived
         });
 
     } catch (error) {
@@ -219,6 +225,12 @@ export async function patchWorkItem(
             });
         }
 
+        if (item.is_archived) {
+            return res.status(409).json({
+                message: 'La tarea está archivada. Restáurala para moverla'
+            });
+        }
+
         // Soltar la tarea en su propia columna no cambia nada
         if (item.status === status) {
             return res.status(200).json(item);
@@ -233,6 +245,94 @@ export async function patchWorkItem(
 
         return res.status(500).json({
             message: 'Error moviendo tarea'
+        });
+    }
+}
+
+
+async function setArchived(
+    req: Request<IdParams & { itemId: string }>,
+    res: Response,
+    archived: boolean
+) {
+    const { id, itemId } = req.params;
+
+    if (!isUuid(id)) {
+        return res.status(404).json({
+            message: 'Proyecto no encontrado'
+        });
+    }
+
+    const project = await findProjectById(id);
+
+    if (!project) {
+        return res.status(404).json({
+            message: 'Proyecto no encontrado'
+        });
+    }
+
+    const item = isUuid(itemId)
+        ? await findBoardItem(project.id, itemId)
+        : undefined;
+
+    if (!item) {
+        return res.status(404).json({
+            message: 'Tarea no encontrada'
+        });
+    }
+
+    if (project.is_archived) {
+        return res.status(409).json({
+            message: 'El proyecto está archivado. Restáuralo para modificar tareas'
+        });
+    }
+
+    if (archived && item.status !== 'DONE') {
+        return res.status(409).json({
+            message: 'Solo se pueden archivar tareas que están en Hecho'
+        });
+    }
+
+    // Ya está en el estado pedido: no hay nada que cambiar
+    if (item.is_archived === archived) {
+        return res.status(200).json(item);
+    }
+
+    return res
+        .status(200)
+        .json(await setWorkItemArchived(project.id, itemId, archived));
+}
+
+
+export async function patchArchiveWorkItem(
+    req: Request<IdParams & { itemId: string }>,
+    res: Response
+) {
+    try {
+        return await setArchived(req, res, true);
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'Error archivando tarea'
+        });
+    }
+}
+
+
+export async function patchRestoreWorkItem(
+    req: Request<IdParams & { itemId: string }>,
+    res: Response
+) {
+    try {
+        return await setArchived(req, res, false);
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'Error restaurando tarea'
         });
     }
 }

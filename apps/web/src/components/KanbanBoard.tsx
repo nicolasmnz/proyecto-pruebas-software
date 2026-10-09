@@ -18,9 +18,16 @@ interface KanbanBoardProps {
   ) => Promise<void>;
   // Sin esta función las tareas no se pueden mover
   onMoveItem?: (item: BoardItem, status: WorkItemStatus) => void;
+  // Sin esta función las tareas terminadas no se pueden archivar
+  onArchiveItem?: (item: BoardItem) => void;
 }
 
-function KanbanBoard({ columns, onCreateItem, onMoveItem }: KanbanBoardProps) {
+function KanbanBoard({
+  columns,
+  onCreateItem,
+  onMoveItem,
+  onArchiveItem,
+}: KanbanBoardProps) {
   const [dragged, setDragged] = useState<BoardItem | null>(null);
   const [dropTarget, setDropTarget] = useState<WorkItemStatus | null>(null);
   const [addingTo, setAddingTo] = useState<WorkItemStatus | null>(null);
@@ -87,6 +94,9 @@ function KanbanBoard({ columns, onCreateItem, onMoveItem }: KanbanBoardProps) {
                     <KanbanCard
                       item={item}
                       onMove={onMoveItem}
+                      onArchive={
+                        column.status === "DONE" ? onArchiveItem : undefined
+                      }
                       onDragStart={setDragged}
                       onDragEnd={() => {
                         setDragged(null);

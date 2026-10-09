@@ -1,27 +1,38 @@
 import pool from '../config/database.js';
 
+// Forma común de un elemento del tablero en todas las consultas
+const BOARD_ITEM_COLUMNS = `
+    w.id,
+    w.item_number,
+    w.is_archived,
+    w.project_id,
+    w.sprint_id,
+    w.type,
+    w.title,
+    w.status,
+    w.priority,
+    w.estimate,
+    w.position,
+    w.due_date::text AS due_date,
+    w.assignee_id,
+    u.name AS assignee_name
+`;
+
+const BOARD_ITEM_FROM = `
+    FROM work_items w
+    LEFT JOIN users u ON u.id = w.assignee_id
+`;
+
 // El tablero muestra el trabajo ejecutable; las épicas solo agrupan
 export async function findBoardItems(projectId: string) {
     const result = await pool.query(
         `
         SELECT
-            w.id,
-            w.item_number,
-            w.project_id,
-            w.sprint_id,
-            w.type,
-            w.title,
-            w.status,
-            w.priority,
-            w.estimate,
-            w.position,
-            w.due_date::text AS due_date,
-            w.assignee_id,
-            u.name AS assignee_name
-        FROM work_items w
-        LEFT JOIN users u ON u.id = w.assignee_id
+            ${BOARD_ITEM_COLUMNS}
+        ${BOARD_ITEM_FROM}
         WHERE w.project_id = $1
           AND w.type <> 'EPIC'
+          AND NOT w.is_archived
         ORDER BY w.position ASC, w.created_at ASC
         `,
         [projectId]
@@ -61,12 +72,13 @@ export async function createWorkItem(data: CreateWorkItemData) {
             (
                 SELECT COALESCE(MAX(position) + 1, 0)
                 FROM work_items
-                WHERE project_id = $1 AND status = $6::varchar
+                WHERE project_id = $1 AND status = $6::varchar AND NOT is_archived
             )
         )
         RETURNING
             id,
             item_number,
+            is_archived,
             project_id,
             sprint_id,
             type,
@@ -98,21 +110,8 @@ export async function findBoardItem(projectId: string, itemId: string) {
     const result = await pool.query(
         `
         SELECT
-            w.id,
-            w.item_number,
-            w.project_id,
-            w.sprint_id,
-            w.type,
-            w.title,
-            w.status,
-            w.priority,
-            w.estimate,
-            w.position,
-            w.due_date::text AS due_date,
-            w.assignee_id,
-            u.name AS assignee_name
-        FROM work_items w
-        LEFT JOIN users u ON u.id = w.assignee_id
+            ${BOARD_ITEM_COLUMNS}
+        ${BOARD_ITEM_FROM}
         WHERE w.id = $1
           AND w.project_id = $2
           AND w.type <> 'EPIC'
@@ -139,12 +138,61 @@ export async function moveWorkItem(
                 FROM work_items
                 WHERE project_id = $1
                   AND status = $3::varchar
+                  AND NOT is_archived
                   AND id <> $2
             )
         WHERE id = $2
           AND project_id = $1
         `,
         [projectId, itemId, status]
+    );
+
+    return findBoardItem(projectId, itemId);
+}
+
+// Las más recientemente archivadas primero
+export async function findArchivedItems(projectId: string) {
+    const result = await pool.query(
+        `
+        SELECT
+            ${BOARD_ITEM_COLUMNS}
+        ${BOARD_ITEM_FROM}
+        WHERE w.project_id = $1
+          AND w.type <> 'EPIC'
+          AND w.is_archived
+        ORDER BY w.updated_at DESC, w.item_number DESC
+        `,
+        [projectId]
+    );
+
+    return result.rows;
+}
+
+// Al restaurar, la tarea vuelve al final de su columna
+export async function setWorkItemArchived(
+    projectId: string,
+    itemId: string,
+    archived: boolean
+) {
+    await pool.query(
+        `
+        UPDATE work_items
+        SET
+            is_archived = $3,
+            position = CASE
+                WHEN $3 THEN position
+                ELSE (
+                    SELECT COALESCE(MAX(position) + 1, 0)
+                    FROM work_items
+                    WHERE project_id = $1
+                      AND status = (SELECT status FROM work_items WHERE id = $2)
+                      AND NOT is_archived
+                )
+            END
+        WHERE id = $2
+          AND project_id = $1
+        `,
+        [projectId, itemId, archived]
     );
 
     return findBoardItem(projectId, itemId);
