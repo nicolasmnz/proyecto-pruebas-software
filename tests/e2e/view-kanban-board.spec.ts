@@ -446,6 +446,8 @@ test.describe("archivar Hecho y puntos por columna", () => {
     await expect(
       page.getByRole("button", { name: "Archivadas (2)" }),
     ).toBeVisible();
-    await expect(page.getByText("2 de 2 tareas hechas · 100 %")).toBeVisible();
+    await expect(
+      page.getByText("2 de 2 tareas hechas · 8 de 8 pts · 100 %"),
+    ).toBeVisible();
   });
 });

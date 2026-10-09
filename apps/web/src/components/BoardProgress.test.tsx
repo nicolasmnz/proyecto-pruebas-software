@@ -4,7 +4,11 @@ import { describe, expect, test } from "vitest";
 import BoardProgress from "./BoardProgress";
 import type { BoardColumn, BoardItem } from "../api/board";
 
-function item(id: number, status: BoardItem["status"]): BoardItem {
+function item(
+  id: number,
+  status: BoardItem["status"],
+  estimate: number | null = null,
+): BoardItem {
   return {
     id: String(id),
     item_number: id,
@@ -13,7 +17,7 @@ function item(id: number, status: BoardItem["status"]): BoardItem {
     title: `Tarea ${id}`,
     status,
     priority: "MEDIUM",
-    estimate: null,
+    estimate,
     position: 0,
     due_date: null,
     assignee_id: null,
@@ -88,5 +92,92 @@ describe("BoardProgress", () => {
       "aria-valuenow",
       "100",
     );
+  });
+
+  describe("según puntos", () => {
+    const withPoints: BoardColumn[] = [
+      {
+        status: "TODO",
+        items: [item(1, "TODO", 8), item(2, "TODO", 5)],
+      },
+      { status: "IN_PROGRESS", items: [item(3, "IN_PROGRESS", 2)] },
+      { status: "DONE", items: [item(4, "DONE", 5)] },
+    ];
+
+    test("muestra tareas y puntos, y la barra pesa por puntos", () => {
+      render(<BoardProgress columns={withPoints} archived={[]} />);
+
+      // 1 de 4 tareas (25 %), pero 5 de 20 puntos (25 %): cambia el peso
+      expect(
+        screen.getByText("1 de 4 tareas hechas · 5 de 20 pts · 25 %"),
+      ).toBeInTheDocument();
+    });
+
+    test("difiere del porcentaje por tareas cuando las estimaciones son desiguales", () => {
+      const columns: BoardColumn[] = [
+        { status: "TODO", items: [item(1, "TODO", 13)] },
+        { status: "IN_PROGRESS", items: [] },
+        { status: "DONE", items: [item(2, "DONE", 1)] },
+      ];
+
+      render(<BoardProgress columns={columns} archived={[]} />);
+
+      // La mitad de las tareas, pero solo 1 de 14 puntos
+      expect(
+        screen.getByText("1 de 2 tareas hechas · 1 de 14 pts · 7 %"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        "7",
+      );
+    });
+
+    test("los puntos de las archivadas cuentan como hechos", () => {
+      render(
+        <BoardProgress
+          columns={withPoints}
+          archived={[item(90, "DONE", 5), item(91, "DONE", 5)]}
+        />,
+      );
+
+      expect(
+        screen.getByText("3 de 6 tareas hechas · 15 de 30 pts · 50 %"),
+      ).toBeInTheDocument();
+    });
+
+    test("las tareas sin estimar no pesan, ni siquiera al terminarlas", () => {
+      const columns: BoardColumn[] = [
+        { status: "TODO", items: [item(1, "TODO", 4)] },
+        { status: "IN_PROGRESS", items: [] },
+        { status: "DONE", items: [item(2, "DONE")] },
+      ];
+
+      render(<BoardProgress columns={columns} archived={[]} />);
+
+      expect(
+        screen.getByText("1 de 2 tareas hechas · 0 de 4 pts · 0 %"),
+      ).toBeInTheDocument();
+    });
+
+    test("todo hecho llega al 100 %", () => {
+      const columns: BoardColumn[] = [
+        { status: "TODO", items: [] },
+        { status: "IN_PROGRESS", items: [] },
+        { status: "DONE", items: [item(1, "DONE", 3), item(2, "DONE", 8)] },
+      ];
+
+      render(<BoardProgress columns={columns} archived={[]} />);
+
+      expect(
+        screen.getByText("2 de 2 tareas hechas · 11 de 11 pts · 100 %"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  test("si ninguna tarea tiene puntos se muestra solo por tareas", () => {
+    render(<BoardProgress columns={columns(2, 0, 2)} archived={[]} />);
+
+    expect(screen.getByText("2 de 4 tareas hechas · 50 %")).toBeInTheDocument();
+    expect(screen.queryByText(/pts/)).not.toBeInTheDocument();
   });
 });

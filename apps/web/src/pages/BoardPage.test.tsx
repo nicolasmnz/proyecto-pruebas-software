@@ -658,9 +658,9 @@ describe("BoardPage", () => {
 
       renderPage();
 
-      // 3 tareas, ninguna hecha
+      // 3 tareas, ninguna hecha; solo la #3 tiene puntos (8)
       expect(
-        await screen.findByText("0 de 3 tareas hechas · 0 %"),
+        await screen.findByText("0 de 3 tareas hechas · 0 de 8 pts · 0 %"),
       ).toBeInTheDocument();
 
       await userEvent.selectOptions(
@@ -669,10 +669,11 @@ describe("BoardPage", () => {
       );
 
       expect(
-        await screen.findByText("1 de 3 tareas hechas · 33 %"),
+        await screen.findByText("1 de 3 tareas hechas · 0 de 8 pts · 0 %"),
       ).toBeInTheDocument();
 
       // Archivar no cambia el progreso: sigue contando como hecha
+      // (la tarea movida no tiene puntos, así que no pesa en la barra)
       await userEvent.click(
         screen.getByRole("button", { name: "Archivar «Diseñar login»" }),
       );
@@ -680,8 +681,39 @@ describe("BoardPage", () => {
       await screen.findByRole("button", { name: "Archivadas (1)" });
 
       expect(
-        screen.getByText("1 de 3 tareas hechas · 33 %"),
+        screen.getByText("1 de 3 tareas hechas · 0 de 8 pts · 0 %"),
       ).toBeInTheDocument();
+    });
+
+    test("terminar una tarea con puntos avanza la barra según sus puntos", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({
+          id: "3",
+          item_number: 3,
+          title: "Administrar miembros",
+          estimate: 8,
+          status: "DONE",
+        }),
+      );
+
+      renderPage();
+
+      await screen.findByText("0 de 3 tareas hechas · 0 de 8 pts · 0 %");
+
+      await userEvent.selectOptions(
+        screen.getByLabelText("Mover «Administrar miembros» a"),
+        "Hecho",
+      );
+
+      // 1 de 3 tareas, pero los únicos 8 puntos del tablero: 100 %
+      expect(
+        await screen.findByText("1 de 3 tareas hechas · 8 de 8 pts · 100 %"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("progressbar")).toHaveAttribute(
+        "aria-valuenow",
+        "100",
+      );
     });
 
     test("crear una tarea aumenta el total", async () => {
@@ -692,7 +724,7 @@ describe("BoardPage", () => {
 
       renderPage();
 
-      await screen.findByText("0 de 3 tareas hechas · 0 %");
+      await screen.findByText("0 de 3 tareas hechas · 0 de 8 pts · 0 %");
 
       await userEvent.click(
         within(screen.getByRole("region", { name: "Por hacer" })).getByRole(
@@ -704,7 +736,7 @@ describe("BoardPage", () => {
       await userEvent.click(screen.getByRole("button", { name: "Crear" }));
 
       expect(
-        await screen.findByText("0 de 4 tareas hechas · 0 %"),
+        await screen.findByText("0 de 4 tareas hechas · 0 de 8 pts · 0 %"),
       ).toBeInTheDocument();
     });
   });
@@ -1794,7 +1826,7 @@ describe("BoardPage", () => {
       ).not.toBeInTheDocument();
       // El progreso sigue contándolas como hechas: 2 de 5
       expect(
-        screen.getByText("2 de 5 tareas hechas · 40 %"),
+        screen.getByText("2 de 5 tareas hechas · 0 de 8 pts · 0 %"),
       ).toBeInTheDocument();
     });
 
