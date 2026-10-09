@@ -45,3 +45,7 @@
   color: #44546f;
   font-size: 14px;
 }
+
+.board-error {
+  margin-bottom: 16px;
+}

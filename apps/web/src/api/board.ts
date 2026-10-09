@@ -5,6 +5,12 @@ export type WorkItemStatus = "TODO" | "IN_PROGRESS" | "DONE";
 export type WorkItemType = "EPIC" | "STORY" | "TASK" | "BUG";
 export type WorkItemPriority = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
+export const STATUS_LABELS: Record<WorkItemStatus, string> = {
+  TODO: "Por hacer",
+  IN_PROGRESS: "En progreso",
+  DONE: "Hecho",
+};
+
 export interface BoardItem {
   id: string;
   type: WorkItemType;
@@ -65,6 +71,24 @@ export function createWorkItem(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
+    },
+  );
+}
+
+export function moveWorkItem(
+  projectId: string,
+  itemId: string,
+  status: WorkItemStatus,
+): Promise<BoardItem> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}`,
+    "No fue posible mover la tarea",
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
     },
   );
 }

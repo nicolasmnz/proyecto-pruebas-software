@@ -1,6 +1,13 @@
+import { useId } from "react";
 import { Bug, CheckSquare, BookOpen } from "lucide-react";
 
-import type { BoardItem, WorkItemPriority, WorkItemType } from "../api/board";
+import { STATUS_LABELS } from "../api/board";
+import type {
+  BoardItem,
+  WorkItemPriority,
+  WorkItemStatus,
+  WorkItemType,
+} from "../api/board";
 import { getInitials } from "../utils/format";
 
 import "./KanbanCard.css";
@@ -31,9 +38,35 @@ function TypeIcon({ type }: { type: WorkItemType }) {
   return <CheckSquare size={14} aria-hidden="true" />;
 }
 
-function KanbanCard({ item }: { item: BoardItem }) {
+interface KanbanCardProps {
+  item: BoardItem;
+  // Sin esta función la tarjeta es de solo lectura
+  onMove?: (item: BoardItem, status: WorkItemStatus) => void;
+  onDragStart?: (item: BoardItem) => void;
+  onDragEnd?: () => void;
+  isDragging?: boolean;
+}
+
+function KanbanCard({
+  item,
+  onMove,
+  onDragStart,
+  onDragEnd,
+  isDragging = false,
+}: KanbanCardProps) {
+  const moveId = useId();
+
   return (
-    <article className="kanban-card">
+    <article
+      className={`kanban-card${isDragging ? " is-dragging" : ""}`}
+      draggable={Boolean(onMove)}
+      onDragStart={(event) => {
+        // Firefox exige datos para iniciar el arrastre
+        event.dataTransfer?.setData("text/plain", item.id);
+        onDragStart?.(item);
+      }}
+      onDragEnd={onDragEnd}
+    >
       <h3 className="kanban-card-title">{item.title}</h3>
 
       <div className="kanban-card-meta">
@@ -64,11 +97,39 @@ function KanbanCard({ item }: { item: BoardItem }) {
             {getInitials(item.assignee_name)}
           </span>
         ) : (
-          <span className="kanban-assignee is-empty" role="img" aria-label="Sin asignar">
+          <span
+            className="kanban-assignee is-empty"
+            role="img"
+            aria-label="Sin asignar"
+          >
             ?
           </span>
         )}
       </div>
+
+      {onMove && (
+        <div className="kanban-card-move">
+          <label htmlFor={moveId} className="sr-only">
+            Mover «{item.title}» a
+          </label>
+          <select
+            id={moveId}
+            value=""
+            onChange={(event) =>
+              onMove(item, event.target.value as WorkItemStatus)
+            }
+          >
+            <option value="">Mover a…</option>
+            {(Object.keys(STATUS_LABELS) as WorkItemStatus[])
+              .filter((status) => status !== item.status)
+              .map((status) => (
+                <option key={status} value={status}>
+                  {STATUS_LABELS[status]}
+                </option>
+              ))}
+          </select>
+        </div>
+      )}
     </article>
   );
 }

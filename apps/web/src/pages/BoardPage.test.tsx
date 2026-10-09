@@ -1,10 +1,16 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
-import { createWorkItem, getBoard } from "../api/board";
+import { createWorkItem, getBoard, moveWorkItem } from "../api/board";
 import type { Board, BoardItem } from "../api/board";
 import { ApiError } from "../api/projects";
 
@@ -12,10 +18,12 @@ vi.mock("../api/board", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/board")>()),
   getBoard: vi.fn(),
   createWorkItem: vi.fn(),
+  moveWorkItem: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
 const mockedCreateWorkItem = vi.mocked(createWorkItem);
+const mockedMoveWorkItem = vi.mocked(moveWorkItem);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -276,6 +284,141 @@ describe("BoardPage", () => {
       expect(
         screen.queryByRole("button", { name: /Crear tarea/ }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("mover tareas", () => {
+    const moved = (overrides: Partial<BoardItem> = {}) =>
+      buildItem({
+        id: "1",
+        title: "Diseñar login",
+        priority: "HIGH",
+        status: "DONE",
+        ...overrides,
+      });
+
+    test("mueve una tarea con el selector «Mover a»", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(moved());
+
+      renderPage();
+
+      await userEvent.selectOptions(
+        await screen.findByLabelText("Mover «Diseñar login» a"),
+        "Hecho",
+      );
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", "DONE");
+
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      expect(
+        await within(done).findByText("Diseñar login"),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("region", { name: "Por hacer" })).queryByText(
+          "Diseñar login",
+        ),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        'Tarea "Diseñar login" movida a Hecho.',
+      );
+    });
+
+    test("el selector no ofrece la columna actual", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const select = await screen.findByLabelText("Mover «Diseñar login» a");
+      const options = within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+
+      expect(options).toEqual(["Mover a…", "En progreso", "Hecho"]);
+    });
+
+    test("mueve una tarea arrastrándola a otra columna", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(moved({ status: "IN_PROGRESS" }));
+
+      renderPage();
+
+      const card = (await screen.findByText("Diseñar login")).closest(
+        "article",
+      )!;
+      const inProgress = screen.getByRole("region", { name: "En progreso" });
+      const dataTransfer = { setData: vi.fn() };
+
+      fireEvent.dragStart(card, { dataTransfer });
+      fireEvent.dragOver(inProgress, { dataTransfer });
+      fireEvent.drop(inProgress, { dataTransfer });
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        "IN_PROGRESS",
+      );
+      await waitFor(() =>
+        expect(within(inProgress).getAllByRole("listitem")).toHaveLength(2),
+      );
+    });
+
+    test("soltar la tarea en su propia columna no llama a la API", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const card = (await screen.findByText("Diseñar login")).closest(
+        "article",
+      )!;
+      const todo = screen.getByRole("region", { name: "Por hacer" });
+      const dataTransfer = { setData: vi.fn() };
+
+      fireEvent.dragStart(card, { dataTransfer });
+      fireEvent.dragOver(todo, { dataTransfer });
+      fireEvent.drop(todo, { dataTransfer });
+
+      expect(mockedMoveWorkItem).not.toHaveBeenCalled();
+    });
+
+    test("si la API falla muestra el error y la tarea no se mueve", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockRejectedValue(new Error("Error moviendo tarea"));
+
+      renderPage();
+
+      await userEvent.selectOptions(
+        await screen.findByLabelText("Mover «Diseñar login» a"),
+        "Hecho",
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error moviendo tarea",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Por hacer" })).getByText(
+          "Diseñar login",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("un proyecto archivado no permite mover tareas", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        project: { ...board.project, is_archived: true },
+      });
+
+      renderPage();
+
+      const card = (await screen.findByText("Diseñar login")).closest(
+        "article",
+      )!;
+
+      expect(
+        screen.queryByLabelText(/Mover «Diseñar login» a/),
+      ).not.toBeInTheDocument();
+      expect(card).toHaveAttribute("draggable", "false");
     });
   });
 });

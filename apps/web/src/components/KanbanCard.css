@@ -75,3 +75,33 @@
   background: #dfe1e6;
   color: #626f86;
 }
+
+.kanban-card[draggable="true"] {
+  cursor: grab;
+}
+
+.kanban-card.is-dragging {
+  opacity: 0.5;
+}
+
+.kanban-card-move {
+  margin-top: 8px;
+}
+
+.kanban-card-move select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #44546f;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kanban-card-move select:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
+}

@@ -91,3 +91,58 @@ export async function createWorkItem(data: CreateWorkItemData) {
 
     return result.rows[0];
 }
+
+export async function findBoardItem(projectId: string, itemId: string) {
+    const result = await pool.query(
+        `
+        SELECT
+            w.id,
+            w.project_id,
+            w.sprint_id,
+            w.type,
+            w.title,
+            w.status,
+            w.priority,
+            w.estimate,
+            w.position,
+            w.due_date::text AS due_date,
+            w.assignee_id,
+            u.name AS assignee_name
+        FROM work_items w
+        LEFT JOIN users u ON u.id = w.assignee_id
+        WHERE w.id = $1
+          AND w.project_id = $2
+          AND w.type <> 'EPIC'
+        `,
+        [itemId, projectId]
+    );
+
+    return result.rows[0];
+}
+
+// El elemento pasa al final de la columna de destino
+export async function moveWorkItem(
+    projectId: string,
+    itemId: string,
+    status: string
+) {
+    await pool.query(
+        `
+        UPDATE work_items
+        SET
+            status = $3::varchar,
+            position = (
+                SELECT COALESCE(MAX(position) + 1, 0)
+                FROM work_items
+                WHERE project_id = $1
+                  AND status = $3::varchar
+                  AND id <> $2
+            )
+        WHERE id = $2
+          AND project_id = $1
+        `,
+        [projectId, itemId, status]
+    );
+
+    return findBoardItem(projectId, itemId);
+}

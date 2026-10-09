@@ -3,8 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import { ApiError } from "../api/projects";
-import { createWorkItem, getBoard } from "../api/board";
-import type { Board, WorkItemStatus } from "../api/board";
+import {
+  STATUS_LABELS,
+  createWorkItem,
+  getBoard,
+  moveWorkItem,
+} from "../api/board";
+import type { Board, BoardItem, WorkItemStatus } from "../api/board";
 import type { AddItemValues } from "../components/AddItemForm";
 import KanbanBoard from "../components/KanbanBoard";
 
@@ -22,6 +27,7 @@ function BoardPage() {
   const [attempt, setAttempt] = useState(0);
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
+  const [moveError, setMoveError] = useState<string | null>(null);
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -125,6 +131,56 @@ function BoardPage() {
     setAnnouncement(`Tarea "${item.title}" creada.`);
   }
 
+  async function handleMoveItem(item: BoardItem, status: WorkItemStatus) {
+    if (!status || status === item.status) {
+      return;
+    }
+
+    try {
+      setMoveError(null);
+
+      const moved = await moveWorkItem(project.id, item.id, status);
+
+      // La tarea sale de su columna y queda al final de la de destino
+      setResult((current) => {
+        if (
+          current?.key !== requestKey ||
+          current.result.status !== "success"
+        ) {
+          return current;
+        }
+
+        const { board } = current.result;
+
+        return {
+          key: requestKey,
+          result: {
+            status: "success",
+            board: {
+              ...board,
+              columns: board.columns.map((column) => ({
+                ...column,
+                items:
+                  column.status === status
+                    ? [...column.items, moved]
+                    : column.items.filter(({ id }) => id !== item.id),
+              })),
+            },
+          },
+        };
+      });
+      setAnnouncement(
+        `Tarea "${item.title}" movida a ${STATUS_LABELS[status]}.`,
+      );
+    } catch (error) {
+      setMoveError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible mover la tarea.",
+      );
+    }
+  }
+
   return (
     <div className="board-page">
       <nav aria-label="Ruta de navegación" className="breadcrumb">
@@ -155,9 +211,16 @@ function BoardPage() {
         </p>
       )}
 
+      {moveError && (
+        <p role="alert" className="form-error board-error">
+          {moveError}
+        </p>
+      )}
+
       <KanbanBoard
         columns={columns}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
+        onMoveItem={project.is_archived ? undefined : handleMoveItem}
       />
     </div>
   );

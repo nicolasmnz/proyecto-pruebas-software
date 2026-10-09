@@ -222,4 +222,141 @@ describe("Tablero Kanban API", () => {
       expect(response.status).toBe(409);
     });
   });
+
+  describe("PATCH /api/projects/:id/work-items/:itemId", () => {
+    async function createItem(title: string, status: string, position: number) {
+      const result = await pool.query(
+        `
+        INSERT INTO work_items
+          (project_id, created_by, type, title, status, position)
+        VALUES ($1, $2, 'TASK', $3, $4, $5)
+        RETURNING id
+        `,
+        [projectId, userId, title, status, position],
+      );
+
+      return result.rows[0].id as string;
+    }
+
+    const url = (itemId: string) =>
+      `/api/projects/${projectId}/work-items/${itemId}`;
+
+    test("mueve la tarea al final de la columna de destino", async () => {
+      const itemId = await createItem("A mover", "TODO", 0);
+      await createItem("En curso 1", "IN_PROGRESS", 0);
+      await createItem("En curso 2", "IN_PROGRESS", 3);
+
+      const response = await request(app)
+        .patch(url(itemId))
+        .send({ status: "IN_PROGRESS" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        id: itemId,
+        status: "IN_PROGRESS",
+        position: 4,
+      });
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+      const [todo, inProgress] = board.body.columns;
+
+      expect(todo.items).toHaveLength(0);
+      expect(
+        inProgress.items.map((item: { title: string }) => item.title),
+      ).toEqual(["En curso 1", "En curso 2", "A mover"]);
+    });
+
+    test("mover a una columna vacía deja la tarea en la posición 0", async () => {
+      const itemId = await createItem("Sola", "TODO", 7);
+
+      const response = await request(app)
+        .patch(url(itemId))
+        .send({ status: "DONE" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({ status: "DONE", position: 0 });
+    });
+
+    test("soltar la tarea en su propia columna no cambia nada", async () => {
+      const itemId = await createItem("Quieta", "TODO", 2);
+
+      const response = await request(app)
+        .patch(url(itemId))
+        .send({ status: "TODO" });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({ status: "TODO", position: 2 });
+    });
+
+    test("responde 400 con un estado inválido", async () => {
+      const itemId = await createItem("Tarea", "TODO", 0);
+
+      const invalid = await request(app)
+        .patch(url(itemId))
+        .send({ status: "BLOCKED" });
+      const missing = await request(app).patch(url(itemId)).send({});
+
+      expect(invalid.status).toBe(400);
+      expect(missing.status).toBe(400);
+    });
+
+    test("responde 404 si la tarea o el proyecto no existen", async () => {
+      const itemId = await createItem("Tarea", "TODO", 0);
+
+      const missingItem = await request(app)
+        .patch(url("99999999-9999-9999-9999-999999999999"))
+        .send({ status: "DONE" });
+      const invalidItem = await request(app)
+        .patch(url("no-es-uuid"))
+        .send({ status: "DONE" });
+      const missingProject = await request(app)
+        .patch(`/api/projects/99999999-9999-9999-9999-999999999999/work-items/${itemId}`)
+        .send({ status: "DONE" });
+
+      expect(missingItem.status).toBe(404);
+      expect(invalidItem.status).toBe(404);
+      expect(missingProject.status).toBe(404);
+    });
+
+    test("responde 404 si la tarea pertenece a otro proyecto o es una épica", async () => {
+      const other = await pool.query(
+        `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,
+        [userId],
+      );
+      const foreign = await pool.query(
+        `INSERT INTO work_items (project_id, created_by, type, title)
+         VALUES ($1, $2, 'TASK', 'Ajena') RETURNING id`,
+        [other.rows[0].id, userId],
+      );
+      const epic = await pool.query(
+        `INSERT INTO work_items (project_id, created_by, type, title)
+         VALUES ($1, $2, 'EPIC', 'Épica') RETURNING id`,
+        [projectId, userId],
+      );
+
+      const foreignResponse = await request(app)
+        .patch(url(foreign.rows[0].id))
+        .send({ status: "DONE" });
+      const epicResponse = await request(app)
+        .patch(url(epic.rows[0].id))
+        .send({ status: "DONE" });
+
+      expect(foreignResponse.status).toBe(404);
+      expect(epicResponse.status).toBe(404);
+    });
+
+    test("responde 409 si el proyecto está archivado", async () => {
+      const itemId = await createItem("Tarea", "TODO", 0);
+
+      await pool.query("UPDATE projects SET is_archived = TRUE WHERE id = $1", [
+        projectId,
+      ]);
+
+      const response = await request(app)
+        .patch(url(itemId))
+        .send({ status: "DONE" });
+
+      expect(response.status).toBe(409);
+    });
+  });
 });

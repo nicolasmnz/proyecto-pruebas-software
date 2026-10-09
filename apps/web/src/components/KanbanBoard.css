@@ -84,3 +84,9 @@
   outline: 2px solid #0c66e4;
   outline-offset: 2px;
 }
+
+.kanban-column.is-drop-target {
+  background: #dce9fd;
+  outline: 2px dashed #0c66e4;
+  outline-offset: -2px;
+}

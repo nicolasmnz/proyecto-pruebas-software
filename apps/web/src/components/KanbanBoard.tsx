@@ -1,18 +1,13 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 
-import type { BoardColumn, WorkItemStatus } from "../api/board";
+import { STATUS_LABELS } from "../api/board";
+import type { BoardColumn, BoardItem, WorkItemStatus } from "../api/board";
 import AddItemForm from "./AddItemForm";
 import type { AddItemValues } from "./AddItemForm";
 import KanbanCard from "./KanbanCard";
 
 import "./KanbanBoard.css";
-
-const COLUMN_TITLES: Record<WorkItemStatus, string> = {
-  TODO: "Por hacer",
-  IN_PROGRESS: "En progreso",
-  DONE: "Hecho",
-};
 
 interface KanbanBoardProps {
   columns: BoardColumn[];
@@ -21,9 +16,13 @@ interface KanbanBoardProps {
     status: WorkItemStatus,
     values: AddItemValues,
   ) => Promise<void>;
+  // Sin esta función las tareas no se pueden mover
+  onMoveItem?: (item: BoardItem, status: WorkItemStatus) => void;
 }
 
-function KanbanBoard({ columns, onCreateItem }: KanbanBoardProps) {
+function KanbanBoard({ columns, onCreateItem, onMoveItem }: KanbanBoardProps) {
+  const [dragged, setDragged] = useState<BoardItem | null>(null);
+  const [dropTarget, setDropTarget] = useState<WorkItemStatus | null>(null);
   const [addingTo, setAddingTo] = useState<WorkItemStatus | null>(null);
   const addButtons = useRef<Partial<Record<WorkItemStatus, HTMLButtonElement>>>(
     {},
@@ -45,10 +44,32 @@ function KanbanBoard({ columns, onCreateItem }: KanbanBoardProps) {
           <section
             key={column.status}
             aria-labelledby={titleId}
-            className="kanban-column"
+            className={`kanban-column${dropTarget === column.status ? " is-drop-target" : ""}`}
+            onDragOver={(event) => {
+              if (dragged && dragged.status !== column.status) {
+                // Permite soltar en esta columna
+                event.preventDefault();
+                setDropTarget(column.status);
+              }
+            }}
+            onDragLeave={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                setDropTarget(null);
+              }
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              setDropTarget(null);
+
+              if (dragged && dragged.status !== column.status) {
+                onMoveItem?.(dragged, column.status);
+              }
+
+              setDragged(null);
+            }}
           >
             <header className="kanban-column-header">
-              <h2 id={titleId}>{COLUMN_TITLES[column.status]}</h2>
+              <h2 id={titleId}>{STATUS_LABELS[column.status]}</h2>
               <span
                 className="kanban-column-count"
                 aria-label={`${column.items.length} elementos`}
@@ -63,7 +84,16 @@ function KanbanBoard({ columns, onCreateItem }: KanbanBoardProps) {
               <ul className="kanban-column-list">
                 {column.items.map((item) => (
                   <li key={item.id}>
-                    <KanbanCard item={item} />
+                    <KanbanCard
+                      item={item}
+                      onMove={onMoveItem}
+                      onDragStart={setDragged}
+                      onDragEnd={() => {
+                        setDragged(null);
+                        setDropTarget(null);
+                      }}
+                      isDragging={dragged?.id === item.id}
+                    />
                   </li>
                 ))}
               </ul>
@@ -93,7 +123,7 @@ function KanbanBoard({ columns, onCreateItem }: KanbanBoardProps) {
                   Crear tarea
                   <span className="sr-only">
                     {" "}
-                    en {COLUMN_TITLES[column.status]}
+                    en {STATUS_LABELS[column.status]}
                   </span>
                 </button>
               ))}

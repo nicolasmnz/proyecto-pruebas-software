@@ -3,7 +3,12 @@ import { IdParams } from '../types/request.js';
 import { isUuid } from '../utils/uuid.js';
 
 import { findProjectById } from '../repositories/project.repository.js';
-import { createWorkItem, findBoardItems } from '../repositories/workitem.repository.js';
+import {
+    createWorkItem,
+    findBoardItem,
+    findBoardItems,
+    moveWorkItem
+} from '../repositories/workitem.repository.js';
 
 // Coinciden con los CHECK y VARCHAR de work_items; las épicas no se crean desde el tablero
 const MAX_TITLE_LENGTH = 200;
@@ -161,6 +166,73 @@ export async function postWorkItem(
 
         return res.status(500).json({
             message: 'Error creando tarea'
+        });
+    }
+}
+
+
+export async function patchWorkItem(
+    req: Request<IdParams & { itemId: string }>,
+    res: Response
+) {
+    try {
+        const { id, itemId } = req.params;
+
+        if (!isUuid(id)) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
+        const { status } = req.body;
+
+        if (
+            typeof status !== 'string' ||
+            !(BOARD_STATUSES as readonly string[]).includes(status)
+        ) {
+            return res.status(400).json({
+                message: `status debe ser uno de: ${BOARD_STATUSES.join(', ')}`
+            });
+        }
+
+        const project = await findProjectById(id);
+
+        if (!project) {
+            return res.status(404).json({
+                message: 'Proyecto no encontrado'
+            });
+        }
+
+        const item = isUuid(itemId)
+            ? await findBoardItem(project.id, itemId)
+            : undefined;
+
+        if (!item) {
+            return res.status(404).json({
+                message: 'Tarea no encontrada'
+            });
+        }
+
+        if (project.is_archived) {
+            return res.status(409).json({
+                message: 'El proyecto está archivado. Restáuralo para mover tareas'
+            });
+        }
+
+        // Soltar la tarea en su propia columna no cambia nada
+        if (item.status === status) {
+            return res.status(200).json(item);
+        }
+
+        return res
+            .status(200)
+            .json(await moveWorkItem(project.id, itemId, status));
+
+    } catch (error) {
+        console.error(error);
+
+        return res.status(500).json({
+            message: 'Error moviendo tarea'
         });
     }
 }

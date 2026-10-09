@@ -78,3 +78,51 @@ test.describe("agregar tareas al tablero", () => {
   });
 });
 
+test.describe("mover tareas entre columnas", () => {
+  let project: { id: string };
+
+  test.beforeEach(async ({ request }) => {
+    const created = await request.post(`${API_URL}/projects`, {
+      data: { name: `Proyecto Mover ${Date.now()}`, createdBy: SEED_USER_ID },
+    });
+
+    expect(created.status()).toBe(201);
+
+    project = await created.json();
+
+    const item = await request.post(
+      `${API_URL}/projects/${project.id}/work-items`,
+      { data: { title: "Tarea a mover", createdBy: SEED_USER_ID } },
+    );
+
+    expect(item.status()).toBe(201);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${API_URL}/projects/${project.id}`);
+  });
+
+  test("usuario mueve una tarea a Hecho y el cambio persiste", async ({
+    page,
+  }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    await page
+      .getByLabel("Mover «Tarea a mover» a")
+      .selectOption({ label: "Hecho" });
+
+    const done = page.getByRole("region", { name: "Hecho" });
+
+    await expect(done.getByText("Tarea a mover")).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Por hacer" }).getByText("Sin elementos"),
+    ).toBeVisible();
+
+    await page.reload();
+
+    await expect(
+      page.getByRole("region", { name: "Hecho" }).getByText("Tarea a mover"),
+    ).toBeVisible();
+  });
+});
+
