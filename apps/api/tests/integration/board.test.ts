@@ -249,12 +249,10 @@ describe("Tablero Kanban API", () => {
 
     test("responde 400 si createdBy falta o no es un usuario existente", async () => {
       const missing = await request(app).post(url()).send({ title: "x" });
-      const unknown = await request(app)
-        .post(url())
-        .send({
-          title: "x",
-          createdBy: "99999999-9999-9999-9999-999999999999",
-        });
+      const unknown = await request(app).post(url()).send({
+        title: "x",
+        createdBy: "99999999-9999-9999-9999-999999999999",
+      });
 
       expect(missing.status).toBe(400);
       expect(unknown.status).toBe(400);
@@ -312,7 +310,8 @@ describe("Tablero Kanban API", () => {
       expect(response.body).toMatchObject({
         id: itemId,
         status: "IN_PROGRESS",
-        position: 4,
+        // La columna se renumera de forma consecutiva (los huecos desaparecen)
+        position: 2,
       });
 
       const board = await request(app).get(`/api/projects/${projectId}/board`);
@@ -837,6 +836,244 @@ describe("Tablero Kanban API", () => {
       ]);
 
       expect(still.rowCount).toBe(1);
+    });
+  });
+
+  describe("reordenar dentro de la columna", () => {
+    async function createItem(title: string, status = "TODO", position = 0) {
+      const result = await pool.query(
+        `
+        INSERT INTO work_items
+          (project_id, created_by, type, title, status, position)
+        VALUES ($1, $2, 'TASK', $3, $4, $5)
+        RETURNING id
+        `,
+        [projectId, userId, title, status, position],
+      );
+
+      return result.rows[0].id as string;
+    }
+
+    const url = (itemId: string) =>
+      `/api/projects/${projectId}/work-items/${itemId}`;
+
+    async function titles(column: number) {
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      return board.body.columns[column].items.map(
+        (item: { title: string }) => item.title,
+      );
+    }
+
+    test("mueve la tarea a la posición indicada dentro de su columna", async () => {
+      const a = await createItem("A", "TODO", 0);
+      await createItem("B", "TODO", 1);
+      const c = await createItem("C", "TODO", 2);
+
+      const toFront = await request(app)
+        .patch(url(c))
+        .send({ status: "TODO", index: 0 });
+
+      expect(toFront.status).toBe(200);
+      expect(await titles(0)).toEqual(["C", "A", "B"]);
+
+      await request(app).patch(url(a)).send({ status: "TODO", index: 2 });
+
+      expect(await titles(0)).toEqual(["C", "B", "A"]);
+    });
+
+    test("deja las posiciones consecutivas desde 0", async () => {
+      await createItem("A", "TODO", 0);
+      await createItem("B", "TODO", 5);
+      const c = await createItem("C", "TODO", 9);
+
+      await request(app).patch(url(c)).send({ status: "TODO", index: 1 });
+
+      const saved = await pool.query(
+        "SELECT title, position FROM work_items ORDER BY position",
+      );
+
+      expect(saved.rows).toEqual([
+        { title: "A", position: 0 },
+        { title: "C", position: 1 },
+        { title: "B", position: 2 },
+      ]);
+    });
+
+    test("al cambiar de columna con índice se inserta en esa posición", async () => {
+      const todo = await createItem("Pendiente", "TODO", 0);
+      await createItem("En curso 1", "IN_PROGRESS", 0);
+      await createItem("En curso 2", "IN_PROGRESS", 1);
+
+      const response = await request(app)
+        .patch(url(todo))
+        .send({ status: "IN_PROGRESS", index: 1 });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        status: "IN_PROGRESS",
+        position: 1,
+      });
+      expect(await titles(1)).toEqual([
+        "En curso 1",
+        "Pendiente",
+        "En curso 2",
+      ]);
+      expect(await titles(0)).toEqual([]);
+    });
+
+    test("un índice fuera de rango deja la tarea al final", async () => {
+      const a = await createItem("A", "TODO", 0);
+      await createItem("B", "TODO", 1);
+
+      await request(app).patch(url(a)).send({ status: "TODO", index: 99 });
+
+      expect(await titles(0)).toEqual(["B", "A"]);
+    });
+
+    test("ordena de forma estable las tareas con la misma posición", async () => {
+      // Como el seed: todas con posición 0; el número de tarea desempata
+      await createItem("Uno");
+      await createItem("Dos");
+      const tres = await createItem("Tres");
+
+      expect(await titles(0)).toEqual(["Uno", "Dos", "Tres"]);
+
+      await request(app).patch(url(tres)).send({ status: "TODO", index: 0 });
+
+      expect(await titles(0)).toEqual(["Tres", "Uno", "Dos"]);
+    });
+
+    test("sin índice, mover a otra columna sigue dejando la tarea al final", async () => {
+      const todo = await createItem("Pendiente", "TODO", 0);
+      await createItem("En curso", "IN_PROGRESS", 0);
+
+      await request(app).patch(url(todo)).send({ status: "IN_PROGRESS" });
+
+      expect(await titles(1)).toEqual(["En curso", "Pendiente"]);
+    });
+
+    test.each([-1, 1.5, "0", null])(
+      "responde 400 con index %p",
+      async (index) => {
+        const a = await createItem("A");
+
+        const response = await request(app)
+          .patch(url(a))
+          .send({ status: "TODO", index });
+
+        expect(response.status).toBe(400);
+      },
+    );
+
+    test("no altera las tareas archivadas ni las de otras columnas", async () => {
+      await createItem("A", "TODO", 0);
+      const b = await createItem("B", "TODO", 1);
+      const done = await createItem("Hecha", "DONE", 3);
+
+      await request(app).patch(url(b)).send({ status: "TODO", index: 0 });
+
+      const saved = await pool.query(
+        "SELECT position FROM work_items WHERE id = $1",
+        [done],
+      );
+
+      expect(saved.rows[0].position).toBe(3);
+      expect(await titles(0)).toEqual(["B", "A"]);
+    });
+  });
+
+  describe("límite de trabajo en curso", () => {
+    const url = () => `/api/projects/${projectId}/wip-limits`;
+
+    test("por defecto ninguna columna tiene límite", async () => {
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.wip_limits).toEqual({ TODO: null, IN_PROGRESS: null });
+    });
+
+    test("PUT guarda los límites y el tablero los devuelve", async () => {
+      const response = await request(app)
+        .put(url())
+        .send({ TODO: 8, IN_PROGRESS: 3 });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ TODO: 8, IN_PROGRESS: 3 });
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.wip_limits).toEqual({ TODO: 8, IN_PROGRESS: 3 });
+    });
+
+    test("PUT reemplaza: lo ausente o null quita el límite", async () => {
+      await request(app).put(url()).send({ TODO: 8, IN_PROGRESS: 3 });
+
+      const response = await request(app)
+        .put(url())
+        .send({ IN_PROGRESS: null });
+
+      expect(response.body).toEqual({ TODO: null, IN_PROGRESS: null });
+
+      const saved = await pool.query(
+        "SELECT wip_limits FROM projects WHERE id = $1",
+        [projectId],
+      );
+
+      expect(saved.rows[0].wip_limits).toEqual({});
+    });
+
+    test("ignora columnas que no admiten límite", async () => {
+      const response = await request(app)
+        .put(url())
+        .send({ IN_PROGRESS: 2, DONE: 1, OTRA: 5 });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ TODO: null, IN_PROGRESS: 2 });
+    });
+
+    test.each([0, -1, 1.5, "3", 1000, true])(
+      "responde 400 con el límite %p",
+      async (value) => {
+        const response = await request(app)
+          .put(url())
+          .send({ IN_PROGRESS: value });
+
+        expect(response.status).toBe(400);
+      },
+    );
+
+    test("responde 404 si el proyecto no existe", async () => {
+      const response = await request(app)
+        .put("/api/projects/99999999-9999-9999-9999-999999999999/wip-limits")
+        .send({ IN_PROGRESS: 2 });
+
+      expect(response.status).toBe(404);
+    });
+
+    test("responde 409 si el proyecto está archivado", async () => {
+      await pool.query("UPDATE projects SET is_archived = TRUE WHERE id = $1", [
+        projectId,
+      ]);
+
+      const response = await request(app).put(url()).send({ IN_PROGRESS: 2 });
+
+      expect(response.status).toBe(409);
+    });
+
+    test("un límite superado no impide crear ni mover tareas", async () => {
+      await request(app).put(url()).send({ IN_PROGRESS: 1 });
+
+      for (const title of ["Uno", "Dos"]) {
+        const response = await request(app)
+          .post(`/api/projects/${projectId}/work-items`)
+          .send({ title, status: "IN_PROGRESS", createdBy: userId });
+
+        expect(response.status).toBe(201);
+      }
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.columns[1].items).toHaveLength(2);
     });
   });
 });

@@ -18,6 +18,7 @@ import {
   getWorkItem,
   moveWorkItem,
   restoreWorkItem,
+  saveWipLimits,
   updateWorkItem,
 } from "../api/board";
 import type { Board, BoardItem, WorkItemDetail } from "../api/board";
@@ -33,6 +34,7 @@ vi.mock("../api/board", async (importOriginal) => ({
   getWorkItem: vi.fn(),
   updateWorkItem: vi.fn(),
   deleteWorkItem: vi.fn(),
+  saveWipLimits: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
@@ -43,6 +45,7 @@ const mockedRestoreWorkItem = vi.mocked(restoreWorkItem);
 const mockedGetWorkItem = vi.mocked(getWorkItem);
 const mockedUpdateWorkItem = vi.mocked(updateWorkItem);
 const mockedDeleteWorkItem = vi.mocked(deleteWorkItem);
+const mockedSaveWipLimits = vi.mocked(saveWipLimits);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -112,11 +115,12 @@ const board: Board = {
     { id: "u1", name: "Ana Pérez" },
     { id: "u2", name: "Beto Soto" },
   ],
+  wip_limits: {},
 };
 
-function renderPage() {
+function renderPage(search = "") {
   render(
-    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board`]}>
+    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board${search}`]}>
       <Routes>
         <Route path="/projects" element={<h1>Listado</h1>} />
         <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
@@ -232,10 +236,19 @@ describe("BoardPage", () => {
         within(inProgress).getByRole("button", { name: /Crear tarea/ }),
       );
 
-      await userEvent.type(screen.getByLabelText(/Título/), "  Preparar demo ");
-      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "STORY");
-      await userEvent.selectOptions(screen.getByLabelText("Prioridad"), "HIGH");
-      await userEvent.type(screen.getByLabelText("Puntos"), "5");
+      await userEvent.type(
+        within(inProgress).getByLabelText(/Título/),
+        "  Preparar demo ",
+      );
+      await userEvent.selectOptions(
+        within(inProgress).getByLabelText("Tipo"),
+        "STORY",
+      );
+      await userEvent.selectOptions(
+        within(inProgress).getByLabelText("Prioridad"),
+        "HIGH",
+      );
+      await userEvent.type(within(inProgress).getByLabelText("Puntos"), "5");
       await userEvent.click(screen.getByRole("button", { name: "Crear" }));
 
       expect(mockedCreateWorkItem).toHaveBeenCalledWith(PROJECT_ID, {
@@ -358,7 +371,12 @@ describe("BoardPage", () => {
         "Hecho",
       );
 
-      expect(mockedMoveWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", "DONE");
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        "DONE",
+        undefined,
+      );
 
       const done = screen.getByRole("region", { name: "Hecho" });
 
@@ -404,32 +422,16 @@ describe("BoardPage", () => {
       fireEvent.dragOver(inProgress, { dataTransfer });
       fireEvent.drop(inProgress, { dataTransfer });
 
+      // Soltar sobre la columna (no sobre una tarjeta) la deja al final
       expect(mockedMoveWorkItem).toHaveBeenCalledWith(
         PROJECT_ID,
         "1",
         "IN_PROGRESS",
+        1,
       );
       await waitFor(() =>
         expect(within(inProgress).getAllByRole("listitem")).toHaveLength(2),
       );
-    });
-
-    test("soltar la tarea en su propia columna no llama a la API", async () => {
-      mockedGetBoard.mockResolvedValue(board);
-
-      renderPage();
-
-      const card = (await screen.findByText("Diseñar login")).closest(
-        "article",
-      )!;
-      const todo = screen.getByRole("region", { name: "Por hacer" });
-      const dataTransfer = { setData: vi.fn() };
-
-      fireEvent.dragStart(card, { dataTransfer });
-      fireEvent.dragOver(todo, { dataTransfer });
-      fireEvent.drop(todo, { dataTransfer });
-
-      expect(mockedMoveWorkItem).not.toHaveBeenCalled();
     });
 
     test("si la API falla muestra el error y la tarea no se mueve", async () => {
@@ -847,10 +849,11 @@ describe("BoardPage", () => {
       });
 
       // Vuelve a la vista de la ficha ya actualizada
-      expect(
-        await screen.findByRole("dialog", { name: "Rediseñar login" }),
-      ).toBeInTheDocument();
-      expect(screen.getByText("Beto Soto")).toBeInTheDocument();
+      const updatedDialog = await screen.findByRole("dialog", {
+        name: "Rediseñar login",
+      });
+
+      expect(within(updatedDialog).getByText("Beto Soto")).toBeInTheDocument();
 
       // El tablero detrás refleja el cambio
       const todo = screen.getByRole("region", { name: "Por hacer" });
@@ -880,11 +883,13 @@ describe("BoardPage", () => {
       await userEvent.click(
         await screen.findByRole("button", { name: "Editar" }),
       );
+      const editDialog = screen.getByRole("dialog");
+
       await userEvent.selectOptions(
-        screen.getByLabelText("Responsable"),
+        within(editDialog).getByLabelText("Responsable"),
         "Sin asignar",
       );
-      await userEvent.clear(screen.getByLabelText("Fecha límite"));
+      await userEvent.clear(within(editDialog).getByLabelText("Fecha límite"));
       await userEvent.click(
         screen.getByRole("button", { name: "Guardar cambios" }),
       );
@@ -1062,6 +1067,555 @@ describe("BoardPage", () => {
       });
 
       expect(within(dialog).getByText("Archivada")).toBeInTheDocument();
+    });
+  });
+
+  describe("filtros y búsqueda", () => {
+    // TODO: #1 Diseñar login (alta, tarea), #2 Corregir menú (media, error)
+    // IN_PROGRESS: #3 Administrar miembros (historia, asignada a Ana)
+    const filterBoard: Board = {
+      ...board,
+      columns: board.columns.map((column) =>
+        column.status === "IN_PROGRESS"
+          ? {
+              ...column,
+              items: column.items.map((item) => ({
+                ...item,
+                assignee_id: "u1",
+              })),
+            }
+          : column,
+      ),
+    };
+
+    function titlesIn(name: string) {
+      const region = screen.getByRole("region", { name });
+
+      return within(region)
+        .queryAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent);
+    }
+
+    test("buscar por título deja solo las tareas que coinciden, sin tildes ni mayúsculas", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      await userEvent.type(
+        await screen.findByRole("searchbox", { name: "Buscar tareas" }),
+        "DISENAR",
+      );
+
+      expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+      expect(titlesIn("En progreso")).toEqual([]);
+      expect(screen.getByText("Mostrando 1 de 3 tareas")).toBeInTheDocument();
+    });
+
+    test("buscar por #número o por el número solo", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      const search = await screen.findByRole("searchbox", {
+        name: "Buscar tareas",
+      });
+
+      await userEvent.type(search, "#2");
+
+      expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+
+      await userEvent.clear(search);
+      await userEvent.type(search, "3");
+
+      expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+      expect(titlesIn("Por hacer")).toEqual([]);
+    });
+
+    test("filtra por tipo, prioridad y responsable", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      await screen.findByRole("search", { name: "Filtrar tareas" });
+
+      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "Error");
+
+      expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+
+      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "Todos");
+      await userEvent.selectOptions(screen.getByLabelText("Prioridad"), "Alta");
+
+      expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+
+      await userEvent.selectOptions(
+        screen.getByLabelText("Prioridad"),
+        "Todas",
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("Responsable"),
+        "Ana Pérez",
+      );
+
+      expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+      expect(titlesIn("Por hacer")).toEqual([]);
+
+      await userEvent.selectOptions(
+        screen.getByLabelText("Responsable"),
+        "Sin asignar",
+      );
+
+      expect(titlesIn("Por hacer")).toEqual(["Diseñar login", "Corregir menú"]);
+      expect(titlesIn("En progreso")).toEqual([]);
+    });
+
+    test("los filtros se combinan y las columnas vacías dicen «Sin resultados»", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      await screen.findByRole("search", { name: "Filtrar tareas" });
+      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "Error");
+      await userEvent.selectOptions(screen.getByLabelText("Prioridad"), "Alta");
+
+      expect(screen.getByText("Mostrando 0 de 3 tareas")).toBeInTheDocument();
+      expect(screen.getAllByText("Sin resultados")).toHaveLength(2);
+      // La columna Hecho está realmente vacía: no es un resultado de filtro
+      expect(
+        within(screen.getByRole("region", { name: "Hecho" })).getByText(
+          "Sin elementos",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("los contadores de columna no cambian al filtrar", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      await userEvent.type(
+        await screen.findByRole("searchbox", { name: "Buscar tareas" }),
+        "login",
+      );
+
+      const todo = screen.getByRole("region", { name: "Por hacer" });
+
+      expect(within(todo).getByText("2 elementos")).toBeInTheDocument();
+    });
+
+    test("Limpiar filtros restablece todo", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      await userEvent.type(
+        await screen.findByRole("searchbox", { name: "Buscar tareas" }),
+        "login",
+      );
+      await userEvent.selectOptions(screen.getByLabelText("Tipo"), "Tarea");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Limpiar filtros" }),
+      );
+
+      expect(screen.getByRole("searchbox")).toHaveValue("");
+      expect(screen.getByLabelText("Tipo")).toHaveValue("");
+      expect(titlesIn("Por hacer")).toEqual(["Diseñar login", "Corregir menú"]);
+      expect(
+        screen.queryByRole("button", { name: "Limpiar filtros" }),
+      ).not.toBeInTheDocument();
+    });
+
+    test("los filtros se leen de la URL", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage("?q=menu&priority=MEDIUM");
+
+      await screen.findByRole("search", { name: "Filtrar tareas" });
+
+      expect(screen.getByRole("searchbox")).toHaveValue("menu");
+      expect(screen.getByLabelText("Prioridad")).toHaveValue("MEDIUM");
+      expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+    });
+
+    test("con filtros activos no se muestran los botones de reordenar", async () => {
+      mockedGetBoard.mockResolvedValue(filterBoard);
+
+      renderPage();
+
+      expect(
+        await screen.findByRole("button", { name: "Subir «Diseñar login»" }),
+      ).toBeInTheDocument();
+
+      await userEvent.type(screen.getByRole("searchbox"), "a");
+
+      expect(
+        screen.queryByRole("button", { name: /^Subir «/ }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("reordenar dentro de la columna", () => {
+    const cardOf = (title: string) =>
+      screen.getByRole("button", { name: title }).closest("article")!;
+    const itemOf = (title: string) => cardOf(title).closest("li")!;
+
+    test("Subir y Bajar mueven la tarea una posición y se deshabilitan en los extremos", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({ id: "1", item_number: 1, title: "Diseñar login" }),
+      );
+
+      renderPage();
+
+      expect(
+        await screen.findByRole("button", { name: "Subir «Diseñar login»" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Bajar «Corregir menú»" }),
+      ).toBeDisabled();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Bajar «Diseñar login»" }),
+      );
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        "TODO",
+        1,
+      );
+
+      await waitFor(() =>
+        expect(
+          within(screen.getByRole("region", { name: "Por hacer" }))
+            .getAllByRole("heading", { level: 3 })
+            .map((heading) => heading.textContent),
+        ).toEqual(["Corregir menú", "Diseñar login"]),
+      );
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        'Tarea "Diseñar login" movida a la posición 2 de 2.',
+      );
+    });
+
+    test("arrastrar una tarjeta sobre otra la deja delante de ella", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({ id: "2", item_number: 2, title: "Corregir menú" }),
+      );
+
+      renderPage();
+
+      await screen.findByRole("button", { name: "Corregir menú" });
+
+      const dataTransfer = { setData: vi.fn() };
+
+      fireEvent.dragStart(cardOf("Corregir menú"), { dataTransfer });
+      fireEvent.dragOver(itemOf("Diseñar login"), { dataTransfer });
+
+      // Se marca dónde caería
+      expect(itemOf("Diseñar login")).toHaveClass("is-drop-before");
+
+      fireEvent.drop(itemOf("Diseñar login"), { dataTransfer });
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "2",
+        "TODO",
+        0,
+      );
+    });
+
+    test("arrastrar a una tarjeta de otra columna la inserta en esa posición", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({
+          id: "1",
+          item_number: 1,
+          title: "Diseñar login",
+          status: "IN_PROGRESS",
+        }),
+      );
+
+      renderPage();
+
+      await screen.findByRole("button", { name: "Diseñar login" });
+
+      const dataTransfer = { setData: vi.fn() };
+
+      fireEvent.dragStart(cardOf("Diseñar login"), { dataTransfer });
+      fireEvent.dragOver(itemOf("Administrar miembros"), { dataTransfer });
+      fireEvent.drop(itemOf("Administrar miembros"), { dataTransfer });
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        "IN_PROGRESS",
+        0,
+      );
+    });
+
+    test("soltar una tarjeta al fondo de su propia columna la deja la última", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({ id: "1", item_number: 1, title: "Diseñar login" }),
+      );
+
+      renderPage();
+
+      await screen.findByRole("button", { name: "Diseñar login" });
+
+      const todo = screen.getByRole("region", { name: "Por hacer" });
+      const dataTransfer = { setData: vi.fn() };
+
+      fireEvent.dragStart(cardOf("Diseñar login"), { dataTransfer });
+      fireEvent.dragOver(todo, { dataTransfer });
+      fireEvent.drop(todo, { dataTransfer });
+
+      expect(mockedMoveWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        "TODO",
+        1,
+      );
+    });
+
+    test("soltar la tarjeta donde ya está no llama a la API", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      await screen.findByRole("button", { name: "Corregir menú" });
+
+      const todo = screen.getByRole("region", { name: "Por hacer" });
+      const dataTransfer = { setData: vi.fn() };
+
+      // La última tarjeta soltada al fondo, y la primera sobre la segunda
+      fireEvent.dragStart(cardOf("Corregir menú"), { dataTransfer });
+      fireEvent.dragOver(todo, { dataTransfer });
+      fireEvent.drop(todo, { dataTransfer });
+
+      fireEvent.dragStart(cardOf("Diseñar login"), { dataTransfer });
+      fireEvent.dragOver(itemOf("Corregir menú"), { dataTransfer });
+      fireEvent.drop(itemOf("Corregir menú"), { dataTransfer });
+
+      expect(mockedMoveWorkItem).not.toHaveBeenCalled();
+    });
+
+    test("si la API falla la tarea no cambia de lugar y se muestra el error", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockRejectedValue(new Error("Error moviendo tarea"));
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Bajar «Diseñar login»" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error moviendo tarea",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Por hacer" }))
+          .getAllByRole("heading", { level: 3 })
+          .map((heading) => heading.textContent),
+      ).toEqual(["Diseñar login", "Corregir menú"]);
+    });
+
+    test("un proyecto archivado no permite reordenar", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        project: { ...board.project, is_archived: true },
+      });
+
+      renderPage();
+
+      await screen.findByRole("button", { name: "Diseñar login" });
+
+      expect(
+        screen.queryByRole("button", { name: /^(Subir|Bajar) «/ }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("límite de trabajo en curso", () => {
+    test("sin límite el contador muestra solo la cantidad", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+
+      expect(within(todo).getByText("2 elementos")).toBeInTheDocument();
+    });
+
+    test("con límite el contador muestra cantidad/límite", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        wip_limits: { TODO: 3, IN_PROGRESS: 1 },
+      });
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+      const inProgress = screen.getByRole("region", { name: "En progreso" });
+
+      expect(within(todo).getByText("2/3")).toBeInTheDocument();
+      expect(within(todo).getByText("2 de 3 elementos")).toBeInTheDocument();
+      expect(within(inProgress).getByText("1/1")).toBeInTheDocument();
+      expect(within(inProgress).getByText("1/1")).not.toHaveClass(
+        "is-over-limit",
+      );
+    });
+
+    test("al superar el límite la columna se marca y se avisa a lectores de pantalla", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        wip_limits: { TODO: 1 },
+      });
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+
+      expect(
+        within(todo).getByText("2 elementos, supera el límite de 1"),
+      ).toBeInTheDocument();
+      expect(within(todo).getByText("2/1").parentElement).toHaveClass(
+        "is-over-limit",
+      );
+    });
+
+    test("el filtro no cambia el conteo contra el límite", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        wip_limits: { TODO: 1 },
+      });
+
+      renderPage("?q=login");
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+
+      expect(
+        within(todo).getByText("2 elementos, supera el límite de 1"),
+      ).toBeInTheDocument();
+    });
+
+    test("se configuran desde el diálogo «Límites»", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedSaveWipLimits.mockResolvedValue({ TODO: 5, IN_PROGRESS: null });
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Límites" }),
+      );
+
+      const dialog = screen.getByRole("dialog", {
+        name: "Límite de trabajo en curso",
+      });
+
+      expect(within(dialog).getByLabelText("Por hacer")).toHaveValue(null);
+
+      await userEvent.type(within(dialog).getByLabelText("Por hacer"), "5");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Guardar" }),
+      );
+
+      expect(mockedSaveWipLimits).toHaveBeenCalledWith(PROJECT_ID, {
+        TODO: 5,
+        IN_PROGRESS: null,
+      });
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Por hacer" })).getByText(
+          "2/5",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("vaciar un campo quita el límite", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        wip_limits: { TODO: 3, IN_PROGRESS: 2 },
+      });
+      mockedSaveWipLimits.mockResolvedValue({ TODO: null, IN_PROGRESS: 2 });
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Límites" }),
+      );
+      await userEvent.clear(
+        within(screen.getByRole("dialog")).getByLabelText("Por hacer"),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+      expect(mockedSaveWipLimits).toHaveBeenCalledWith(PROJECT_ID, {
+        TODO: null,
+        IN_PROGRESS: 2,
+      });
+    });
+
+    test("si guardar falla muestra el error y mantiene el diálogo", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedSaveWipLimits.mockRejectedValue(
+        new Error("Error guardando límites"),
+      );
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Límites" }),
+      );
+      const limitsDialog = screen.getByRole("dialog");
+
+      await userEvent.type(
+        within(limitsDialog).getByLabelText("En progreso"),
+        "2",
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Guardar" }));
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error guardando límites",
+      );
+      expect(within(limitsDialog).getByLabelText("En progreso")).toHaveValue(2);
+    });
+
+    test("Cancelar y Escape cierran el diálogo sin guardar y devuelven el foco", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      const open = await screen.findByRole("button", { name: "Límites" });
+
+      await userEvent.click(open);
+      await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() => expect(open).toHaveFocus());
+
+      await userEvent.click(open);
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(mockedSaveWipLimits).not.toHaveBeenCalled();
+    });
+
+    test("un proyecto archivado no puede cambiar los límites", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        project: { ...board.project, is_archived: true },
+      });
+
+      renderPage();
+
+      await screen.findByRole("search", { name: "Filtrar tareas" });
+
+      expect(
+        screen.queryByRole("button", { name: "Límites" }),
+      ).not.toBeInTheDocument();
     });
   });
 });

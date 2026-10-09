@@ -85,12 +85,16 @@
 }
 
 .kanban-card-move {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 8px;
 }
 
 .kanban-card-move select {
   box-sizing: border-box;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 4px 6px;
   border: 1px solid #dfe1e6;
   border-radius: 4px;
@@ -160,4 +164,28 @@
   outline: 2px solid #0c66e4;
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+.kanban-card-reorder {
+  display: inline-flex;
+  padding: 4px;
+  border: 1px solid #dfe1e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #44546f;
+  cursor: pointer;
+}
+
+.kanban-card-reorder:hover:not(:disabled) {
+  background: #f1f2f4;
+}
+
+.kanban-card-reorder:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.kanban-card-reorder:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
 }

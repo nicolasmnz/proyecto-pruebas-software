@@ -9,6 +9,7 @@ import {
   updateWorkItem,
 } from "../api/board";
 import type { BoardMember, WorkItemDetail } from "../api/board";
+import { trapTab } from "../utils/focusTrap";
 import { formatDate, formatDueDate } from "../utils/format";
 import ConfirmDialog from "./ConfirmDialog";
 import TaskForm from "./TaskForm";
@@ -31,9 +32,6 @@ interface TaskDialogProps {
 type State =
   | { status: "success"; item: WorkItemDetail }
   | { status: "error"; message: string };
-
-const FOCUSABLE =
-  "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href]";
 
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -102,25 +100,7 @@ function TaskDialog({
       return;
     }
 
-    // Mantiene el foco dentro del diálogo
-    if (event.key === "Tab") {
-      const focusable = Array.from(
-        dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
-      );
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey && document.activeElement === dialogRef.current) {
-        event.preventDefault();
-        last?.focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    }
+    trapTab(event, dialogRef.current);
   }
 
   async function handleSave(item: WorkItemDetail, values: TaskFormValues) {

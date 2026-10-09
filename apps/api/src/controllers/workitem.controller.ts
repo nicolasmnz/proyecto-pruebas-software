@@ -10,16 +10,20 @@ import {
     findBoardItem,
     findBoardItems,
     findProjectMembers,
+    findWipLimits,
     findWorkItemDetail,
     moveWorkItem,
+    setWipLimits,
     setWorkItemArchived,
-    updateWorkItem
+    updateWorkItem,
+    WIP_STATUSES
 } from '../repositories/workitem.repository.js';
 
 // Coinciden con los CHECK y VARCHAR de work_items; las épicas no se crean desde el tablero
 const MAX_TITLE_LENGTH = 200;
 const EDITABLE_TYPES = ['TASK', 'STORY', 'BUG'];
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+const MAX_WIP_LIMIT = 999;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Orden de las columnas del tablero
@@ -147,10 +151,11 @@ export async function getBoard(
             return respond(res, project);
         }
 
-        const [items, archived, members] = await Promise.all([
+        const [items, archived, members, wipLimits] = await Promise.all([
             findBoardItems(project.id),
             findArchivedItems(project.id),
-            findProjectMembers(project.id)
+            findProjectMembers(project.id),
+            findWipLimits(project.id)
         ]);
 
         return res.status(200).json({
@@ -160,7 +165,8 @@ export async function getBoard(
                 items: items.filter((item) => item.status === status)
             })),
             archived,
-            members
+            members,
+            wip_limits: wipLimits
         });
 
     } catch (error) {
@@ -391,6 +397,15 @@ export async function patchWorkItem(
             return respond(res, new Failure(400, `status debe ser uno de: ${BOARD_STATUSES.join(', ')}`));
         }
 
+        const { index } = req.body;
+
+        if (
+            index !== undefined &&
+            (typeof index !== 'number' || !Number.isInteger(index) || index < 0)
+        ) {
+            return respond(res, new Failure(400, 'index debe ser un entero mayor o igual a 0'));
+        }
+
         const project = await loadProject(req.params.id);
 
         if (isFailure(project)) {
@@ -413,14 +428,14 @@ export async function patchWorkItem(
             return respond(res, new Failure(409, 'La tarea está archivada. Restáurala para moverla'));
         }
 
-        // Soltar la tarea en su propia columna no cambia nada
-        if (item.status === status) {
+        // Sin posición, soltar la tarea en su propia columna no cambia nada
+        if (item.status === status && index === undefined) {
             return res.status(200).json(item);
         }
 
         return res
             .status(200)
-            .json(await moveWorkItem(project.id, item.id, status));
+            .json(await moveWorkItem(project.id, item.id, status, index));
 
     } catch (error) {
         return serverError(res, error, 'Error moviendo tarea');
@@ -488,5 +503,55 @@ export async function patchRestoreWorkItem(
 
     } catch (error) {
         return serverError(res, error, 'Error restaurando tarea');
+    }
+}
+
+
+export async function putWipLimits(
+    req: Request<IdParams>,
+    res: Response
+) {
+    try {
+        const project = await loadProject(req.params.id);
+
+        if (isFailure(project)) {
+            return respond(res, project);
+        }
+
+        const blocked = assertEditable(project, 'cambiar los límites');
+
+        if (blocked) {
+            return respond(res, blocked);
+        }
+
+        const body = req.body ?? {};
+        const limits: Record<string, number | null> = {};
+
+        for (const status of WIP_STATUSES) {
+            const value = body[status];
+
+            if (value === undefined || value === null) {
+                limits[status] = null;
+                continue;
+            }
+
+            if (
+                typeof value !== 'number' ||
+                !Number.isInteger(value) ||
+                value < 1 ||
+                value > MAX_WIP_LIMIT
+            ) {
+                return res.status(400).json({
+                    message: `${status} debe ser un entero entre 1 y ${MAX_WIP_LIMIT}, o null para quitar el límite`
+                });
+            }
+
+            limits[status] = value;
+        }
+
+        return res.status(200).json(await setWipLimits(project.id, limits));
+
+    } catch (error) {
+        return serverError(res, error, 'Error guardando límites');
     }
 }

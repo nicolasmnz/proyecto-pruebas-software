@@ -274,3 +274,117 @@ test.describe("ficha de la tarea", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("filtros, orden y límite de trabajo", () => {
+  let project: { id: string };
+
+  async function addItem(
+    request: import("@playwright/test").APIRequestContext,
+    title: string,
+    status = "TODO",
+  ) {
+    const response = await request.post(
+      `${API_URL}/projects/${project.id}/work-items`,
+      { data: { title, status, createdBy: SEED_USER_ID } },
+    );
+
+    expect(response.status()).toBe(201);
+  }
+
+  test.beforeEach(async ({ request }) => {
+    const created = await request.post(`${API_URL}/projects`, {
+      data: { name: `Proyecto Orden ${Date.now()}`, createdBy: SEED_USER_ID },
+    });
+
+    expect(created.status()).toBe(201);
+
+    project = await created.json();
+
+    await addItem(request, "Primera tarea");
+    await addItem(request, "Segunda tarea");
+    await addItem(request, "Tercera tarea");
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${API_URL}/projects/${project.id}`);
+  });
+
+  test("usuario busca una tarea por título y por número", async ({ page }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    const todo = page.getByRole("region", { name: "Por hacer" });
+    const search = page.getByRole("searchbox", { name: "Buscar tareas" });
+
+    await search.fill("segunda");
+
+    await expect(todo.getByRole("heading", { level: 3 })).toHaveCount(1);
+    await expect(page.getByText("Mostrando 1 de 3 tareas")).toBeVisible();
+    await expect(page).toHaveURL(/q=segunda/);
+
+    await search.fill("#3");
+
+    await expect(
+      todo.getByRole("button", { name: "Tercera tarea" }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Limpiar filtros" }).click();
+
+    await expect(todo.getByRole("heading", { level: 3 })).toHaveCount(3);
+  });
+
+  test("usuario reordena una tarea dentro de la columna y el orden persiste", async ({
+    page,
+  }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    await page.getByRole("button", { name: "Bajar «Primera tarea»" }).click();
+
+    const titles = () =>
+      page
+        .getByRole("region", { name: "Por hacer" })
+        .getByRole("heading", { level: 3 })
+        .allTextContents();
+
+    await expect
+      .poll(titles)
+      .toEqual(["Segunda tarea", "Primera tarea", "Tercera tarea"]);
+
+    await page.reload();
+
+    await expect
+      .poll(titles)
+      .toEqual(["Segunda tarea", "Primera tarea", "Tercera tarea"]);
+  });
+
+  test("usuario define un límite y la columna se marca al superarlo", async ({
+    page,
+  }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    await page.getByRole("button", { name: "Límites" }).click();
+
+    const dialog = page.getByRole("dialog", {
+      name: "Límite de trabajo en curso",
+    });
+
+    await dialog.getByLabel("Por hacer").fill("2");
+    await dialog.getByRole("button", { name: "Guardar" }).click();
+
+    await expect(dialog).toHaveCount(0);
+
+    const todo = page.getByRole("region", { name: "Por hacer" });
+
+    await expect(
+      todo.getByText("3 elementos, supera el límite de 2"),
+    ).toBeAttached();
+
+    // El límite persiste al recargar
+    await page.reload();
+
+    await expect(
+      page
+        .getByRole("region", { name: "Por hacer" })
+        .getByText("3 elementos, supera el límite de 2"),
+    ).toBeAttached();
+  });
+});

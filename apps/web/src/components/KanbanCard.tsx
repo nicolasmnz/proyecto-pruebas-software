@@ -5,6 +5,8 @@ import {
   BookOpen,
   Bug,
   CheckSquare,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
@@ -30,6 +32,10 @@ interface KanbanCardProps {
   item: BoardItem;
   // Sin esta función la tarjeta es de solo lectura
   onMove?: (item: BoardItem, status: WorkItemStatus) => void;
+  // Sube o baja la tarea dentro de su columna (alternativa al arrastre)
+  onReorder?: (item: BoardItem, delta: -1 | 1) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
   // Abre la ficha de la tarea
   onOpen?: (item: BoardItem) => void;
   // Solo en tareas terminadas: la sacan del tablero
@@ -45,6 +51,9 @@ function KanbanCard({
   item,
   onOpen,
   onMove,
+  onReorder,
+  canMoveUp = true,
+  canMoveDown = true,
   onArchive,
   onRestore,
   onDragStart,
@@ -141,6 +150,29 @@ function KanbanCard({
                 </option>
               ))}
           </select>
+
+          {onReorder && (
+            <>
+              <button
+                type="button"
+                className="kanban-card-reorder"
+                aria-label={`Subir «${item.title}»`}
+                disabled={!canMoveUp}
+                onClick={() => onReorder(item, -1)}
+              >
+                <ChevronUp size={14} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="kanban-card-reorder"
+                aria-label={`Bajar «${item.title}»`}
+                disabled={!canMoveDown}
+                onClick={() => onReorder(item, 1)}
+              >
+                <ChevronDown size={14} aria-hidden="true" />
+              </button>
+            </>
+          )}
         </div>
       )}
 

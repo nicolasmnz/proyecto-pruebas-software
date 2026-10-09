@@ -28,7 +28,19 @@
   text-transform: uppercase;
 }
 
+.kanban-column-list > li {
+  border-radius: 6px;
+}
+
+/* Marca dónde caería la tarjeta que se arrastra */
+.kanban-column-list > li.is-drop-before {
+  box-shadow: 0 -3px 0 0 #0c66e4;
+}
+
 .kanban-column-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 0 6px;
   border-radius: 8px;
   background: #dfe1e6;
@@ -89,4 +101,11 @@
   background: #dce9fd;
   outline: 2px dashed #0c66e4;
   outline-offset: -2px;
+}
+
+/* Columna que supera su límite de trabajo en curso */
+.kanban-column-count.is-over-limit {
+  background: #ffd5d2;
+  color: #ae2e24;
+  font-weight: 600;
 }

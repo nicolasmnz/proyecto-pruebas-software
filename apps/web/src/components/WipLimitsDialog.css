@@ -1,0 +1,12 @@
+.wip-limits-hint {
+  margin: 0 0 16px;
+  color: #44546f;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.wip-limits-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

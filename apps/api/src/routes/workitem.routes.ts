@@ -8,12 +8,15 @@ import {
     patchRestoreWorkItem,
     patchWorkItem,
     postWorkItem,
+    putWipLimits,
     putWorkItem
 } from '../controllers/workitem.controller.js';
 
 const router = Router();
 
 router.get('/:id/board', getBoard);
+
+router.put('/:id/wip-limits', putWipLimits);
 
 router.post('/:id/work-items', postWorkItem);
 

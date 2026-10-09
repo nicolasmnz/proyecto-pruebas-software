@@ -37,6 +37,9 @@ export interface BoardMember {
   name: string;
 }
 
+// Límite de tareas por columna; ausente o null = sin límite
+export type WipLimits = Partial<Record<WorkItemStatus, number | null>>;
+
 export interface Board {
   project: Project;
   columns: BoardColumn[];
@@ -44,6 +47,7 @@ export interface Board {
   archived: BoardItem[];
   // Quienes pueden ser responsables de una tarea
   members: BoardMember[];
+  wip_limits: WipLimits;
 }
 
 export function getBoard(
@@ -87,10 +91,13 @@ export function createWorkItem(
   );
 }
 
+// Con `index` la tarea queda en esa posición de la columna de destino
+// (0 = primera); sin él, al final
 export function moveWorkItem(
   projectId: string,
   itemId: string,
   status: WorkItemStatus,
+  index?: number,
 ): Promise<BoardItem> {
   return request(
     `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}`,
@@ -100,7 +107,27 @@ export function moveWorkItem(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, index }),
+    },
+  );
+}
+
+// Coincide con el límite de la API
+export const MAX_WIP_LIMIT = 999;
+
+export function saveWipLimits(
+  projectId: string,
+  limits: WipLimits,
+): Promise<WipLimits> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/wip-limits`,
+    "No fue posible guardar los límites",
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(limits),
     },
   );
 }

@@ -27,8 +27,17 @@ CREATE TABLE projects (
 
     is_archived BOOLEAN NOT NULL DEFAULT FALSE,
 
+    -- Límite de trabajo en curso por columna del tablero, p. ej.
+    -- {"IN_PROGRESS": 3}. Una columna sin clave no tiene límite
+    wip_limits JSONB NOT NULL DEFAULT '{}'::jsonb,
+
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT chk_projects_wip_limits
+        CHECK (
+            jsonb_typeof(wip_limits) = 'object'
+        ),
 
     CONSTRAINT fk_projects_created_by
         FOREIGN KEY (created_by)

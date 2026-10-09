@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 
 import { ApiError } from "../api/projects";
@@ -10,18 +10,25 @@ import {
   getBoard,
   moveWorkItem,
   restoreWorkItem,
+  saveWipLimits,
 } from "../api/board";
 import type {
   Board,
   BoardItem,
+  WipLimits,
   WorkItemDetail,
   WorkItemStatus,
 } from "../api/board";
 import ArchivedItems from "../components/ArchivedItems";
+import BoardToolbar from "../components/BoardToolbar";
 import BoardProgress from "../components/BoardProgress";
 import KanbanBoard from "../components/KanbanBoard";
 import TaskDialog from "../components/TaskDialog";
+import WipLimitsDialog from "../components/WipLimitsDialog";
 import type { TaskFormValues } from "../components/TaskForm";
+
+import { hasActiveFilters, matchesFilters } from "../utils/boardFilters";
+import type { BoardFilters } from "../utils/boardFilters";
 
 import "./BoardPage.css";
 
@@ -40,6 +47,9 @@ function BoardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   // Tarea cuya ficha está abierta
   const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const [isLimitsOpen, setIsLimitsOpen] = useState(false);
+  // Los filtros viven en la URL para poder compartir o recargar la vista
+  const [searchParams, setSearchParams] = useSearchParams();
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -115,6 +125,31 @@ function BoardPage() {
 
   const { project } = state.board;
 
+  const filters: BoardFilters = {
+    query: searchParams.get("q") ?? "",
+    type: searchParams.get("type") ?? "",
+    priority: searchParams.get("priority") ?? "",
+    assignee: searchParams.get("assignee") ?? "",
+  };
+  const isFiltering = hasActiveFilters(filters);
+
+  function handleFiltersChange(next: BoardFilters) {
+    const params = new URLSearchParams();
+
+    if (next.query) params.set("q", next.query);
+    if (next.type) params.set("type", next.type);
+    if (next.priority) params.set("priority", next.priority);
+    if (next.assignee) params.set("assignee", next.assignee);
+
+    // Escribir en el buscador no llena el historial del navegador
+    setSearchParams(params, { replace: true });
+  }
+
+  const allItems = state.board.columns.flatMap((column) => column.items);
+  const shownCount = isFiltering
+    ? allItems.filter((item) => matchesFilters(item, filters)).length
+    : allItems.length;
+
   // Aplica un cambio al tablero ya cargado, sin volver a pedirlo
   function updateBoard(change: (board: Board) => Board) {
     setResult((current) => {
@@ -151,29 +186,50 @@ function BoardPage() {
     setAnnouncement(`Tarea "${item.title}" creada.`);
   }
 
-  async function handleMoveItem(item: BoardItem, status: WorkItemStatus) {
-    if (!status || status === item.status) {
+  async function handleMoveItem(
+    item: BoardItem,
+    status: WorkItemStatus,
+    index?: number,
+  ) {
+    if (!status || (status === item.status && index === undefined)) {
       return;
     }
 
     try {
       setActionError(null);
 
-      const moved = await moveWorkItem(project.id, item.id, status);
+      const moved = await moveWorkItem(project.id, item.id, status, index);
+      let position = 0;
+      let size = 0;
 
-      // La tarea sale de su columna y queda al final de la de destino
+      // La tarea sale de su columna y entra en la de destino, en `index`
+      // (o al final si no se indicó)
       updateBoard((board) => ({
         ...board,
-        columns: board.columns.map((column) => ({
-          ...column,
-          items:
-            column.status === status
-              ? [...column.items, moved]
-              : column.items.filter(({ id }) => id !== item.id),
-        })),
+        columns: board.columns.map((column) => {
+          const others = column.items.filter(({ id }) => id !== item.id);
+
+          if (column.status !== status) {
+            return { ...column, items: others };
+          }
+
+          position = Math.min(index ?? others.length, others.length);
+          size = others.length + 1;
+
+          return {
+            ...column,
+            items: [
+              ...others.slice(0, position),
+              moved,
+              ...others.slice(position),
+            ],
+          };
+        }),
       }));
       setAnnouncement(
-        `Tarea "${item.title}" movida a ${STATUS_LABELS[status]}.`,
+        status === item.status
+          ? `Tarea "${item.title}" movida a la posición ${position + 1} de ${size}.`
+          : `Tarea "${item.title}" movida a ${STATUS_LABELS[status]}.`,
       );
     } catch (error) {
       setActionError(
@@ -182,6 +238,14 @@ function BoardPage() {
           : "No fue posible mover la tarea.",
       );
     }
+  }
+
+  async function handleSaveLimits(limits: WipLimits) {
+    const saved = await saveWipLimits(project.id, limits);
+
+    updateBoard((board) => ({ ...board, wip_limits: saved }));
+    setIsLimitsOpen(false);
+    setAnnouncement("Límites de trabajo actualizados.");
   }
 
   // La ficha editada reemplaza a la tarea en su columna o en las archivadas
@@ -305,8 +369,22 @@ function BoardPage() {
         archived={state.board.archived}
       />
 
+      <BoardToolbar
+        filters={filters}
+        onChange={handleFiltersChange}
+        members={state.board.members}
+        shown={shownCount}
+        total={allItems.length}
+        onEditLimits={
+          project.is_archived ? undefined : () => setIsLimitsOpen(true)
+        }
+      />
+
       <KanbanBoard
         columns={state.board.columns}
+        wipLimits={state.board.wip_limits}
+        isFiltering={isFiltering}
+        isVisible={(item) => matchesFilters(item, filters)}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
         onOpenItem={(item) => setOpenItemId(item.id)}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
@@ -318,6 +396,14 @@ function BoardPage() {
         onOpen={(item) => setOpenItemId(item.id)}
         onRestore={project.is_archived ? undefined : handleRestoreItem}
       />
+
+      {isLimitsOpen && (
+        <WipLimitsDialog
+          limits={state.board.wip_limits}
+          onSave={handleSaveLimits}
+          onClose={() => setIsLimitsOpen(false)}
+        />
+      )}
 
       {openItemId && (
         <TaskDialog
