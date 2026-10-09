@@ -8,11 +8,13 @@ import "./ArchivedItems.css";
 
 interface ArchivedItemsProps {
   items: BoardItem[];
+  // Abre la ficha de una tarea archivada
+  onOpen?: (item: BoardItem) => void;
   // Sin esta función las tareas archivadas no se pueden restaurar
   onRestore?: (item: BoardItem) => void;
 }
 
-function ArchivedItems({ items, onRestore }: ArchivedItemsProps) {
+function ArchivedItems({ items, onOpen, onRestore }: ArchivedItemsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const listId = useId();
 
@@ -40,7 +42,7 @@ function ArchivedItems({ items, onRestore }: ArchivedItemsProps) {
           <ul className="archived-items-list">
             {items.map((item) => (
               <li key={item.id}>
-                <KanbanCard item={item} onRestore={onRestore} />
+                <KanbanCard item={item} onOpen={onOpen} onRestore={onRestore} />
               </li>
             ))}
           </ul>

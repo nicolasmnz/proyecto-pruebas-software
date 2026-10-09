@@ -3,8 +3,8 @@ import { Plus } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
 import type { BoardColumn, BoardItem, WorkItemStatus } from "../api/board";
-import AddItemForm from "./AddItemForm";
-import type { AddItemValues } from "./AddItemForm";
+import TaskForm from "./TaskForm";
+import type { TaskFormValues } from "./TaskForm";
 import KanbanCard from "./KanbanCard";
 
 import "./KanbanBoard.css";
@@ -14,8 +14,10 @@ interface KanbanBoardProps {
   // Sin esta función el tablero es de solo lectura (proyecto archivado)
   onCreateItem?: (
     status: WorkItemStatus,
-    values: AddItemValues,
+    values: TaskFormValues,
   ) => Promise<void>;
+  // Abre la ficha de una tarea
+  onOpenItem?: (item: BoardItem) => void;
   // Sin esta función las tareas no se pueden mover
   onMoveItem?: (item: BoardItem, status: WorkItemStatus) => void;
   // Sin esta función las tareas terminadas no se pueden archivar
@@ -25,6 +27,7 @@ interface KanbanBoardProps {
 function KanbanBoard({
   columns,
   onCreateItem,
+  onOpenItem,
   onMoveItem,
   onArchiveItem,
 }: KanbanBoardProps) {
@@ -93,6 +96,7 @@ function KanbanBoard({
                   <li key={item.id}>
                     <KanbanCard
                       item={item}
+                      onOpen={onOpenItem}
                       onMove={onMoveItem}
                       onArchive={
                         column.status === "DONE" ? onArchiveItem : undefined
@@ -111,7 +115,7 @@ function KanbanBoard({
 
             {onCreateItem &&
               (isAdding ? (
-                <AddItemForm
+                <TaskForm
                   onSubmit={async (values) => {
                     await onCreateItem(column.status, values);
                     closeForm(column.status);

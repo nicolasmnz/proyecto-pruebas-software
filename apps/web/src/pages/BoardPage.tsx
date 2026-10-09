@@ -11,11 +11,17 @@ import {
   moveWorkItem,
   restoreWorkItem,
 } from "../api/board";
-import type { Board, BoardItem, WorkItemStatus } from "../api/board";
-import type { AddItemValues } from "../components/AddItemForm";
+import type {
+  Board,
+  BoardItem,
+  WorkItemDetail,
+  WorkItemStatus,
+} from "../api/board";
 import ArchivedItems from "../components/ArchivedItems";
 import BoardProgress from "../components/BoardProgress";
 import KanbanBoard from "../components/KanbanBoard";
+import TaskDialog from "../components/TaskDialog";
+import type { TaskFormValues } from "../components/TaskForm";
 
 import "./BoardPage.css";
 
@@ -32,6 +38,8 @@ function BoardPage() {
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
+  // Tarea cuya ficha está abierta
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -123,7 +131,7 @@ function BoardPage() {
 
   async function handleCreateItem(
     status: WorkItemStatus,
-    values: AddItemValues,
+    values: TaskFormValues,
   ) {
     const item = await createWorkItem(project.id, {
       ...values,
@@ -174,6 +182,36 @@ function BoardPage() {
           : "No fue posible mover la tarea.",
       );
     }
+  }
+
+  // La ficha editada reemplaza a la tarea en su columna o en las archivadas
+  function handleItemUpdated(updated: WorkItemDetail) {
+    updateBoard((board) => ({
+      ...board,
+      columns: board.columns.map((column) => ({
+        ...column,
+        items: column.items.map((item) =>
+          item.id === updated.id ? updated : item,
+        ),
+      })),
+      archived: board.archived.map((item) =>
+        item.id === updated.id ? updated : item,
+      ),
+    }));
+    setAnnouncement(`Tarea "${updated.title}" actualizada.`);
+  }
+
+  function handleItemDeleted(deleted: WorkItemDetail) {
+    updateBoard((board) => ({
+      ...board,
+      columns: board.columns.map((column) => ({
+        ...column,
+        items: column.items.filter(({ id }) => id !== deleted.id),
+      })),
+      archived: board.archived.filter(({ id }) => id !== deleted.id),
+    }));
+    setOpenItemId(null);
+    setAnnouncement(`Tarea "${deleted.title}" eliminada.`);
   }
 
   async function handleArchiveItem(item: BoardItem) {
@@ -270,14 +308,29 @@ function BoardPage() {
       <KanbanBoard
         columns={state.board.columns}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
+        onOpenItem={(item) => setOpenItemId(item.id)}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
         onArchiveItem={project.is_archived ? undefined : handleArchiveItem}
       />
 
       <ArchivedItems
         items={state.board.archived}
+        onOpen={(item) => setOpenItemId(item.id)}
         onRestore={project.is_archived ? undefined : handleRestoreItem}
       />
+
+      {openItemId && (
+        <TaskDialog
+          key={openItemId}
+          projectId={project.id}
+          itemId={openItemId}
+          members={state.board.members}
+          readOnly={project.is_archived}
+          onClose={() => setOpenItemId(null)}
+          onUpdated={handleItemUpdated}
+          onDeleted={handleItemDeleted}
+        />
+      )}
     </div>
   );
 }

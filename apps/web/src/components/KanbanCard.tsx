@@ -8,29 +8,11 @@ import {
 } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
-import type {
-  BoardItem,
-  WorkItemPriority,
-  WorkItemStatus,
-  WorkItemType,
-} from "../api/board";
+import type { BoardItem, WorkItemStatus, WorkItemType } from "../api/board";
 import { getInitials } from "../utils/format";
+import { PRIORITY_LABELS, TYPE_LABELS } from "./taskLabels";
 
 import "./KanbanCard.css";
-
-const TYPE_LABELS: Record<WorkItemType, string> = {
-  EPIC: "Épica",
-  STORY: "Historia",
-  TASK: "Tarea",
-  BUG: "Error",
-};
-
-const PRIORITY_LABELS: Record<WorkItemPriority, string> = {
-  LOW: "Baja",
-  MEDIUM: "Media",
-  HIGH: "Alta",
-  CRITICAL: "Crítica",
-};
 
 function TypeIcon({ type }: { type: WorkItemType }) {
   if (type === "BUG") {
@@ -48,6 +30,8 @@ interface KanbanCardProps {
   item: BoardItem;
   // Sin esta función la tarjeta es de solo lectura
   onMove?: (item: BoardItem, status: WorkItemStatus) => void;
+  // Abre la ficha de la tarea
+  onOpen?: (item: BoardItem) => void;
   // Solo en tareas terminadas: la sacan del tablero
   onArchive?: (item: BoardItem) => void;
   // Solo en tareas archivadas: la devuelven a Hecho
@@ -59,6 +43,7 @@ interface KanbanCardProps {
 
 function KanbanCard({
   item,
+  onOpen,
   onMove,
   onArchive,
   onRestore,
@@ -83,7 +68,19 @@ function KanbanCard({
         <span className="sr-only">Tarea </span>#{item.item_number}
       </p>
 
-      <h3 className="kanban-card-title">{item.title}</h3>
+      <h3 className="kanban-card-title">
+        {onOpen ? (
+          <button
+            type="button"
+            className="kanban-card-open"
+            onClick={() => onOpen(item)}
+          >
+            {item.title}
+          </button>
+        ) : (
+          item.title
+        )}
+      </h3>
 
       <div className="kanban-card-meta">
         <span className={`kanban-type kanban-type-${item.type.toLowerCase()}`}>

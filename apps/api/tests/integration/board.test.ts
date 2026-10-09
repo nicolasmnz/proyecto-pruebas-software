@@ -157,7 +157,9 @@ describe("Tablero Kanban API", () => {
     const response = await request(app).get(`/api/projects/${projectId}/board`);
 
     expect(
-      response.body.columns.flatMap((column: { items: unknown[] }) => column.items),
+      response.body.columns.flatMap(
+        (column: { items: unknown[] }) => column.items,
+      ),
     ).toHaveLength(0);
   });
 
@@ -195,7 +197,9 @@ describe("Tablero Kanban API", () => {
       const board = await request(app).get(`/api/projects/${projectId}/board`);
 
       expect(
-        board.body.columns[0].items.map((item: { title: string }) => item.title),
+        board.body.columns[0].items.map(
+          (item: { title: string }) => item.title,
+        ),
       ).toEqual(["Existente", "Nueva tarea"]);
     });
 
@@ -247,7 +251,10 @@ describe("Tablero Kanban API", () => {
       const missing = await request(app).post(url()).send({ title: "x" });
       const unknown = await request(app)
         .post(url())
-        .send({ title: "x", createdBy: "99999999-9999-9999-9999-999999999999" });
+        .send({
+          title: "x",
+          createdBy: "99999999-9999-9999-9999-999999999999",
+        });
 
       expect(missing.status).toBe(400);
       expect(unknown.status).toBe(400);
@@ -361,7 +368,9 @@ describe("Tablero Kanban API", () => {
         .patch(url("no-es-uuid"))
         .send({ status: "DONE" });
       const missingProject = await request(app)
-        .patch(`/api/projects/99999999-9999-9999-9999-999999999999/work-items/${itemId}`)
+        .patch(
+          `/api/projects/99999999-9999-9999-9999-999999999999/work-items/${itemId}`,
+        )
         .send({ status: "DONE" });
 
       expect(missingItem.status).toBe(404);
@@ -472,7 +481,9 @@ describe("Tablero Kanban API", () => {
       const board = await request(app).get(`/api/projects/${projectId}/board`);
 
       expect(
-        board.body.columns[2].items.map((item: { title: string }) => item.title),
+        board.body.columns[2].items.map(
+          (item: { title: string }) => item.title,
+        ),
       ).toEqual(["Segunda", "Primera"]);
       expect(board.body.archived).toEqual([]);
     });
@@ -531,5 +542,301 @@ describe("Tablero Kanban API", () => {
       expect(response.status).toBe(409);
     });
   });
-});
 
+  describe("detalle, edición y eliminación de tareas", () => {
+    let memberId: string;
+    let outsiderId: string;
+
+    async function createItem(title = "Original") {
+      const result = await pool.query(
+        `
+        INSERT INTO work_items
+          (project_id, created_by, type, title, description, priority)
+        VALUES ($1, $2, 'TASK', $3, 'Descripción original', 'LOW')
+        RETURNING id
+        `,
+        [projectId, userId, title],
+      );
+
+      return result.rows[0].id as string;
+    }
+
+    const url = (itemId: string) =>
+      `/api/projects/${projectId}/work-items/${itemId}`;
+
+    const validBody = {
+      title: "Editada",
+      description: "Nueva descripción",
+      type: "BUG",
+      priority: "HIGH",
+      estimate: 5,
+      assigneeId: null as string | null,
+      dueDate: "2026-12-31",
+    };
+
+    beforeEach(async () => {
+      const member = await pool.query(
+        `
+        INSERT INTO users (name, email, password_hash)
+        VALUES ('Beto Miembro', 'beto@test.cl', 'hash-de-prueba')
+        RETURNING id
+        `,
+      );
+      const outsider = await pool.query(
+        `
+        INSERT INTO users (name, email, password_hash)
+        VALUES ('Carla Externa', 'carla@test.cl', 'hash-de-prueba')
+        RETURNING id
+        `,
+      );
+
+      memberId = member.rows[0].id;
+      outsiderId = outsider.rows[0].id;
+
+      await pool.query(
+        "INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'MEMBER')",
+        [projectId, memberId],
+      );
+    });
+
+    test("el tablero lista a los miembros asignables: miembros y creador", async () => {
+      const response = await request(app).get(
+        `/api/projects/${projectId}/board`,
+      );
+
+      expect(response.body.members).toEqual([
+        { id: userId, name: "Ana Pérez" },
+        { id: memberId, name: "Beto Miembro" },
+      ]);
+    });
+
+    test("GET devuelve la ficha completa de la tarea", async () => {
+      const itemId = await createItem();
+
+      const response = await request(app).get(url(itemId));
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        id: itemId,
+        title: "Original",
+        description: "Descripción original",
+        created_by: userId,
+        created_by_name: "Ana Pérez",
+        assignee_name: null,
+      });
+      expect(response.body.created_at).toBeDefined();
+      expect(response.body.updated_at).toBeDefined();
+    });
+
+    test("GET responde 404 si la tarea no existe, es de otro proyecto o es una épica", async () => {
+      const other = await pool.query(
+        `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,
+        [userId],
+      );
+      const foreign = await pool.query(
+        `INSERT INTO work_items (project_id, created_by, type, title)
+         VALUES ($1, $2, 'TASK', 'Ajena') RETURNING id`,
+        [other.rows[0].id, userId],
+      );
+      const epic = await pool.query(
+        `INSERT INTO work_items (project_id, created_by, type, title)
+         VALUES ($1, $2, 'EPIC', 'Épica') RETURNING id`,
+        [projectId, userId],
+      );
+
+      for (const itemId of [
+        "99999999-9999-9999-9999-999999999999",
+        "no-es-uuid",
+        foreign.rows[0].id,
+        epic.rows[0].id,
+      ]) {
+        expect((await request(app).get(url(itemId))).status).toBe(404);
+      }
+    });
+
+    test("PUT edita los campos y asigna a un miembro", async () => {
+      const itemId = await createItem();
+
+      const response = await request(app)
+        .put(url(itemId))
+        .send({ ...validBody, title: "  Editada  ", assigneeId: memberId });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        title: "Editada",
+        description: "Nueva descripción",
+        type: "BUG",
+        priority: "HIGH",
+        estimate: 5,
+        assignee_id: memberId,
+        assignee_name: "Beto Miembro",
+        due_date: "2026-12-31",
+      });
+    });
+
+    test("PUT permite quitar responsable, estimación, fecha y descripción", async () => {
+      const itemId = await createItem();
+
+      await request(app)
+        .put(url(itemId))
+        .send({ ...validBody, assigneeId: memberId });
+
+      const response = await request(app).put(url(itemId)).send({
+        title: "Sin extras",
+        type: "TASK",
+        priority: "MEDIUM",
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toMatchObject({
+        description: null,
+        estimate: null,
+        assignee_id: null,
+        assignee_name: null,
+        due_date: null,
+      });
+    });
+
+    test("PUT no cambia el estado ni la posición de la tarea", async () => {
+      const itemId = await createItem();
+
+      await pool.query(
+        "UPDATE work_items SET status = 'IN_PROGRESS', position = 4 WHERE id = $1",
+        [itemId],
+      );
+
+      const response = await request(app).put(url(itemId)).send(validBody);
+
+      expect(response.body).toMatchObject({
+        status: "IN_PROGRESS",
+        position: 4,
+      });
+    });
+
+    test.each([
+      ["sin título", { title: " " }],
+      ["título demasiado largo", { title: "a".repeat(201) }],
+      ["tipo inválido", { type: "EPIC" }],
+      ["sin tipo", { type: undefined }],
+      ["prioridad inválida", { priority: "URGENT" }],
+      ["estimación negativa", { estimate: -2 }],
+      ["estimación no entera", { estimate: 1.5 }],
+      ["responsable que no es un id", { assigneeId: "pepe" }],
+      ["fecha con otro formato", { dueDate: "31/12/2026" }],
+      ["fecha imposible", { dueDate: "2026-02-30" }],
+    ])("PUT responde 400 con %s", async (_name, change) => {
+      const itemId = await createItem();
+
+      const response = await request(app)
+        .put(url(itemId))
+        .send({ ...validBody, ...change });
+
+      expect(response.status).toBe(400);
+    });
+
+    test("PUT rechaza asignar a quien no es miembro del proyecto", async () => {
+      const itemId = await createItem();
+
+      const response = await request(app)
+        .put(url(itemId))
+        .send({ ...validBody, assigneeId: outsiderId });
+
+      expect(response.status).toBe(400);
+
+      const saved = await pool.query(
+        "SELECT assignee_id FROM work_items WHERE id = $1",
+        [itemId],
+      );
+
+      expect(saved.rows[0].assignee_id).toBeNull();
+    });
+
+    test("PUT conserva al responsable actual aunque ya no sea miembro", async () => {
+      const itemId = await createItem();
+
+      await pool.query("UPDATE work_items SET assignee_id = $2 WHERE id = $1", [
+        itemId,
+        outsiderId,
+      ]);
+
+      const response = await request(app)
+        .put(url(itemId))
+        .send({ ...validBody, assigneeId: outsiderId });
+
+      expect(response.status).toBe(200);
+      expect(response.body.assignee_id).toBe(outsiderId);
+    });
+
+    test("PUT responde 404 si la tarea o el proyecto no existen", async () => {
+      const itemId = await createItem();
+
+      const missingItem = await request(app)
+        .put(url("99999999-9999-9999-9999-999999999999"))
+        .send(validBody);
+      const missingProject = await request(app)
+        .put(
+          `/api/projects/99999999-9999-9999-9999-999999999999/work-items/${itemId}`,
+        )
+        .send(validBody);
+
+      expect(missingItem.status).toBe(404);
+      expect(missingProject.status).toBe(404);
+    });
+
+    test("PUT y DELETE responden 409 si el proyecto está archivado", async () => {
+      const itemId = await createItem();
+
+      await pool.query("UPDATE projects SET is_archived = TRUE WHERE id = $1", [
+        projectId,
+      ]);
+
+      const put = await request(app).put(url(itemId)).send(validBody);
+      const del = await request(app).delete(url(itemId));
+
+      expect(put.status).toBe(409);
+      expect(del.status).toBe(409);
+    });
+
+    test("DELETE elimina la tarea", async () => {
+      const itemId = await createItem();
+
+      const response = await request(app).delete(url(itemId));
+
+      expect(response.status).toBe(200);
+      expect(response.body.id).toBe(itemId);
+
+      const saved = await pool.query("SELECT 1 FROM work_items WHERE id = $1", [
+        itemId,
+      ]);
+
+      expect(saved.rowCount).toBe(0);
+      expect((await request(app).get(url(itemId))).status).toBe(404);
+    });
+
+    test("DELETE responde 404 si la tarea no existe o es de otro proyecto", async () => {
+      const other = await pool.query(
+        `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,
+        [userId],
+      );
+      const foreign = await pool.query(
+        `INSERT INTO work_items (project_id, created_by, type, title)
+         VALUES ($1, $2, 'TASK', 'Ajena') RETURNING id`,
+        [other.rows[0].id, userId],
+      );
+
+      const missing = await request(app).delete(
+        url("99999999-9999-9999-9999-999999999999"),
+      );
+      const crossProject = await request(app).delete(url(foreign.rows[0].id));
+
+      expect(missing.status).toBe(404);
+      expect(crossProject.status).toBe(404);
+
+      const still = await pool.query("SELECT 1 FROM work_items WHERE id = $1", [
+        foreign.rows[0].id,
+      ]);
+
+      expect(still.rowCount).toBe(1);
+    });
+  });
+});

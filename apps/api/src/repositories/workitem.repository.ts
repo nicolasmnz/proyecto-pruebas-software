@@ -106,6 +106,27 @@ export async function createWorkItem(data: CreateWorkItemData) {
     return result.rows[0];
 }
 
+// Usuarios activos que participan del proyecto: sus miembros y quien lo creó
+export async function findProjectMembers(projectId: string) {
+    const result = await pool.query(
+        `
+        SELECT u.id, u.name
+        FROM users u
+        WHERE u.is_active
+          AND (
+              u.id IN (
+                  SELECT user_id FROM project_members WHERE project_id = $1
+              )
+              OR u.id = (SELECT created_by FROM projects WHERE id = $1)
+          )
+        ORDER BY u.name ASC, u.id ASC
+        `,
+        [projectId]
+    );
+
+    return result.rows;
+}
+
 export async function findBoardItem(projectId: string, itemId: string) {
     const result = await pool.query(
         `
@@ -196,4 +217,79 @@ export async function setWorkItemArchived(
     );
 
     return findBoardItem(projectId, itemId);
+}
+
+// Ficha completa de una tarea: el elemento del tablero más sus datos de detalle
+export async function findWorkItemDetail(projectId: string, itemId: string) {
+    const result = await pool.query(
+        `
+        SELECT
+            ${BOARD_ITEM_COLUMNS},
+            w.description,
+            w.created_by,
+            c.name AS created_by_name,
+            w.created_at,
+            w.updated_at
+        ${BOARD_ITEM_FROM}
+        JOIN users c ON c.id = w.created_by
+        WHERE w.id = $1
+          AND w.project_id = $2
+          AND w.type <> 'EPIC'
+        `,
+        [itemId, projectId]
+    );
+
+    return result.rows[0];
+}
+
+interface UpdateWorkItemData {
+    title: string;
+    description: string | null;
+    type: string;
+    priority: string;
+    estimate: number | null;
+    assigneeId: string | null;
+    dueDate: string | null;
+}
+
+export async function updateWorkItem(
+    projectId: string,
+    itemId: string,
+    data: UpdateWorkItemData
+) {
+    await pool.query(
+        `
+        UPDATE work_items
+        SET
+            title = $3,
+            description = $4,
+            type = $5,
+            priority = $6,
+            estimate = $7,
+            assignee_id = $8,
+            due_date = $9
+        WHERE id = $2
+          AND project_id = $1
+        `,
+        [
+            projectId,
+            itemId,
+            data.title,
+            data.description,
+            data.type,
+            data.priority,
+            data.estimate,
+            data.assigneeId,
+            data.dueDate
+        ]
+    );
+
+    return findWorkItemDetail(projectId, itemId);
+}
+
+export async function deleteWorkItem(projectId: string, itemId: string) {
+    await pool.query(
+        'DELETE FROM work_items WHERE id = $1 AND project_id = $2',
+        [itemId, projectId]
+    );
 }

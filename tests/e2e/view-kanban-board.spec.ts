@@ -194,3 +194,83 @@ test.describe("archivar tareas terminadas", () => {
     ).toBeVisible();
   });
 });
+
+test.describe("ficha de la tarea", () => {
+  let project: { id: string };
+
+  test.beforeEach(async ({ request }) => {
+    const created = await request.post(`${API_URL}/projects`, {
+      data: { name: `Proyecto Ficha ${Date.now()}`, createdBy: SEED_USER_ID },
+    });
+
+    expect(created.status()).toBe(201);
+
+    project = await created.json();
+
+    const item = await request.post(
+      `${API_URL}/projects/${project.id}/work-items`,
+      {
+        data: {
+          title: "Tarea con ficha",
+          description: "Descripción inicial",
+          createdBy: SEED_USER_ID,
+        },
+      },
+    );
+
+    expect(item.status()).toBe(201);
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${API_URL}/projects/${project.id}`);
+  });
+
+  test("usuario edita la tarea, la asigna y luego la elimina", async ({
+    page,
+  }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    await page.getByRole("button", { name: "Tarea con ficha" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Tarea con ficha" });
+
+    await expect(dialog.getByText("Descripción inicial")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "Editar" }).click();
+    await dialog.getByLabel(/Título/).fill("Tarea editada");
+    // La primera opción es "Sin asignar": se elige al primer miembro
+    await dialog.getByLabel("Responsable").selectOption({ index: 1 });
+    await dialog.getByRole("button", { name: "Guardar cambios" }).click();
+
+    await expect(
+      page.getByRole("dialog", { name: "Tarea editada" }),
+    ).toBeVisible();
+    await expect(dialog.getByText("Sin asignar")).toHaveCount(0);
+
+    // Los cambios persisten al recargar
+    await page.reload();
+    await page.getByRole("button", { name: "Tarea editada" }).click();
+
+    await page
+      .getByRole("dialog", { name: "Tarea editada" })
+      .getByRole("button", { name: "Eliminar" })
+      .click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Eliminar" })
+      .click();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Tarea editada" }),
+    ).toHaveCount(0);
+
+    await page.reload();
+
+    await expect(
+      page
+        .getByRole("region", { name: "Por hacer" })
+        .getByText("Sin elementos"),
+    ).toBeVisible();
+  });
+});

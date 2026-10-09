@@ -55,7 +55,7 @@
 }
 
 .kanban-column-list + .kanban-add-button,
-.kanban-column-list + .add-item-form,
+.kanban-column-list + .task-form,
 .kanban-column-empty + .kanban-add-button {
   margin-top: 8px;
 }

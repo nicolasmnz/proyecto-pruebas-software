@@ -13,11 +13,14 @@ import BoardPage from "./BoardPage";
 import {
   archiveWorkItem,
   createWorkItem,
+  deleteWorkItem,
   getBoard,
+  getWorkItem,
   moveWorkItem,
   restoreWorkItem,
+  updateWorkItem,
 } from "../api/board";
-import type { Board, BoardItem } from "../api/board";
+import type { Board, BoardItem, WorkItemDetail } from "../api/board";
 import { ApiError } from "../api/projects";
 
 vi.mock("../api/board", async (importOriginal) => ({
@@ -27,6 +30,9 @@ vi.mock("../api/board", async (importOriginal) => ({
   moveWorkItem: vi.fn(),
   archiveWorkItem: vi.fn(),
   restoreWorkItem: vi.fn(),
+  getWorkItem: vi.fn(),
+  updateWorkItem: vi.fn(),
+  deleteWorkItem: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
@@ -34,6 +40,9 @@ const mockedCreateWorkItem = vi.mocked(createWorkItem);
 const mockedMoveWorkItem = vi.mocked(moveWorkItem);
 const mockedArchiveWorkItem = vi.mocked(archiveWorkItem);
 const mockedRestoreWorkItem = vi.mocked(restoreWorkItem);
+const mockedGetWorkItem = vi.mocked(getWorkItem);
+const mockedUpdateWorkItem = vi.mocked(updateWorkItem);
+const mockedDeleteWorkItem = vi.mocked(deleteWorkItem);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -99,6 +108,10 @@ const board: Board = {
     { status: "DONE", items: [] },
   ],
   archived: [],
+  members: [
+    { id: "u1", name: "Ana Pérez" },
+    { id: "u2", name: "Beto Soto" },
+  ],
 };
 
 function renderPage() {
@@ -687,6 +700,368 @@ describe("BoardPage", () => {
       expect(
         await screen.findByText("0 de 4 tareas hechas · 0 %"),
       ).toBeInTheDocument();
+    });
+  });
+
+  describe("ficha de la tarea", () => {
+    const detail: WorkItemDetail = {
+      ...buildItem({
+        id: "1",
+        item_number: 1,
+        title: "Diseñar login",
+        priority: "HIGH",
+        estimate: 3,
+        due_date: "2026-10-31",
+      }),
+      description: "Pantalla de inicio de sesión.",
+      created_by: "u1",
+      created_by_name: "Ana Pérez",
+      created_at: "2026-10-01T12:00:00Z",
+      updated_at: "2026-10-02T12:00:00Z",
+    };
+
+    async function openDialog() {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+
+      return screen.findByRole("dialog", { name: "Diseñar login" });
+    }
+
+    test("al hacer clic en el título abre la ficha con todos sus datos", async () => {
+      const dialog = await openDialog();
+
+      expect(mockedGetWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        expect.anything(),
+      );
+      expect(within(dialog).getByText("#1")).toBeInTheDocument();
+      expect(
+        within(dialog).getByText("Pantalla de inicio de sesión."),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText("Por hacer")).toBeInTheDocument();
+      expect(within(dialog).getByText("Alta")).toBeInTheDocument();
+      expect(within(dialog).getByText("3")).toBeInTheDocument();
+      expect(within(dialog).getByText("Sin asignar")).toBeInTheDocument();
+      // 31 de octubre: la fecha no se corre de día por la zona horaria
+      expect(within(dialog).getByText(/31/)).toBeInTheDocument();
+      expect(within(dialog).getByText("Ana Pérez")).toBeInTheDocument();
+    });
+
+    test("se cierra con el botón y con Escape, y devuelve el foco a la tarjeta", async () => {
+      const dialog = await openDialog();
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Cerrar" }),
+      );
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Diseñar login" }),
+        ).toHaveFocus(),
+      );
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Diseñar login" }),
+      );
+      await screen.findByRole("dialog");
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    test("si no se puede cargar muestra el error y permite reintentar", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockRejectedValueOnce(new Error("Fallo de red"));
+      mockedGetWorkItem.mockResolvedValueOnce(detail);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Fallo de red",
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
+
+      expect(
+        await screen.findByRole("dialog", { name: "Diseñar login" }),
+      ).toBeInTheDocument();
+    });
+
+    test("editar guarda los cambios y actualiza la tarjeta del tablero", async () => {
+      const dialog = await openDialog();
+
+      mockedUpdateWorkItem.mockResolvedValue({
+        ...detail,
+        title: "Rediseñar login",
+        priority: "CRITICAL",
+        assignee_id: "u2",
+        assignee_name: "Beto Soto",
+        updated_at: "2026-10-03T12:00:00Z",
+      });
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Editar" }),
+      );
+
+      const title = within(dialog).getByLabelText(/Título/);
+
+      expect(title).toHaveValue("Diseñar login");
+      expect(within(dialog).getByLabelText("Fecha límite")).toHaveValue(
+        "2026-10-31",
+      );
+
+      await userEvent.clear(title);
+      await userEvent.type(title, "Rediseñar login");
+      await userEvent.selectOptions(
+        within(dialog).getByLabelText("Prioridad"),
+        "CRITICAL",
+      );
+      await userEvent.selectOptions(
+        within(dialog).getByLabelText("Responsable"),
+        "Beto Soto",
+      );
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Guardar cambios" }),
+      );
+
+      expect(mockedUpdateWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", {
+        title: "Rediseñar login",
+        description: "Pantalla de inicio de sesión.",
+        type: "TASK",
+        priority: "CRITICAL",
+        estimate: 3,
+        assigneeId: "u2",
+        dueDate: "2026-10-31",
+      });
+
+      // Vuelve a la vista de la ficha ya actualizada
+      expect(
+        await screen.findByRole("dialog", { name: "Rediseñar login" }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Beto Soto")).toBeInTheDocument();
+
+      // El tablero detrás refleja el cambio
+      const todo = screen.getByRole("region", { name: "Por hacer" });
+
+      expect(
+        within(todo).getByRole("button", { name: "Rediseñar login" }),
+      ).toBeInTheDocument();
+      expect(
+        within(todo).getByLabelText("Asignado a Beto Soto"),
+      ).toBeInTheDocument();
+    });
+
+    test("quitar el responsable y la fecha los envía vacíos", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue({
+        ...detail,
+        assignee_id: "u1",
+        assignee_name: "Ana Pérez",
+      });
+      mockedUpdateWorkItem.mockResolvedValue(detail);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Editar" }),
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("Responsable"),
+        "Sin asignar",
+      );
+      await userEvent.clear(screen.getByLabelText("Fecha límite"));
+      await userEvent.click(
+        screen.getByRole("button", { name: "Guardar cambios" }),
+      );
+
+      expect(mockedUpdateWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        expect.objectContaining({ assigneeId: undefined, dueDate: undefined }),
+      );
+    });
+
+    test("si guardar falla muestra el error y conserva el formulario", async () => {
+      const dialog = await openDialog();
+
+      mockedUpdateWorkItem.mockRejectedValue(
+        new Error("Error actualizando tarea"),
+      );
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Editar" }),
+      );
+      await userEvent.type(within(dialog).getByLabelText(/Título/), " v2");
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Guardar cambios" }),
+      );
+
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+        "Error actualizando tarea",
+      );
+      expect(within(dialog).getByLabelText(/Título/)).toHaveValue(
+        "Diseñar login v2",
+      );
+    });
+
+    test("cancelar la edición vuelve a la ficha sin guardar", async () => {
+      const dialog = await openDialog();
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Editar" }),
+      );
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Cancelar" }),
+      );
+
+      expect(
+        within(dialog).getByRole("button", { name: "Editar" }),
+      ).toBeInTheDocument();
+      expect(mockedUpdateWorkItem).not.toHaveBeenCalled();
+    });
+
+    test("eliminar pide confirmación y quita la tarea del tablero", async () => {
+      const dialog = await openDialog();
+
+      mockedDeleteWorkItem.mockResolvedValue(undefined);
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Eliminar" }),
+      );
+
+      const confirm = await screen.findByRole("alertdialog", {
+        name: "¿Eliminar esta tarea?",
+      });
+
+      expect(mockedDeleteWorkItem).not.toHaveBeenCalled();
+
+      await userEvent.click(
+        within(confirm).getByRole("button", { name: "Eliminar" }),
+      );
+
+      expect(mockedDeleteWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1");
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+      expect(screen.queryByText("Diseñar login")).not.toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        'Tarea "Diseñar login" eliminada.',
+      );
+    });
+
+    test("cancelar la confirmación no elimina nada", async () => {
+      const dialog = await openDialog();
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Eliminar" }),
+      );
+      await userEvent.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: "Cancelar",
+        }),
+      );
+
+      expect(mockedDeleteWorkItem).not.toHaveBeenCalled();
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    test("si eliminar falla muestra el error y la tarea sigue", async () => {
+      const dialog = await openDialog();
+
+      mockedDeleteWorkItem.mockRejectedValue(
+        new Error("Error eliminando tarea"),
+      );
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Eliminar" }),
+      );
+
+      const confirm = await screen.findByRole("alertdialog");
+
+      await userEvent.click(
+        within(confirm).getByRole("button", { name: "Eliminar" }),
+      );
+
+      expect(await within(confirm).findByRole("alert")).toHaveTextContent(
+        "Error eliminando tarea",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Por hacer" })).getByText(
+          "Diseñar login",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("en un proyecto archivado la ficha es de solo lectura", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        project: { ...board.project, is_archived: true },
+      });
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Diseñar login",
+      });
+
+      expect(
+        within(dialog).queryByRole("button", { name: "Editar" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(dialog).queryByRole("button", { name: "Eliminar" }),
+      ).not.toBeInTheDocument();
+    });
+
+    test("también se puede abrir la ficha de una tarea archivada", async () => {
+      const archivedItem = {
+        ...detail,
+        id: "7",
+        is_archived: true,
+        status: "DONE" as const,
+      };
+
+      mockedGetBoard.mockResolvedValue({ ...board, archived: [archivedItem] });
+      mockedGetWorkItem.mockResolvedValue(archivedItem);
+
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Archivadas (1)" }),
+      );
+
+      const section = screen.getByRole("region", { name: "Tareas archivadas" });
+
+      await userEvent.click(
+        within(section).getByRole("button", { name: "Diseñar login" }),
+      );
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Diseñar login",
+      });
+
+      expect(within(dialog).getByText("Archivada")).toBeInTheDocument();
     });
   });
 });

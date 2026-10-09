@@ -32,11 +32,18 @@ export interface BoardColumn {
   items: BoardItem[];
 }
 
+export interface BoardMember {
+  id: string;
+  name: string;
+}
+
 export interface Board {
   project: Project;
   columns: BoardColumn[];
   // Tareas terminadas que se sacaron del tablero
   archived: BoardItem[];
+  // Quienes pueden ser responsables de una tarea
+  members: BoardMember[];
 }
 
 export function getBoard(
@@ -132,5 +139,64 @@ export function restoreWorkItem(
     itemId,
     "restore",
     "No fue posible restaurar la tarea",
+  );
+}
+
+export interface WorkItemDetail extends BoardItem {
+  description: string | null;
+  created_by: string;
+  created_by_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateWorkItemData {
+  title: string;
+  description?: string;
+  type: Exclude<WorkItemType, "EPIC">;
+  priority: WorkItemPriority;
+  estimate?: number;
+  assigneeId?: string;
+  dueDate?: string;
+}
+
+export function getWorkItem(
+  projectId: string,
+  itemId: string,
+  signal?: AbortSignal,
+): Promise<WorkItemDetail> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}`,
+    "No fue posible cargar la tarea",
+    { signal },
+  );
+}
+
+export function updateWorkItem(
+  projectId: string,
+  itemId: string,
+  data: UpdateWorkItemData,
+): Promise<WorkItemDetail> {
+  return request(
+    `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}`,
+    "No fue posible guardar la tarea",
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+export async function deleteWorkItem(
+  projectId: string,
+  itemId: string,
+): Promise<void> {
+  await request(
+    `/projects/${encodeURIComponent(projectId)}/work-items/${encodeURIComponent(itemId)}`,
+    "No fue posible eliminar la tarea",
+    { method: "DELETE" },
   );
 }
