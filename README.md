@@ -4,7 +4,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 > **Enlaces**
 >
-> - 🎥 Video Entrega 1: _pendiente_
+> - 🎥 Video Entrega 1: [Link a video](https://drive.google.com/drive/folders/1k-okz9jdoSsn6UtHb03K5-L44_l2OKJ_?usp=drive_link)
 > - 📚 [Wiki del proyecto](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki)
 > - 🏷️ Release Entrega 1: `v1.0-entrega1` _(pendiente)_
 
