@@ -179,16 +179,16 @@ npm run test:integration
 > docker compose -f compose.test.yml down -v
 > npm run db:test:up
 > ```
-## Ejecucion
-Para ejecutar todas las pruebas necesarias, se debe de
+ ---
+## Resumen de Ejecucion
+En resumen, para ejecutar todas las pruebas necesarias, se debe de:
 
 ```bash
-docker compose -f compose.test.yml ps
+docker compose -f compose.test.yml down -v
 npm run db:test:up
 
 npm run lint
 npm run typecheck
-npm run build
 
 npm run test:all
 ```
