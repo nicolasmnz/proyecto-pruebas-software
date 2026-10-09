@@ -13,6 +13,8 @@ export const STATUS_LABELS: Record<WorkItemStatus, string> = {
 
 export interface BoardItem {
   id: string;
+  // Identificador correlativo dentro del proyecto (#1, #2, ...)
+  item_number: number;
   type: WorkItemType;
   title: string;
   status: WorkItemStatus;

@@ -30,6 +30,7 @@ const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 function buildItem(overrides: Partial<BoardItem>): BoardItem {
   return {
     id: "30000000-0000-0000-0000-000000000010",
+    item_number: 1,
     type: "TASK",
     title: "Tarea",
     status: "TODO",
@@ -57,8 +58,18 @@ const board: Board = {
     {
       status: "TODO",
       items: [
-        buildItem({ id: "1", title: "Diseñar login", priority: "HIGH" }),
-        buildItem({ id: "2", title: "Corregir menú", type: "BUG" }),
+        buildItem({
+          id: "1",
+          item_number: 1,
+          title: "Diseñar login",
+          priority: "HIGH",
+        }),
+        buildItem({
+          id: "2",
+          item_number: 2,
+          title: "Corregir menú",
+          type: "BUG",
+        }),
       ],
     },
     {
@@ -66,6 +77,7 @@ const board: Board = {
       items: [
         buildItem({
           id: "3",
+          item_number: 3,
           title: "Administrar miembros",
           type: "STORY",
           estimate: 8,
@@ -116,6 +128,19 @@ describe("BoardPage", () => {
     ).toBeInTheDocument();
     expect(within(todo).getAllByLabelText("Sin asignar")).toHaveLength(2);
     expect(within(done).getByText("Sin elementos")).toBeInTheDocument();
+  });
+
+  test("cada tarjeta muestra su identificador", async () => {
+    mockedGetBoard.mockResolvedValue(board);
+
+    renderPage();
+
+    const todo = await screen.findByRole("region", { name: "Por hacer" });
+    const inProgress = screen.getByRole("region", { name: "En progreso" });
+
+    expect(within(todo).getByText("#1")).toBeInTheDocument();
+    expect(within(todo).getByText("#2")).toBeInTheDocument();
+    expect(within(inProgress).getByText("#3")).toBeInTheDocument();
   });
 
   test("el breadcrumb enlaza con el proyecto", async () => {

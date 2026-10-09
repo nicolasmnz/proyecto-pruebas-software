@@ -92,6 +92,57 @@ describe("Tablero Kanban API", () => {
     expect(done.items).toHaveLength(1);
   });
 
+  test("numera los elementos por proyecto en orden de creación", async () => {
+    await addItem("Uno", "TODO", 0);
+    await addItem("Dos", "DONE", 0);
+
+    const other = await pool.query(
+      `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,
+      [userId],
+    );
+    await pool.query(
+      `INSERT INTO work_items (project_id, created_by, type, title)
+       VALUES ($1, $2, 'TASK', 'Primera de otro')`,
+      [other.rows[0].id, userId],
+    );
+
+    const created = await request(app)
+      .post(`/api/projects/${projectId}/work-items`)
+      .send({ title: "Tres", createdBy: userId });
+    const otherBoard = await request(app).get(
+      `/api/projects/${other.rows[0].id}/board`,
+    );
+    const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+    const numbers = Object.fromEntries(
+      board.body.columns
+        .flatMap((column: { items: unknown[] }) => column.items)
+        .map((item: { title: string; item_number: number }) => [
+          item.title,
+          item.item_number,
+        ]),
+    );
+
+    expect(numbers).toEqual({ Uno: 1, Dos: 2, Tres: 3 });
+    expect(created.body.item_number).toBe(3);
+    expect(otherBoard.body.columns[0].items[0].item_number).toBe(1);
+  });
+
+  test("no repite números en altas simultáneas", async () => {
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        request(app)
+          .post(`/api/projects/${projectId}/work-items`)
+          .send({ title: `Tarea ${index}`, createdBy: userId }),
+      ),
+    );
+
+    expect(responses.every((response) => response.status === 201)).toBe(true);
+    expect(
+      responses.map((response) => response.body.item_number).sort(),
+    ).toEqual([1, 2, 3, 4, 5]);
+  });
+
   test("no mezcla elementos de otros proyectos", async () => {
     const other = await pool.query(
       `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,

@@ -6,6 +6,7 @@ export async function findBoardItems(projectId: string) {
         `
         SELECT
             w.id,
+            w.item_number,
             w.project_id,
             w.sprint_id,
             w.type,
@@ -65,6 +66,7 @@ export async function createWorkItem(data: CreateWorkItemData) {
         )
         RETURNING
             id,
+            item_number,
             project_id,
             sprint_id,
             type,
@@ -97,6 +99,7 @@ export async function findBoardItem(projectId: string, itemId: string) {
         `
         SELECT
             w.id,
+            w.item_number,
             w.project_id,
             w.sprint_id,
             w.type,

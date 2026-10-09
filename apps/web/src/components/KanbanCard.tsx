@@ -67,6 +67,10 @@ function KanbanCard({
       }}
       onDragEnd={onDragEnd}
     >
+      <p className="kanban-card-key" title="Identificador de la tarea">
+        <span className="sr-only">Tarea </span>#{item.item_number}
+      </p>
+
       <h3 className="kanban-card-title">{item.title}</h3>
 
       <div className="kanban-card-meta">
