@@ -1,0 +1,142 @@
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  align-items: start;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.kanban-column {
+  padding: 8px;
+  border-radius: 8px;
+  background: #f1f2f4;
+}
+
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px 8px;
+}
+
+.kanban-column-header h2 {
+  margin: 0;
+  color: #44546f;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.kanban-column-list > li {
+  border-radius: 6px;
+}
+
+/* Marca dónde caería la tarjeta que se arrastra */
+.kanban-column-list > li.is-drop-before {
+  box-shadow: 0 -3px 0 0 #0c66e4;
+}
+
+.kanban-column-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #dfe1e6;
+  color: #44546f;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kanban-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kanban-column-empty {
+  margin: 0;
+  padding: 16px 4px;
+  color: #626f86;
+  font-size: 14px;
+  text-align: center;
+}
+
+.kanban-column-list + .kanban-add-button,
+.kanban-column-list + .task-form,
+.kanban-column-empty + .kanban-add-button {
+  margin-top: 8px;
+}
+
+.kanban-add-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #44546f;
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.kanban-add-button:hover {
+  background: #dfe1e6;
+}
+
+.kanban-add-button:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+}
+
+.kanban-column.is-drop-target {
+  background: #dce9fd;
+  outline: 2px dashed #0c66e4;
+  outline-offset: -2px;
+}
+
+/* Columna que supera su límite de trabajo en curso */
+.kanban-column-count.is-over-limit {
+  background: #ffd5d2;
+  color: #ae2e24;
+  font-weight: 600;
+}
+
+.kanban-column-points {
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kanban-column-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #44546f;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.kanban-column-action:hover {
+  background: #dfe1e6;
+}
+
+.kanban-column-action:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
+}

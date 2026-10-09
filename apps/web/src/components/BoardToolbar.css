@@ -1,0 +1,75 @@
+.board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.board-toolbar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.board-toolbar-field label {
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.board-toolbar-field select,
+.board-toolbar-field input {
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  background: #fff;
+  color: #292a2e;
+  font: inherit;
+  font-size: 14px;
+}
+
+.board-toolbar-field select:focus,
+.board-toolbar-field input:focus {
+  outline: none;
+  border-color: #0c66e4;
+  box-shadow: 0 0 0 1px #0c66e4;
+}
+
+.board-toolbar-search {
+  position: relative;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+
+.board-toolbar-search svg {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  color: #626f86;
+  pointer-events: none;
+}
+
+.board-toolbar-search input {
+  width: 100%;
+  padding-left: 32px;
+}
+
+.board-toolbar-limits {
+  margin-left: auto;
+}
+
+.board-toolbar-summary {
+  flex-basis: 100%;
+  margin: 0;
+  color: #44546f;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.board-toolbar-summary:empty {
+  display: none;
+}

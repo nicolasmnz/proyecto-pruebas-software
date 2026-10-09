@@ -1,0 +1,228 @@
+import request from "supertest";
+import { describe, expect, test, beforeEach, afterAll } from "@jest/globals";
+
+import app from "../../src/app.js";
+import pool from "../../src/config/database.js";
+import { resetTestDatabase } from "../helpers/database.js";
+
+describe("Projects API", () => {
+  beforeEach(async () => {
+    await resetTestDatabase();
+  });
+
+  afterAll(async () => {
+    try {
+      await resetTestDatabase();
+    } finally {
+      await pool.end();
+    }
+  });
+
+  test("GET /api/projects responde 200", async () => {
+    const response = await request(app).get("/api/projects");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+  });
+
+  test("GET /api/projects/:id responde 404 si no existe", async () => {
+    const response = await request(app).get(
+      "/api/projects/99999999-9999-9999-9999-999999999999",
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  test("GET /api/projects/:id responde 404 si el id no es un UUID", async () => {
+    const response = await request(app).get("/api/projects/1");
+
+    expect(response.status).toBe(404);
+  });
+
+  test("GET /api/projects/:id obtiene un proyecto existente", async () => {
+    // Crear un usuario para asociarlo al proyecto
+    const user = await pool.query(
+      `
+      INSERT INTO users (name, email, password_hash)
+      VALUES ($1, $2, $3)
+      RETURNING id
+      `,
+      ["Usuario Test", "usuario@test.cl", "hash-de-prueba"],
+    );
+
+    const userId = user.rows[0].id;
+
+    // Crear un proyecto directamente en PostgreSQL
+    const project = await pool.query(
+      `
+      INSERT INTO projects (name, description, created_by)
+      VALUES ($1, $2, $3)
+      RETURNING id
+      `,
+      ["Proyecto Existente", "Proyecto creado para el test", userId],
+    );
+
+    const projectId = project.rows[0].id;
+
+    // Consultar el proyecto desde la API
+    const response = await request(app).get(`/api/projects/${projectId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.name).toBe("Proyecto Existente");
+  });
+
+  test("POST /api/projects crea un proyecto", async () => {
+    // Crear previamente el usuario propietario
+    const user = await pool.query(
+      `
+      INSERT INTO users (name, email, password_hash)
+      VALUES ($1, $2, $3)
+      RETURNING id
+      `,
+      ["Usuario Creador", "creador@test.cl", "hash-de-prueba"],
+    );
+
+    const userId = user.rows[0].id;
+
+    // Crear proyecto mediante la API
+    const response = await request(app).post("/api/projects").send({
+      name: "Proyecto Test",
+      description: "Proyecto creado desde Jest",
+      createdBy: userId,
+    });
+
+    expect(response.status).toBe(201);
+    expect(response.body.name).toBe("Proyecto Test");
+
+    // Comprobar que realmente quedó guardado
+    const savedProject = await pool.query(
+      "SELECT * FROM projects WHERE id = $1",
+      [response.body.id],
+    );
+
+    expect(savedProject.rowCount).toBe(1);
+    expect(savedProject.rows[0].created_by).toBe(userId);
+  });
+
+  describe("edición y archivado", () => {
+    async function createTestProject(name = "Proyecto Original") {
+      const user = await pool.query(
+        `
+        INSERT INTO users (name, email, password_hash)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        `,
+        ["Usuario Test", `usuario-${Date.now()}@test.cl`, "hash-de-prueba"],
+      );
+
+      const project = await pool.query(
+        `
+        INSERT INTO projects (name, description, created_by)
+        VALUES ($1, $2, $3)
+        RETURNING id
+        `,
+        [name, "Descripción original", user.rows[0].id],
+      );
+
+      return project.rows[0].id as string;
+    }
+
+    test("PUT /api/projects/:id actualiza nombre y descripción", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name: "  Nombre Nuevo  ", description: "Descripción nueva" });
+
+      expect(response.status).toBe(200);
+      expect(response.body.name).toBe("Nombre Nuevo");
+      expect(response.body.description).toBe("Descripción nueva");
+    });
+
+    test("PUT /api/projects/:id guarda null si la descripción queda vacía", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name: "Proyecto", description: "   " });
+
+      expect(response.status).toBe(200);
+      expect(response.body.description).toBeNull();
+    });
+
+    test.each([
+      ["vacío", ""],
+      ["solo espacios", "   "],
+      ["más de 150 caracteres", "a".repeat(151)],
+    ])("PUT /api/projects/:id rechaza un nombre %s", async (_case, name) => {
+      const projectId = await createTestProject();
+
+      const response = await request(app)
+        .put(`/api/projects/${projectId}`)
+        .send({ name });
+
+      expect(response.status).toBe(400);
+    });
+
+    test("POST /api/projects rechaza un nombre de más de 150 caracteres", async () => {
+      const response = await request(app)
+        .post("/api/projects")
+        .send({
+          name: "a".repeat(151),
+          createdBy: "11111111-1111-1111-1111-111111111111",
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    test("PUT /api/projects/:id responde 404 si no existe", async () => {
+      const response = await request(app)
+        .put("/api/projects/99999999-9999-9999-9999-999999999999")
+        .send({ name: "Proyecto" });
+
+      expect(response.status).toBe(404);
+    });
+
+    test("DELETE /api/projects/:id archiva y lo mueve a la lista de archivados", async () => {
+      const projectId = await createTestProject();
+
+      const response = await request(app).delete(`/api/projects/${projectId}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.project.is_archived).toBe(true);
+
+      const active = await request(app).get("/api/projects");
+      const archived = await request(app).get("/api/projects?archived=true");
+
+      expect(active.body).toEqual([]);
+      expect(archived.body.map((p: { id: string }) => p.id)).toEqual([
+        projectId,
+      ]);
+    });
+
+    test("PATCH /api/projects/:id/restore vuelve a activar el proyecto", async () => {
+      const projectId = await createTestProject();
+
+      await request(app).delete(`/api/projects/${projectId}`);
+
+      const response = await request(app).patch(
+        `/api/projects/${projectId}/restore`,
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.body.is_archived).toBe(false);
+
+      const active = await request(app).get("/api/projects");
+
+      expect(active.body.map((p: { id: string }) => p.id)).toEqual([projectId]);
+    });
+
+    test("PATCH /api/projects/:id/restore responde 404 si no existe", async () => {
+      const response = await request(app).patch(
+        "/api/projects/99999999-9999-9999-9999-999999999999/restore",
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+});

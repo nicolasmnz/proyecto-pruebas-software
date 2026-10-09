@@ -1,0 +1,30 @@
+.project-avatar {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.project-avatar-sm {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 9px;
+}
+
+.project-avatar-md {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.project-avatar-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 8px;
+  font-size: 20px;
+}
