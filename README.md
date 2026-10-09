@@ -190,8 +190,10 @@ npm run db:test:up
 npm run lint
 npm run typecheck
 
-npm run test:all
+npm run test:unit
+npm run test:integration
 ```
+`npm run test:unit` y `npm run test:integration` ejecuta las pruebas unitarias y de integracion
 
 ### E2E
 
