@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
 import {
+  archiveDoneItems,
   archiveWorkItem,
   createWorkItem,
   deleteWorkItem,
@@ -35,6 +36,7 @@ vi.mock("../api/board", async (importOriginal) => ({
   updateWorkItem: vi.fn(),
   deleteWorkItem: vi.fn(),
   saveWipLimits: vi.fn(),
+  archiveDoneItems: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
@@ -46,6 +48,7 @@ const mockedGetWorkItem = vi.mocked(getWorkItem);
 const mockedUpdateWorkItem = vi.mocked(updateWorkItem);
 const mockedDeleteWorkItem = vi.mocked(deleteWorkItem);
 const mockedSaveWipLimits = vi.mocked(saveWipLimits);
+const mockedArchiveDoneItems = vi.mocked(archiveDoneItems);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -151,7 +154,8 @@ describe("BoardPage", () => {
     expect(within(todo).getByText("Diseñar login")).toBeInTheDocument();
     expect(within(todo).getByText("Prioridad alta")).toBeInTheDocument();
     expect(within(todo).getByText("Error")).toBeInTheDocument();
-    expect(within(inProgress).getByText("8 pts")).toBeInTheDocument();
+    // La tarjeta y el total de la columna muestran los mismos 8 puntos
+    expect(within(inProgress).getAllByText("8 pts")).toHaveLength(2);
     expect(
       within(inProgress).getByLabelText("Asignado a Ana Pérez"),
     ).toBeInTheDocument();
@@ -1615,6 +1619,249 @@ describe("BoardPage", () => {
 
       expect(
         screen.queryByRole("button", { name: "Límites" }),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("puntos por columna", () => {
+    test("cada columna suma los puntos de sus tareas; las sin estimar valen 0", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...board,
+        columns: [
+          {
+            status: "TODO",
+            items: [
+              buildItem({ id: "1", item_number: 1, title: "A", estimate: 3 }),
+              buildItem({ id: "2", item_number: 2, title: "B", estimate: 5 }),
+              buildItem({
+                id: "3",
+                item_number: 3,
+                title: "C",
+                estimate: null,
+              }),
+            ],
+          },
+          { status: "IN_PROGRESS", items: [] },
+          {
+            status: "DONE",
+            items: [
+              buildItem({
+                id: "4",
+                item_number: 4,
+                title: "D",
+                status: "DONE",
+                estimate: 13,
+              }),
+            ],
+          },
+        ],
+      });
+
+      renderPage();
+
+      const todo = await screen.findByRole("region", { name: "Por hacer" });
+      const inProgress = screen.getByRole("region", { name: "En progreso" });
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      expect(within(todo).getByText("8 puntos")).toBeInTheDocument();
+      expect(within(inProgress).getByText("0 puntos")).toBeInTheDocument();
+      expect(within(done).getByText("13 puntos")).toBeInTheDocument();
+    });
+
+    test("los puntos no dependen del filtro y se actualizan al mover una tarea", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedMoveWorkItem.mockResolvedValue(
+        buildItem({
+          id: "3",
+          item_number: 3,
+          title: "Administrar miembros",
+          estimate: 8,
+          status: "DONE",
+        }),
+      );
+
+      renderPage("?q=menu");
+
+      const inProgress = await screen.findByRole("region", {
+        name: "En progreso",
+      });
+
+      // El filtro oculta la tarea de 8 puntos, pero la columna sigue sumándola
+      expect(within(inProgress).getByText("8 puntos")).toBeInTheDocument();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: "Limpiar filtros" }),
+      );
+      await userEvent.selectOptions(
+        screen.getByLabelText("Mover «Administrar miembros» a"),
+        "Hecho",
+      );
+
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      expect(await within(done).findByText("8 puntos")).toBeInTheDocument();
+      expect(within(inProgress).getByText("0 puntos")).toBeInTheDocument();
+    });
+  });
+
+  describe("archivar todas las tareas de Hecho", () => {
+    const doneItems = [
+      buildItem({
+        id: "10",
+        item_number: 10,
+        title: "Hecha 1",
+        status: "DONE",
+      }),
+      buildItem({
+        id: "11",
+        item_number: 11,
+        title: "Hecha 2",
+        status: "DONE",
+      }),
+    ];
+
+    const boardWithDone: Board = {
+      ...board,
+      columns: board.columns.map((column) =>
+        column.status === "DONE" ? { ...column, items: doneItems } : column,
+      ),
+    };
+
+    async function openConfirm() {
+      renderPage();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: /Archivar todas/ }),
+      );
+
+      return screen.findByRole("alertdialog", {
+        name: "¿Archivar todas las tareas de Hecho?",
+      });
+    }
+
+    test("el botón está solo en la columna Hecho y solo si tiene tareas", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+
+      renderPage();
+
+      await screen.findByRole("region", { name: "Hecho" });
+
+      expect(
+        screen.queryByRole("button", { name: /Archivar todas/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    test("pide confirmación y muestra cuántas tareas se archivarán", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+
+      const confirm = await openConfirm();
+
+      expect(within(confirm).getByText("2 tareas")).toBeInTheDocument();
+      expect(mockedArchiveDoneItems).not.toHaveBeenCalled();
+    });
+
+    test("confirmar archiva todas, vacía Hecho y las lista en Archivadas", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+      mockedArchiveDoneItems.mockResolvedValue(
+        [...doneItems]
+          .reverse()
+          .map((item) => ({ ...item, is_archived: true })),
+      );
+
+      const confirm = await openConfirm();
+
+      await userEvent.click(
+        within(confirm).getByRole("button", { name: "Archivar" }),
+      );
+
+      expect(mockedArchiveDoneItems).toHaveBeenCalledWith(PROJECT_ID);
+
+      const done = screen.getByRole("region", { name: "Hecho" });
+
+      await waitFor(() =>
+        expect(within(done).getByText("Sin elementos")).toBeInTheDocument(),
+      );
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Archivadas (2)" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("status", { name: "" })).toHaveTextContent(
+        "2 tareas archivadas.",
+      );
+      // Ya no queda nada que archivar
+      expect(
+        screen.queryByRole("button", { name: /Archivar todas/ }),
+      ).not.toBeInTheDocument();
+      // El progreso sigue contándolas como hechas: 2 de 5
+      expect(
+        screen.getByText("2 de 5 tareas hechas · 40 %"),
+      ).toBeInTheDocument();
+    });
+
+    test("cancelar no archiva nada", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+
+      const confirm = await openConfirm();
+
+      await userEvent.click(
+        within(confirm).getByRole("button", { name: "Cancelar" }),
+      );
+
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(mockedArchiveDoneItems).not.toHaveBeenCalled();
+      expect(
+        within(screen.getByRole("region", { name: "Hecho" })).getByText(
+          "Hecha 1",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("si la API falla muestra el error y las tareas siguen en Hecho", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+      mockedArchiveDoneItems.mockRejectedValue(
+        new Error("Error archivando tareas"),
+      );
+
+      const confirm = await openConfirm();
+
+      await userEvent.click(
+        within(confirm).getByRole("button", { name: "Archivar" }),
+      );
+
+      expect(await within(confirm).findByRole("alert")).toHaveTextContent(
+        "Error archivando tareas",
+      );
+      expect(
+        within(screen.getByRole("region", { name: "Hecho" })).getByText(
+          "Hecha 2",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    test("no se ofrece con filtros activos ni en un proyecto archivado", async () => {
+      mockedGetBoard.mockResolvedValue(boardWithDone);
+
+      renderPage("?q=hecha");
+
+      await screen.findByRole("region", { name: "Hecho" });
+
+      expect(
+        screen.queryByRole("button", { name: /Archivar todas/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    test("un proyecto archivado no puede archivar la columna", async () => {
+      mockedGetBoard.mockResolvedValue({
+        ...boardWithDone,
+        project: { ...board.project, is_archived: true },
+      });
+
+      renderPage();
+
+      await screen.findByRole("region", { name: "Hecho" });
+
+      expect(
+        screen.queryByRole("button", { name: /Archivar todas/ }),
       ).not.toBeInTheDocument();
     });
   });

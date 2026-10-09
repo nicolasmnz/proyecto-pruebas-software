@@ -388,3 +388,64 @@ test.describe("filtros, orden y límite de trabajo", () => {
     ).toBeAttached();
   });
 });
+
+test.describe("archivar Hecho y puntos por columna", () => {
+  let project: { id: string };
+
+  test.beforeEach(async ({ request }) => {
+    const created = await request.post(`${API_URL}/projects`, {
+      data: { name: `Proyecto Puntos ${Date.now()}`, createdBy: SEED_USER_ID },
+    });
+
+    expect(created.status()).toBe(201);
+
+    project = await created.json();
+
+    for (const [title, estimate] of [
+      ["Hecha uno", 3],
+      ["Hecha dos", 5],
+    ] as const) {
+      const response = await request.post(
+        `${API_URL}/projects/${project.id}/work-items`,
+        {
+          data: { title, estimate, status: "DONE", createdBy: SEED_USER_ID },
+        },
+      );
+
+      expect(response.status()).toBe(201);
+    }
+  });
+
+  test.afterEach(async ({ request }) => {
+    await request.delete(`${API_URL}/projects/${project.id}`);
+  });
+
+  test("usuario ve los puntos de la columna y archiva todas las de Hecho", async ({
+    page,
+  }) => {
+    await page.goto(`/projects/${project.id}/board`);
+
+    const done = page.getByRole("region", { name: "Hecho" });
+
+    await expect(done.getByText("8 puntos")).toBeAttached();
+
+    await done.getByRole("button", { name: /Archivar todas/ }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Archivar" })
+      .click();
+
+    await expect(done.getByText("Sin elementos")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Archivadas (2)" }),
+    ).toBeVisible();
+
+    // Persiste al recargar y el progreso las sigue contando como hechas
+    await page.reload();
+
+    await expect(
+      page.getByRole("button", { name: "Archivadas (2)" }),
+    ).toBeVisible();
+    await expect(page.getByText("2 de 2 tareas hechas · 100 %")).toBeVisible();
+  });
+});

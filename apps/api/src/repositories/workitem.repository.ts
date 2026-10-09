@@ -389,3 +389,38 @@ export async function setWipLimits(
 
     return normalizeWipLimits(result.rows[0].wip_limits);
 }
+
+// Archiva de una vez todas las tareas que están en Hecho y devuelve las
+// que se archivaron, la más reciente primero
+export async function archiveDoneItems(projectId: string) {
+    const updated = await pool.query(
+        `
+        UPDATE work_items
+        SET is_archived = TRUE
+        WHERE project_id = $1
+          AND status = 'DONE'
+          AND type <> 'EPIC'
+          AND NOT is_archived
+        RETURNING id
+        `,
+        [projectId]
+    );
+
+    if (updated.rowCount === 0) {
+        return [];
+    }
+
+    const result = await pool.query(
+        `
+        SELECT
+            ${BOARD_ITEM_COLUMNS}
+        ${BOARD_ITEM_FROM}
+        WHERE w.project_id = $1
+          AND w.id = ANY($2::uuid[])
+        ORDER BY w.item_number DESC
+        `,
+        [projectId, updated.rows.map((row) => row.id)]
+    );
+
+    return result.rows;
+}

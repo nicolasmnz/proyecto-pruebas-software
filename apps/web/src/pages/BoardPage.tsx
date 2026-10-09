@@ -5,6 +5,7 @@ import { ChevronRight } from "lucide-react";
 import { ApiError } from "../api/projects";
 import {
   STATUS_LABELS,
+  archiveDoneItems,
   archiveWorkItem,
   createWorkItem,
   getBoard,
@@ -20,6 +21,7 @@ import type {
   WorkItemStatus,
 } from "../api/board";
 import ArchivedItems from "../components/ArchivedItems";
+import ConfirmDialog from "../components/ConfirmDialog";
 import BoardToolbar from "../components/BoardToolbar";
 import BoardProgress from "../components/BoardProgress";
 import KanbanBoard from "../components/KanbanBoard";
@@ -48,6 +50,9 @@ function BoardPage() {
   // Tarea cuya ficha está abierta
   const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [isLimitsOpen, setIsLimitsOpen] = useState(false);
+  const [isArchiveAllOpen, setIsArchiveAllOpen] = useState(false);
+  const [isArchivingAll, setIsArchivingAll] = useState(false);
+  const [archiveAllError, setArchiveAllError] = useState<string | null>(null);
   // Los filtros viven en la URL para poder compartir o recargar la vista
   const [searchParams, setSearchParams] = useSearchParams();
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
@@ -302,6 +307,37 @@ function BoardPage() {
     }
   }
 
+  async function handleArchiveAllDone() {
+    try {
+      setIsArchivingAll(true);
+      setArchiveAllError(null);
+
+      const archived = await archiveDoneItems(project.id);
+
+      updateBoard((board) => ({
+        ...board,
+        columns: board.columns.map((column) =>
+          column.status === "DONE" ? { ...column, items: [] } : column,
+        ),
+        archived: [...archived, ...board.archived],
+      }));
+      setIsArchiveAllOpen(false);
+      setAnnouncement(
+        archived.length === 1
+          ? "1 tarea archivada."
+          : `${archived.length} tareas archivadas.`,
+      );
+    } catch (error) {
+      setArchiveAllError(
+        error instanceof Error
+          ? error.message
+          : "No fue posible archivar las tareas.",
+      );
+    } finally {
+      setIsArchivingAll(false);
+    }
+  }
+
   async function handleRestoreItem(item: BoardItem) {
     try {
       setActionError(null);
@@ -389,6 +425,15 @@ function BoardPage() {
         onOpenItem={(item) => setOpenItemId(item.id)}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
         onArchiveItem={project.is_archived ? undefined : handleArchiveItem}
+        // Con filtros activos no se ven todas las tareas de Hecho: no se ofrece
+        onArchiveAllDone={
+          project.is_archived || isFiltering
+            ? undefined
+            : () => {
+                setArchiveAllError(null);
+                setIsArchiveAllOpen(true);
+              }
+        }
       />
 
       <ArchivedItems
@@ -396,6 +441,29 @@ function BoardPage() {
         onOpen={(item) => setOpenItemId(item.id)}
         onRestore={project.is_archived ? undefined : handleRestoreItem}
       />
+
+      {isArchiveAllOpen && (
+        <ConfirmDialog
+          title="¿Archivar todas las tareas de Hecho?"
+          confirmLabel="Archivar"
+          confirmingLabel="Archivando..."
+          isConfirming={isArchivingAll}
+          error={archiveAllError}
+          onConfirm={handleArchiveAllDone}
+          onCancel={() => setIsArchiveAllOpen(false)}
+        >
+          <p>
+            Se archivarán las{" "}
+            <strong>
+              {state.board.columns.find(({ status }) => status === "DONE")
+                ?.items.length ?? 0}{" "}
+              tareas
+            </strong>{" "}
+            de la columna Hecho y saldrán del tablero.
+          </p>
+          <p>Podrás restaurarlas una a una desde Archivadas.</p>
+        </ConfirmDialog>
+      )}
 
       {isLimitsOpen && (
         <WipLimitsDialog

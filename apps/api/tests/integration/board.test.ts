@@ -1076,4 +1076,134 @@ describe("Tablero Kanban API", () => {
       expect(board.body.columns[1].items).toHaveLength(2);
     });
   });
+
+  describe("archivar todas las tareas de Hecho", () => {
+    async function createItem(
+      title: string,
+      status: string,
+      type = "TASK",
+      projectOverride?: string,
+    ) {
+      const result = await pool.query(
+        `
+        INSERT INTO work_items (project_id, created_by, type, title, status)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING id
+        `,
+        [projectOverride ?? projectId, userId, type, title, status],
+      );
+
+      return result.rows[0].id as string;
+    }
+
+    const url = (id = projectId) =>
+      `/api/projects/${id}/work-items/archive-done`;
+
+    test("archiva todas las de Hecho y deja intactas las demás", async () => {
+      await createItem("Hecha 1", "DONE");
+      await createItem("Hecha 2", "DONE");
+      await createItem("Pendiente", "TODO");
+      await createItem("En curso", "IN_PROGRESS");
+
+      const response = await request(app).patch(url());
+
+      expect(response.status).toBe(200);
+      expect(
+        response.body.archived.map((item: { title: string }) => item.title),
+      ).toEqual(["Hecha 2", "Hecha 1"]);
+      expect(
+        response.body.archived.every(
+          (item: { is_archived: boolean }) => item.is_archived,
+        ),
+      ).toBe(true);
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.columns[0].items).toHaveLength(1);
+      expect(board.body.columns[1].items).toHaveLength(1);
+      expect(board.body.columns[2].items).toEqual([]);
+      expect(board.body.archived).toHaveLength(2);
+    });
+
+    test("sin tareas en Hecho responde 200 con una lista vacía", async () => {
+      await createItem("Pendiente", "TODO");
+
+      const response = await request(app).patch(url());
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ archived: [] });
+    });
+
+    test("no devuelve las que ya estaban archivadas", async () => {
+      const old = await createItem("Vieja", "DONE");
+
+      await request(app).patch(
+        `/api/projects/${projectId}/work-items/${old}/archive`,
+      );
+      await createItem("Nueva", "DONE");
+
+      const response = await request(app).patch(url());
+
+      expect(
+        response.body.archived.map((item: { title: string }) => item.title),
+      ).toEqual(["Nueva"]);
+
+      const board = await request(app).get(`/api/projects/${projectId}/board`);
+
+      expect(board.body.archived).toHaveLength(2);
+    });
+
+    test("no toca las épicas ni las tareas de otros proyectos", async () => {
+      await createItem("Épica terminada", "DONE", "EPIC");
+
+      const other = await pool.query(
+        `INSERT INTO projects (name, created_by) VALUES ('Otro', $1) RETURNING id`,
+        [userId],
+      );
+      await createItem(
+        "Ajena",
+        "DONE",
+        "TASK",
+        other.rows[0].id,
+      );
+
+      const response = await request(app).patch(url());
+
+      expect(response.body).toEqual({ archived: [] });
+
+      const saved = await pool.query(
+        "SELECT title FROM work_items WHERE is_archived",
+      );
+
+      expect(saved.rowCount).toBe(0);
+    });
+
+    test("responde 404 si el proyecto no existe o el id es inválido", async () => {
+      const missing = await request(app).patch(
+        url("99999999-9999-9999-9999-999999999999"),
+      );
+      const invalid = await request(app).patch(url("nope"));
+
+      expect(missing.status).toBe(404);
+      expect(invalid.status).toBe(404);
+    });
+
+    test("responde 409 si el proyecto está archivado", async () => {
+      await createItem("Hecha", "DONE");
+      await pool.query("UPDATE projects SET is_archived = TRUE WHERE id = $1", [
+        projectId,
+      ]);
+
+      const response = await request(app).patch(url());
+
+      expect(response.status).toBe(409);
+    });
+
+    test("archive-done no se confunde con el id de una tarea", async () => {
+      const response = await request(app).patch(url());
+
+      // Si la ruta :itemId la tomara, respondería 404 «Tarea no encontrada»
+      expect(response.status).toBe(200);
+    });
+  });
 });

@@ -109,3 +109,34 @@
   color: #ae2e24;
   font-weight: 600;
 }
+
+.kanban-column-points {
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.kanban-column-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #44546f;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.kanban-column-action:hover {
+  background: #dfe1e6;
+}
+
+.kanban-column-action:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
+}

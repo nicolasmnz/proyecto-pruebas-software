@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, Archive, Plus } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
 import type {
@@ -38,6 +38,8 @@ interface KanbanBoardProps {
   ) => void;
   // Sin esta función las tareas terminadas no se pueden archivar
   onArchiveItem?: (item: BoardItem) => void;
+  // Sin esta función no se puede archivar toda la columna Hecho de una vez
+  onArchiveAllDone?: () => void;
 }
 
 function KanbanBoard({
@@ -49,6 +51,7 @@ function KanbanBoard({
   onOpenItem,
   onMoveItem,
   onArchiveItem,
+  onArchiveAllDone,
 }: KanbanBoardProps) {
   const [dragged, setDragged] = useState<BoardItem | null>(null);
   const [dropTarget, setDropTarget] = useState<WorkItemStatus | null>(null);
@@ -111,6 +114,11 @@ function KanbanBoard({
         const isAdding = addingTo === column.status;
         const visibleItems = column.items.filter(isVisible);
         const count = column.items.length;
+        // Puntos de la columna entera; las tareas sin estimar no suman
+        const points = column.items.reduce(
+          (sum, item) => sum + (item.estimate ?? 0),
+          0,
+        );
         const limit = wipLimits[column.status] ?? null;
         const isOverLimit = limit !== null && count > limit;
 
@@ -160,6 +168,21 @@ function KanbanBoard({
                       : `${count} de ${limit} elementos`}
                 </span>
               </span>
+              <span className="kanban-column-points">
+                <span aria-hidden="true">{points} pts</span>
+                <span className="sr-only">{points} puntos</span>
+              </span>
+
+              {column.status === "DONE" && onArchiveAllDone && count > 0 && (
+                <button
+                  type="button"
+                  className="kanban-column-action"
+                  onClick={onArchiveAllDone}
+                >
+                  <Archive size={14} aria-hidden="true" />
+                  Archivar todas
+                </button>
+              )}
             </header>
 
             {visibleItems.length === 0 && !isAdding ? (

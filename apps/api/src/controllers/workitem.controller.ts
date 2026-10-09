@@ -4,6 +4,7 @@ import { isUuid } from '../utils/uuid.js';
 
 import { findProjectById } from '../repositories/project.repository.js';
 import {
+    archiveDoneItems,
     createWorkItem,
     deleteWorkItem,
     findArchivedItems,
@@ -553,5 +554,32 @@ export async function putWipLimits(
 
     } catch (error) {
         return serverError(res, error, 'Error guardando límites');
+    }
+}
+
+
+export async function patchArchiveDoneItems(
+    req: Request<IdParams>,
+    res: Response
+) {
+    try {
+        const project = await loadProject(req.params.id);
+
+        if (isFailure(project)) {
+            return respond(res, project);
+        }
+
+        const blocked = assertEditable(project, 'modificar tareas');
+
+        if (blocked) {
+            return respond(res, blocked);
+        }
+
+        return res.status(200).json({
+            archived: await archiveDoneItems(project.id)
+        });
+
+    } catch (error) {
+        return serverError(res, error, 'Error archivando tareas');
     }
 }

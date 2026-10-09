@@ -112,6 +112,19 @@ export function moveWorkItem(
   );
 }
 
+// Archiva todas las tareas de Hecho; devuelve las que se archivaron
+export async function archiveDoneItems(
+  projectId: string,
+): Promise<BoardItem[]> {
+  const body = await request<{ archived: BoardItem[] }>(
+    `/projects/${encodeURIComponent(projectId)}/work-items/archive-done`,
+    "No fue posible archivar las tareas",
+    { method: "PATCH" },
+  );
+
+  return body.archived;
+}
+
 // Coincide con el límite de la API
 export const MAX_WIP_LIMIT = 999;
 

@@ -4,6 +4,7 @@ import {
     deleteWorkItemById,
     getBoard,
     getWorkItem,
+    patchArchiveDoneItems,
     patchArchiveWorkItem,
     patchRestoreWorkItem,
     patchWorkItem,
@@ -19,6 +20,9 @@ router.get('/:id/board', getBoard);
 router.put('/:id/wip-limits', putWipLimits);
 
 router.post('/:id/work-items', postWorkItem);
+
+// Debe ir antes de las rutas con :itemId, que tomarían "archive-done" por un id
+router.patch('/:id/work-items/archive-done', patchArchiveDoneItems);
 
 router.get('/:id/work-items/:itemId', getWorkItem);
 
