@@ -1,6 +1,13 @@
 import { expect, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 // Proyecto del seed con elementos en las tres columnas
+// El título de una tarjeta es un botón. getByText también encontraría la
+// etiqueta oculta de «Mover a» y getByRole sin `exact` los botones Subir/Bajar
+function card(scope: Page | Locator, title: string) {
+  return scope.getByRole("button", { name: title, exact: true });
+}
+
 const API_URL = "http://localhost:3000/api";
 const SEED_USER_ID = "11111111-1111-1111-1111-111111111111";
 const SEED_PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
@@ -23,7 +30,7 @@ test.describe("visualizar tablero kanban", () => {
     }
 
     await expect(
-      page.getByRole("region", { name: "Hecho" }).getByText("Crear proyectos"),
+      card(page.getByRole("region", { name: "Hecho" }), "Crear proyectos"),
     ).toBeVisible();
   });
 
@@ -61,19 +68,20 @@ test.describe("agregar tareas al tablero", () => {
     await expect(column.getByText("Sin elementos")).toBeVisible();
 
     await column.getByRole("button", { name: /Crear tarea/ }).click();
-    await page.getByLabel(/Título/).fill("Preparar la demo");
-    await page.getByLabel("Prioridad").selectOption("HIGH");
+    await column.getByLabel(/Título/).fill("Preparar la demo");
+    await column.getByLabel("Prioridad").selectOption("HIGH");
     await page.getByRole("button", { name: "Crear", exact: true }).click();
 
-    await expect(column.getByText("Preparar la demo")).toBeVisible();
+    await expect(card(column, "Preparar la demo")).toBeVisible();
 
     // La tarea persiste al recargar
     await page.reload();
 
     await expect(
-      page
-        .getByRole("region", { name: "En progreso" })
-        .getByText("Preparar la demo"),
+      card(
+        page.getByRole("region", { name: "En progreso" }),
+        "Preparar la demo",
+      ),
     ).toBeVisible();
   });
 });
@@ -113,7 +121,7 @@ test.describe("mover tareas entre columnas", () => {
 
     const done = page.getByRole("region", { name: "Hecho" });
 
-    await expect(done.getByText("Tarea a mover")).toBeVisible();
+    await expect(card(done, "Tarea a mover")).toBeVisible();
     await expect(
       page
         .getByRole("region", { name: "Por hacer" })
@@ -123,7 +131,7 @@ test.describe("mover tareas entre columnas", () => {
     await page.reload();
 
     await expect(
-      page.getByRole("region", { name: "Hecho" }).getByText("Tarea a mover"),
+      card(page.getByRole("region", { name: "Hecho" }), "Tarea a mover"),
     ).toBeVisible();
   });
 });
@@ -190,7 +198,7 @@ test.describe("archivar tareas terminadas", () => {
       .click();
 
     await expect(
-      page.getByRole("region", { name: "Hecho" }).getByText("Tarea terminada"),
+      card(page.getByRole("region", { name: "Hecho" }), "Tarea terminada"),
     ).toBeVisible();
   });
 });
@@ -230,7 +238,7 @@ test.describe("ficha de la tarea", () => {
   }) => {
     await page.goto(`/projects/${project.id}/board`);
 
-    await page.getByRole("button", { name: "Tarea con ficha" }).click();
+    await card(page, "Tarea con ficha").click();
 
     const dialog = page.getByRole("dialog", { name: "Tarea con ficha" });
 
@@ -249,7 +257,7 @@ test.describe("ficha de la tarea", () => {
 
     // Los cambios persisten al recargar
     await page.reload();
-    await page.getByRole("button", { name: "Tarea editada" }).click();
+    await card(page, "Tarea editada").click();
 
     await page
       .getByRole("dialog", { name: "Tarea editada" })
@@ -261,9 +269,7 @@ test.describe("ficha de la tarea", () => {
       .click();
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Tarea editada" }),
-    ).toHaveCount(0);
+    await expect(card(page, "Tarea editada")).toHaveCount(0);
 
     await page.reload();
 
@@ -323,9 +329,7 @@ test.describe("filtros, orden y límite de trabajo", () => {
 
     await search.fill("#3");
 
-    await expect(
-      todo.getByRole("button", { name: "Tercera tarea" }),
-    ).toBeVisible();
+    await expect(card(todo, "Tercera tarea")).toBeVisible();
 
     await page.getByRole("button", { name: "Limpiar filtros" }).click();
 
