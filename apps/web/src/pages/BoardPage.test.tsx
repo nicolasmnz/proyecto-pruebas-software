@@ -1496,6 +1496,86 @@ describe("BoardPage", () => {
       expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
     });
 
+    describe("por épica", () => {
+      const EPIC_ID = "e0000000-0000-0000-0000-000000000001";
+      // #1 Diseñar login pertenece a la épica Autenticación
+      const epicBoard: Board = {
+        ...filterBoard,
+        columns: filterBoard.columns.map((column) => ({
+          ...column,
+          items: column.items.map((item) =>
+            item.id === "1" ? { ...item, parent_id: EPIC_ID } : item,
+          ),
+        })),
+      };
+
+      beforeEach(() => {
+        mockedGetBoard.mockResolvedValue(epicBoard);
+        mockedGetEpics.mockResolvedValue([
+          {
+            id: EPIC_ID,
+            project_id: PROJECT_ID,
+            item_number: 20,
+            is_archived: false,
+            type: "EPIC",
+            title: "Autenticación",
+            description: null,
+            status: "TODO",
+            priority: "MEDIUM",
+            estimate: null,
+            due_date: null,
+            created_by: "u1",
+            created_at: "2026-10-01T12:00:00Z",
+            updated_at: "2026-10-01T12:00:00Z",
+          },
+        ]);
+      });
+
+      test("las tarjetas muestran la épica a la que pertenecen", async () => {
+        renderPage();
+
+        const todo = await screen.findByRole("region", { name: "Por hacer" });
+        const [login, menu] = within(todo).getAllByRole("article");
+
+        expect(login).toHaveTextContent("Épica: Autenticación");
+        expect(menu).not.toHaveTextContent("Épica:");
+      });
+
+      test("filtra por una épica o por las tareas sin épica", async () => {
+        renderPage();
+
+        const epic = await screen.findByLabelText("Épica");
+
+        await userEvent.selectOptions(epic, "Autenticación");
+
+        expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+        expect(titlesIn("En progreso")).toEqual([]);
+
+        await userEvent.selectOptions(epic, "Sin épica");
+
+        expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+        expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+
+        await userEvent.click(
+          screen.getByRole("button", { name: "Limpiar filtros" }),
+        );
+
+        expect(epic).toHaveValue("");
+        expect(titlesIn("Por hacer")).toEqual([
+          "Diseñar login",
+          "Corregir menú",
+        ]);
+      });
+
+      test("la épica se lee de la URL", async () => {
+        renderPage(`?epic=${EPIC_ID}`);
+
+        expect(await screen.findByLabelText("Épica")).toHaveValue(EPIC_ID);
+        expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+        expect(screen.getByText("Mostrando 1 de 3 tareas")).toBeInTheDocument();
+      });
+    });
+
     test("con filtros activos no se muestran los botones de reordenar", async () => {
       mockedGetBoard.mockResolvedValue(filterBoard);
 

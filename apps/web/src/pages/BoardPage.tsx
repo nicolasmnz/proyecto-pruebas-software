@@ -140,6 +140,7 @@ function BoardPage() {
     type: searchParams.get("type") ?? "",
     priority: searchParams.get("priority") ?? "",
     assignee: searchParams.get("assignee") ?? "",
+    epic: searchParams.get("epic") ?? "",
   };
   const isFiltering = hasActiveFilters(filters);
 
@@ -150,12 +151,16 @@ function BoardPage() {
     if (next.type) params.set("type", next.type);
     if (next.priority) params.set("priority", next.priority);
     if (next.assignee) params.set("assignee", next.assignee);
+    if (next.epic) params.set("epic", next.epic);
 
     // Escribir en el buscador no llena el historial del navegador
     setSearchParams(params, { replace: true });
   }
 
   const allItems = state.board.columns.flatMap((column) => column.items);
+  const epicTitles = Object.fromEntries(
+    state.epics.map((epic) => [epic.id, epic.title]),
+  );
   const shownCount = isFiltering
     ? allItems.filter((item) => matchesFilters(item, filters)).length
     : allItems.length;
@@ -414,6 +419,7 @@ function BoardPage() {
         filters={filters}
         onChange={handleFiltersChange}
         members={state.board.members}
+        epics={state.epics}
         shown={shownCount}
         total={allItems.length}
         onEditLimits={
@@ -423,6 +429,7 @@ function BoardPage() {
 
       <KanbanBoard
         columns={state.board.columns}
+        epicTitles={epicTitles}
         wipLimits={state.board.wip_limits}
         isFiltering={isFiltering}
         isVisible={(item) => matchesFilters(item, filters)}
@@ -443,6 +450,7 @@ function BoardPage() {
 
       <ArchivedItems
         items={state.board.archived}
+        epicTitles={epicTitles}
         onOpen={(item) => setOpenItemId(item.id)}
         onRestore={project.is_archived ? undefined : handleRestoreItem}
       />

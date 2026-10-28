@@ -7,15 +7,19 @@ export interface BoardFilters {
   priority: string;
   // "" = todos, "none" = sin asignar, o el id del responsable
   assignee: string;
+  // "" = todas, "none" = sin épica, o el id de la épica
+  epic: string;
 }
 
 export const NO_ASSIGNEE = "none";
+export const NO_EPIC = "none";
 
 export const EMPTY_FILTERS: BoardFilters = {
   query: "",
   type: "",
   priority: "",
   assignee: "",
+  epic: "",
 };
 
 export function hasActiveFilters(filters: BoardFilters): boolean {
@@ -40,6 +44,14 @@ export function matchesFilters(item: BoardItem, filters: BoardFilters) {
   }
 
   if (filters.priority && item.priority !== filters.priority) {
+    return false;
+  }
+
+  if (filters.epic === NO_EPIC) {
+    if (item.parent_id !== null) {
+      return false;
+    }
+  } else if (filters.epic && item.parent_id !== filters.epic) {
     return false;
   }
 

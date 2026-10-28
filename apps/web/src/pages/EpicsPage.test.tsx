@@ -186,6 +186,13 @@ describe("EpicsPage", () => {
     expect(within(login).getByText("13")).toBeInTheDocument();
     expect(within(login).getByText(/2026/)).toBeInTheDocument();
 
+    expect(
+      within(login).getByRole("link", { name: /Ver en el tablero/ }),
+    ).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/board?epic=${LOGIN_EPIC_ID}`,
+    );
+
     const reports = epicCard("Reportes");
 
     expect(within(reports).getByText("Sin fecha")).toBeInTheDocument();
@@ -584,5 +591,11 @@ describe("EpicsPage", () => {
     expect(
       screen.queryByRole("button", { name: "Archivar" }),
     ).not.toBeInTheDocument();
+    // Las tareas se pueden seguir consultando en el tablero
+    expect(
+      within(epicCard("Reportes")).getByRole("link", {
+        name: /Ver en el tablero/,
+      }),
+    ).toBeInTheDocument();
   });
 });

@@ -15,6 +15,28 @@
   overflow-wrap: anywhere;
 }
 
+.kanban-card-epic {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: -4px 0 8px;
+  color: #5e4db2;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.kanban-card-epic svg {
+  flex-shrink: 0;
+}
+
+.kanban-card-epic-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .kanban-card-meta {
   display: flex;
   flex-wrap: wrap;

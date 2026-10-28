@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Archive, Pencil } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Archive, KanbanSquare, Pencil } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
 import type { Epic } from "../api/epics";
@@ -118,31 +119,37 @@ function EpicCard({ epic, progress, onSave, onArchive }: EpicCardProps) {
             </div>
           </div>
 
-          {(onSave || onArchive) && (
-            <div className="actions epic-card-actions">
-              {onSave && (
-                <button
-                  ref={editButtonRef}
-                  type="button"
-                  className="btn-secondary"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <Pencil size={16} aria-hidden="true" />
-                  Editar
-                </button>
-              )}
-              {onArchive && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  onClick={onArchive}
-                >
-                  <Archive size={16} aria-hidden="true" />
-                  Archivar
-                </button>
-              )}
-            </div>
-          )}
+          <div className="actions epic-card-actions">
+            <Link
+              to={`/projects/${epic.project_id}/board?epic=${epic.id}`}
+              className="btn-secondary"
+            >
+              <KanbanSquare size={16} aria-hidden="true" />
+              Ver en el tablero
+              <span className="sr-only"> las tareas de {epic.title}</span>
+            </Link>
+            {onSave && (
+              <button
+                ref={editButtonRef}
+                type="button"
+                className="btn-secondary"
+                onClick={() => setIsEditing(true)}
+              >
+                <Pencil size={16} aria-hidden="true" />
+                Editar
+              </button>
+            )}
+            {onArchive && (
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onArchive}
+              >
+                <Archive size={16} aria-hidden="true" />
+                Archivar
+              </button>
+            )}
+          </div>
         </>
       )}
     </article>
