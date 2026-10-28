@@ -1,8 +1,5 @@
 import { Request, Response } from "express";
-
-import {
-    findUserByEmail
-} from "../repositories/user.repository.js";
+import { findUserByEmail } from "../repositories/user.repository.js";
 import { verifyPassword } from "../utils/password.js";
 
 
