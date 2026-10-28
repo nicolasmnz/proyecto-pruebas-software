@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ChevronRight, Plus } from "lucide-react";
 
 import { getBoard } from "../api/board";
@@ -35,7 +35,9 @@ function EpicsPage() {
   );
   // Mensaje para lectores de pantalla tras cada acción
   const [announcement, setAnnouncement] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
+  // ?nueva abre directamente el formulario (enlace «Nueva épica» del detalle)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [isCreating, setIsCreating] = useState(() => searchParams.has("nueva"));
   const [archiving, setArchiving] = useState<Epic | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
@@ -124,6 +126,14 @@ function EpicsPage() {
   const { board, epics } = state;
   const { project } = board;
 
+  function closeCreate() {
+    setIsCreating(false);
+
+    if (searchParams.has("nueva")) {
+      setSearchParams({}, { replace: true });
+    }
+  }
+
   // Aplica un cambio a las épicas ya cargadas, sin volver a pedirlas
   function updateEpics(change: (epics: Epic[]) => Epic[]) {
     setResult((current) => {
@@ -146,7 +156,7 @@ function EpicsPage() {
 
     // La API las lista de la más reciente a la más antigua
     updateEpics((epics) => [epic, ...epics]);
-    setIsCreating(false);
+    closeCreate();
     setAnnouncement(`Épica "${epic.title}" creada.`);
   }
 
@@ -227,13 +237,10 @@ function EpicsPage() {
         </p>
       )}
 
-      {isCreating && (
+      {isCreating && !readOnly && (
         <section aria-labelledby="new-epic-title" className="epics-new">
           <h2 id="new-epic-title">Nueva épica</h2>
-          <EpicForm
-            onSubmit={handleCreate}
-            onCancel={() => setIsCreating(false)}
-          />
+          <EpicForm onSubmit={handleCreate} onCancel={closeCreate} />
         </section>
       )}
 

@@ -120,9 +120,9 @@ const epics: Epic[] = [
   buildEpic({ id: REPORTS_EPIC_ID, item_number: 11, title: "Reportes" }),
 ];
 
-function renderPage() {
+function renderPage(search = "") {
   render(
-    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/epics`]}>
+    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/epics${search}`]}>
       <Routes>
         <Route path="/projects" element={<h1>Listado</h1>} />
         <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
@@ -135,11 +135,12 @@ function renderPage() {
 async function renderLoadedPage(
   loadedBoard: Board = board,
   loadedEpics: Epic[] = epics,
+  search = "",
 ) {
   mockedGetBoard.mockResolvedValue(loadedBoard);
   mockedGetEpics.mockResolvedValue(loadedEpics);
 
-  renderPage();
+  renderPage(search);
 
   await screen.findByRole("heading", { level: 1, name: "Épicas" });
 }
@@ -375,6 +376,22 @@ describe("EpicsPage", () => {
       );
     });
 
+    test("con ?nueva el formulario se abre al cargar la página", async () => {
+      const user = userEvent.setup();
+
+      await renderLoadedPage(board, epics, "?nueva");
+
+      const form = screen.getByRole("region", { name: "Nueva épica" });
+
+      expect(within(form).getByLabelText(/Título/)).toHaveFocus();
+
+      await user.click(within(form).getByRole("button", { name: "Cancelar" }));
+
+      expect(
+        screen.queryByRole("region", { name: "Nueva épica" }),
+      ).not.toBeInTheDocument();
+    });
+
     test("cancelar cierra el formulario y devuelve el foco", async () => {
       const user = userEvent.setup();
 
@@ -546,16 +563,20 @@ describe("EpicsPage", () => {
   });
 
   test("en un proyecto archivado las épicas son de solo lectura", async () => {
-    await renderLoadedPage({
-      ...board,
-      project: { ...board.project, is_archived: true },
-    });
+    await renderLoadedPage(
+      { ...board, project: { ...board.project, is_archived: true } },
+      epics,
+      "?nueva",
+    );
 
     expect(
       screen.getByText(/Este proyecto está archivado/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Nueva épica" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Nueva épica" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Editar" }),

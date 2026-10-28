@@ -14,6 +14,7 @@ import type { Project } from "../api/projects";
 import { useProjects } from "../context/projectsContext";
 import { formatDate } from "../utils/format";
 import ConfirmDialog from "./ConfirmDialog";
+import EpicsSummary from "./EpicsSummary";
 import ProjectAvatar from "./ProjectAvatar";
 import ProjectForm from "./ProjectForm";
 import type { ProjectFormValues } from "./ProjectForm";
@@ -204,18 +205,25 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
         </section>
       ) : (
         <div className="project-detail-layout">
-          <section aria-labelledby="description-title" className="panel">
-            <h2 id="description-title">Descripción</h2>
-            {project.description ? (
-              <p className="project-detail-description">
-                {project.description}
-              </p>
-            ) : (
-              <p className="project-detail-description is-empty">
-                Este proyecto no tiene descripción.
-              </p>
-            )}
-          </section>
+          <div className="project-detail-main">
+            <section aria-labelledby="description-title" className="panel">
+              <h2 id="description-title">Descripción</h2>
+              {project.description ? (
+                <p className="project-detail-description">
+                  {project.description}
+                </p>
+              ) : (
+                <p className="project-detail-description is-empty">
+                  Este proyecto no tiene descripción.
+                </p>
+              )}
+            </section>
+
+            <EpicsSummary
+              projectId={project.id}
+              readOnly={project.is_archived}
+            />
+          </div>
 
           <aside aria-labelledby="details-title" className="panel">
             <h2 id="details-title">Detalles</h2>
