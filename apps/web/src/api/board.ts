@@ -18,6 +18,8 @@ export interface BoardItem {
   is_archived: boolean;
   // Épica a la que pertenece; null = sin épica
   parent_id: string | null;
+  // Sprint en el que está; null = en el backlog
+  sprint_id: string | null;
   type: WorkItemType;
   title: string;
   status: WorkItemStatus;

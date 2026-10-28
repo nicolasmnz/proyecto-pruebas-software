@@ -39,6 +39,7 @@ function buildItem(overrides: Partial<BoardItem>): BoardItem {
     item_number: 1,
     is_archived: false,
     parent_id: null,
+    sprint_id: null,
     type: "TASK",
     title: "Tarea",
     status: "TODO",
