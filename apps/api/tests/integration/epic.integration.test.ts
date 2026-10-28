@@ -778,5 +778,86 @@ describe(
                 ).toBe(400);
             }
         );
+
+
+        test(
+            "devuelve la fecha límite en formato AAAA-MM-DD",
+            async () => {
+
+                const created =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic con fecha",
+
+                        createdBy:
+                            USER_ID,
+
+                        dueDate:
+                            "2026-11-01"
+                    });
+
+
+                expect(
+                    created.body.due_date
+                ).toBe("2026-11-01");
+
+
+                const updated =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/epics/${created.body.id}`
+                    )
+
+                    .send({
+                        title:
+                            "Epic con fecha",
+
+                        status:
+                            "TODO",
+
+                        priority:
+                            "MEDIUM",
+
+                        dueDate:
+                            "2026-12-24"
+                    });
+
+
+                expect(
+                    updated.body.due_date
+                ).toBe("2026-12-24");
+
+
+                const detail =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/${created.body.id}`
+                        );
+
+
+                expect(
+                    detail.body.due_date
+                ).toBe("2026-12-24");
+
+
+                const list =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics`
+                        );
+
+
+                expect(
+                    list.body[0].due_date
+                ).toBe("2026-12-24");
+            }
+        );
     }
 );
