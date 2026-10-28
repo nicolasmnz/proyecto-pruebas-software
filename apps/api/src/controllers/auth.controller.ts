@@ -13,7 +13,13 @@ export async function login(
             password
         } = req.body;
 
-        if (!email || !password) {
+        // Solo texto: scrypt falla con números u objetos
+        if (
+            typeof email !== "string" ||
+            typeof password !== "string" ||
+            !email.trim() ||
+            !password
+        ) {
             return res.status(400).json({
                 message: "email y password son obligatorios"
             });

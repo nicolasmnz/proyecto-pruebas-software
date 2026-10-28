@@ -107,6 +107,22 @@ describe("Auth API", () => {
     expect(response.status).toBe(200);
   });
 
+  test.each([
+    ["password numérico", { email: "login@test.cl", password: 123456 }],
+    ["email numérico", { email: 123, password: "123456" }],
+    ["password como objeto", { email: "login@test.cl", password: {} }],
+  ])("POST /api/auth/login responde 400 con %s", async (_case, body) => {
+    await request(app).post("/api/users").send({
+      name: "Usuario Test",
+      email: "login@test.cl",
+      password: "123456",
+    });
+
+    const response = await request(app).post("/api/auth/login").send(body);
+
+    expect(response.status).toBe(400);
+  });
+
   describe("cuenta desactivada", () => {
     beforeEach(async () => {
       const created = await request(app).post("/api/users").send({

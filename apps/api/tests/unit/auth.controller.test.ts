@@ -41,6 +41,18 @@ describe("auth.controller login", () => {
     expect(mockedFindUserByEmail).not.toHaveBeenCalled();
   });
 
+  test("responde 400 si las credenciales no son texto", async () => {
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "ana@pruebas.cl", password: 123456 }),
+      res as unknown as Response,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockedFindUserByEmail).not.toHaveBeenCalled();
+  });
+
   test("responde 401 si el usuario no existe", async () => {
     mockedFindUserByEmail.mockResolvedValue(undefined);
     const res = createResponse();
