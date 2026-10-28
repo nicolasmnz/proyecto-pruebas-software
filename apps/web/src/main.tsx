@@ -11,6 +11,7 @@ import BoardPage from "./pages/BoardPage";
 import EpicsPage from "./pages/EpicsPage";
 import SprintsPage from "./pages/SprintsPage";
 import CreateProjectPage from "./pages/CreateProjectPage";
+import LoginPage from "./pages/LoginPage";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
@@ -19,6 +20,8 @@ createRoot(document.getElementById("root")!).render(
       <AuthProvider>
         <ProjectsProvider>
           <Routes>
+            <Route path="/login" element={<LoginPage />} />
+
             <Route element={<Layout />}>
               <Route index element={<Navigate to="/projects" replace />} />
 
