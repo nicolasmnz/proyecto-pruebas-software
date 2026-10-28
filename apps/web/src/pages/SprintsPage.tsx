@@ -8,10 +8,12 @@ import { ApiError } from "../api/projects";
 import {
   assignWorkItemToSprint,
   createSprint,
+  deleteSprint,
   getSprints,
   updateSprint,
 } from "../api/sprints";
 import type { Sprint } from "../api/sprints";
+import ConfirmDialog from "../components/ConfirmDialog";
 import SprintCard from "../components/SprintCard";
 import SprintForm from "../components/SprintForm";
 import type { SprintFormValues } from "../components/SprintForm";
@@ -33,6 +35,17 @@ type Result =
   | { status: "not-found" }
   | { status: "error"; message: string };
 
+// Qué pasa con las tareas al eliminar un sprint
+function describeReturn(count: number) {
+  if (count === 0) {
+    return "Este sprint no tiene tareas.";
+  }
+
+  return count === 1
+    ? "Su tarea vuelve al backlog."
+    : `Sus ${count} tareas vuelven al backlog.`;
+}
+
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
@@ -47,6 +60,9 @@ function SprintsPage() {
   const [announcement, setAnnouncement] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Sprint | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const wasCreating = useRef(false);
 
@@ -153,15 +169,18 @@ function SprintsPage() {
     });
   }
 
-  // Cambia el sprint de una tarea en el tablero ya cargado
-  function setItemSprint(itemId: string, sprintId: string | null) {
+  // Cambia el sprint de las tareas indicadas en el tablero ya cargado
+  function setItemsSprint(
+    belongs: (item: BoardItem) => boolean,
+    sprintId: string | null,
+  ) {
     setResult((current) => {
       if (current?.key !== requestKey || current.result.status !== "success") {
         return current;
       }
 
       const move = (item: BoardItem) =>
-        item.id === itemId ? { ...item, sprint_id: sprintId } : item;
+        belongs(item) ? { ...item, sprint_id: sprintId } : item;
       const { board } = current.result;
 
       return {
@@ -187,7 +206,7 @@ function SprintsPage() {
 
       const moved = await assignWorkItemToSprint(project.id, item.id, sprintId);
 
-      setItemSprint(item.id, moved.sprint_id);
+      setItemsSprint(({ id }) => id === item.id, moved.sprint_id);
 
       const target = sprints.find(({ id }) => id === moved.sprint_id);
 
@@ -198,6 +217,27 @@ function SprintsPage() {
       );
     } catch (error) {
       setActionError(getErrorMessage(error, "No fue posible mover la tarea."));
+    }
+  }
+
+  async function handleDelete(sprint: Sprint) {
+    try {
+      setIsDeleting(true);
+      setDeleteError(null);
+
+      await deleteSprint(project.id, sprint.id);
+
+      // La base deja sus tareas sin sprint (ON DELETE SET NULL)
+      setItemsSprint((item) => item.sprint_id === sprint.id, null);
+      updateSprints((sprints) => sprints.filter(({ id }) => id !== sprint.id));
+      setDeleting(null);
+      setAnnouncement(`Sprint "${sprint.name}" eliminado.`);
+    } catch (error) {
+      setDeleteError(
+        getErrorMessage(error, "No fue posible eliminar el sprint."),
+      );
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -306,6 +346,14 @@ function SprintsPage() {
                 onSave={
                   readOnly ? undefined : (values) => handleSave(sprint, values)
                 }
+                onDelete={
+                  readOnly
+                    ? undefined
+                    : () => {
+                        setDeleteError(null);
+                        setDeleting(sprint);
+                      }
+                }
                 moveTargets={moveTargets}
                 onMoveItem={readOnly ? undefined : handleMove}
               />
@@ -327,6 +375,23 @@ function SprintsPage() {
           onMove={readOnly ? undefined : handleMove}
         />
       </section>
+
+      {deleting && (
+        <ConfirmDialog
+          title="¿Eliminar este sprint?"
+          confirmLabel="Eliminar"
+          confirmingLabel="Eliminando..."
+          isConfirming={isDeleting}
+          error={deleteError}
+          onConfirm={() => handleDelete(deleting)}
+          onCancel={() => setDeleting(null)}
+        >
+          <p>
+            <strong>{deleting.name}</strong> se eliminará de forma permanente.
+          </p>
+          <p>{describeReturn(getSprintItems(board, deleting.id).length)}</p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

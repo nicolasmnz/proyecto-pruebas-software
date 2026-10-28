@@ -10,6 +10,7 @@ import { ApiError } from "../api/projects";
 import {
   assignWorkItemToSprint,
   createSprint,
+  deleteSprint,
   getSprints,
   updateSprint,
 } from "../api/sprints";
@@ -26,6 +27,7 @@ vi.mock("../api/sprints", async (importOriginal) => ({
   createSprint: vi.fn(),
   updateSprint: vi.fn(),
   assignWorkItemToSprint: vi.fn(),
+  deleteSprint: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
@@ -33,6 +35,7 @@ const mockedGetSprints = vi.mocked(getSprints);
 const mockedCreateSprint = vi.mocked(createSprint);
 const mockedUpdateSprint = vi.mocked(updateSprint);
 const mockedAssignWorkItemToSprint = vi.mocked(assignWorkItemToSprint);
+const mockedDeleteSprint = vi.mocked(deleteSprint);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const ACTIVE_ID = "50000000-0000-0000-0000-000000000001";
@@ -668,6 +671,96 @@ describe("SprintsPage", () => {
     });
   });
 
+  describe("eliminar un sprint", () => {
+    test("pide confirmación y no elimina si se cancela", async () => {
+      const user = userEvent.setup();
+
+      await renderLoadedPage();
+
+      await user.click(
+        within(sprintCard("Sprint 2")).getByRole("button", {
+          name: "Eliminar",
+        }),
+      );
+
+      const dialog = screen.getByRole("alertdialog", {
+        name: "¿Eliminar este sprint?",
+      });
+
+      expect(dialog).toHaveTextContent("Sprint 2");
+      expect(dialog).toHaveTextContent("Sus 2 tareas vuelven al backlog.");
+
+      await user.click(
+        within(dialog).getByRole("button", { name: "Cancelar" }),
+      );
+
+      expect(mockedDeleteSprint).not.toHaveBeenCalled();
+      expect(sprintCard("Sprint 2")).toBeInTheDocument();
+    });
+
+    test("al confirmar lo elimina y sus tareas vuelven al backlog", async () => {
+      const user = userEvent.setup();
+      mockedDeleteSprint.mockResolvedValue(sprints[1]);
+
+      await renderLoadedPage();
+
+      await user.click(
+        within(sprintCard("Sprint 2")).getByRole("button", {
+          name: "Eliminar",
+        }),
+      );
+      await user.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", {
+          name: "Eliminar",
+        }),
+      );
+
+      expect(mockedDeleteSprint).toHaveBeenCalledWith(PROJECT_ID, ACTIVE_ID);
+      expect(
+        screen.queryByRole("article", { name: "Sprint 2" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(within(backlog()).getByText("Diseñar login")).toBeInTheDocument();
+      expect(
+        within(backlog()).getByText("Administrar miembros"),
+      ).toBeInTheDocument();
+      expect(
+        within(backlog()).getByText("3 tareas · 8 pts"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Sprint "Sprint 2" eliminado.'),
+      ).toBeInTheDocument();
+    });
+
+    test("si falla, muestra el error dentro del diálogo", async () => {
+      const user = userEvent.setup();
+      mockedDeleteSprint.mockRejectedValue(
+        new Error("Error eliminando sprint"),
+      );
+
+      await renderLoadedPage();
+
+      await user.click(
+        within(sprintCard("Sprint 3")).getByRole("button", {
+          name: "Eliminar",
+        }),
+      );
+
+      const dialog = screen.getByRole("alertdialog");
+
+      expect(dialog).toHaveTextContent("Este sprint no tiene tareas.");
+
+      await user.click(
+        within(dialog).getByRole("button", { name: "Eliminar" }),
+      );
+
+      expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+        "Error eliminando sprint",
+      );
+      expect(sprintCard("Sprint 3")).toBeInTheDocument();
+    });
+  });
+
   test("en un proyecto archivado los sprints son de solo lectura", async () => {
     await renderLoadedPage({
       ...board,
@@ -684,5 +777,8 @@ describe("SprintsPage", () => {
       screen.queryByRole("button", { name: "Editar" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Eliminar" }),
+    ).not.toBeInTheDocument();
   });
 });

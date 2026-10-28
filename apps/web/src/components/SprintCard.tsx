@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 import type { BoardItem } from "../api/board";
 import { SPRINT_STATUS_LABELS } from "../api/sprints";
@@ -17,6 +17,8 @@ interface SprintCardProps {
   items: BoardItem[];
   // Sin esta función la tarjeta es de solo lectura (proyecto archivado)
   onSave?: (values: SprintFormValues) => Promise<void>;
+  // Abre la confirmación para eliminar el sprint
+  onDelete?: () => void;
   moveTargets?: Pick<Sprint, "id" | "name">[];
   onMoveItem?: (item: BoardItem, sprintId: string | null) => void;
 }
@@ -40,6 +42,7 @@ function SprintCard({
   sprint,
   items,
   onSave,
+  onDelete,
   moveTargets,
   onMoveItem,
 }: SprintCardProps) {
@@ -100,17 +103,29 @@ function SprintCard({
             onMove={onMoveItem}
           />
 
-          {onSave && (
+          {(onSave || onDelete) && (
             <div className="actions sprint-card-actions">
-              <button
-                ref={editButtonRef}
-                type="button"
-                className="btn-secondary"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil size={16} aria-hidden="true" />
-                Editar
-              </button>
+              {onSave && (
+                <button
+                  ref={editButtonRef}
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil size={16} aria-hidden="true" />
+                  Editar
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={onDelete}
+                >
+                  <Trash2 size={16} aria-hidden="true" />
+                  Eliminar
+                </button>
+              )}
             </div>
           )}
         </>
