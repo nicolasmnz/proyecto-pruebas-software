@@ -3,11 +3,21 @@ import type { Request, Response } from "express";
 
 import { login } from "../../src/controllers/auth.controller.js";
 import { findUserByEmail } from "../../src/repositories/user.repository.js";
-import { hashPassword } from "../../src/utils/password.js";
+import { hashPassword, verifyPassword } from "../../src/utils/password.js";
 
 jest.mock("../../src/repositories/user.repository.js");
 
+// verifyPassword real, pero observable
+jest.mock("../../src/utils/password.js", () => {
+  const actual = jest.requireActual<
+    typeof import("../../src/utils/password.js")
+  >("../../src/utils/password.js");
+
+  return { ...actual, verifyPassword: jest.fn(actual.verifyPassword) };
+});
+
 const mockedFindUserByEmail = jest.mocked(findUserByEmail);
+const mockedVerifyPassword = jest.mocked(verifyPassword);
 
 function createResponse() {
   const res = {
@@ -41,6 +51,18 @@ describe("auth.controller login", () => {
     expect(mockedFindUserByEmail).not.toHaveBeenCalled();
   });
 
+  test("responde 400 si las credenciales no son texto", async () => {
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "ana@pruebas.cl", password: 123456 }),
+      res as unknown as Response,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockedFindUserByEmail).not.toHaveBeenCalled();
+  });
+
   test("responde 401 si el usuario no existe", async () => {
     mockedFindUserByEmail.mockResolvedValue(undefined);
     const res = createResponse();
@@ -50,6 +72,20 @@ describe("auth.controller login", () => {
       res as unknown as Response,
     );
 
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  test("calcula scrypt aunque el usuario no exista, para no delatarlo por el tiempo", async () => {
+    mockedFindUserByEmail.mockResolvedValue(undefined);
+    mockedVerifyPassword.mockClear();
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "nadie@pruebas.cl", password: "123456" }),
+      res as unknown as Response,
+    );
+
+    expect(mockedVerifyPassword).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 
@@ -69,6 +105,24 @@ describe("auth.controller login", () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(403);
+  });
+
+  test("responde 401 si el usuario está desactivado y la contraseña es incorrecta", async () => {
+    mockedFindUserByEmail.mockResolvedValue({
+      id: "1",
+      name: "Sofía",
+      email: "sofia@pruebas.cl",
+      password_hash: storedHash,
+      is_active: false,
+    });
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "sofia@pruebas.cl", password: "incorrecta" }),
+      res as unknown as Response,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(401);
   });
 
   test("responde 401 si la contraseña es incorrecta", async () => {
