@@ -3,6 +3,59 @@ import {Request, Response } from "express";
 import { ProjectParams, SprintParams,WorkItemParams } from "../types/request.js";
 
 import { findSprintsByProject, findSprintById, createSprint,updateSprint, deleteSprint, assignWorkItemToSprint } from "../repositories/sprint.repository.js";
+import { findProjectById } from "../repositories/project.repository.js";
+import { isValidDate } from "../utils/date.js";
+import { isUuid } from "../utils/uuid.js";
+
+
+// Coincide con sprints.name VARCHAR(100)
+const MAX_NAME_LENGTH = 100;
+
+
+// Validación común a crear y editar; devuelve el mensaje de error o null
+function validateSprintFields(
+    body: Record<string, unknown>
+): string | null {
+    const { name, startDate, endDate } = body;
+
+    if (typeof name !== "string" || !name.trim()) {
+        return "name es obligatorio";
+    }
+
+    if (name.trim().length > MAX_NAME_LENGTH) {
+        return `name no puede superar ${MAX_NAME_LENGTH} caracteres`;
+    }
+
+    for (const [field, value] of [
+        ["startDate", startDate],
+        ["endDate", endDate]
+    ] as const) {
+        if (
+            value !== undefined &&
+            value !== null &&
+            (typeof value !== "string" || !isValidDate(value))
+        ) {
+            return `${field} debe tener formato AAAA-MM-DD o ser null`;
+        }
+    }
+
+    // Ambas fechas son AAAA-MM-DD válidas: se comparan como texto
+    if (
+        typeof startDate === "string" &&
+        typeof endDate === "string" &&
+        endDate < startDate
+    ) {
+        return "endDate no puede ser anterior a startDate";
+    }
+
+    return null;
+}
+
+
+// Un id con formato inválido no puede existir en la base
+function hasValidIds(params: SprintParams) {
+    return isUuid(params.id) && isUuid(params.sprintId);
+}
 
 
 const VALID_STATUS = [
@@ -18,6 +71,12 @@ export async function getSprints(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
+            });
+        }
+
         const sprints =
             await findSprintsByProject(
                 req.params.id
@@ -38,10 +97,12 @@ export async function getSprint(
     res: Response
 ) {
     try {
-        const sprint = await findSprintById(
-            req.params.id,
-            req.params.sprintId
-        );
+        const sprint = hasValidIds(req.params)
+            ? await findSprintById(
+                req.params.id,
+                req.params.sprintId
+            )
+            : undefined;
 
         if (!sprint) {
             return res.status(404).json({
@@ -71,27 +132,30 @@ export async function postSprint(
             endDate
         } = req.body;
 
-        if (!name) {
-            return res.status(400).json({
-                message: "name es obligatorio"
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
             });
         }
 
-        if (
-            startDate &&
-            endDate &&
-            new Date(endDate) <
-            new Date(startDate)
-        ) {
+        const invalidField =
+            validateSprintFields(req.body);
+
+        if (invalidField) {
             return res.status(400).json({
-                message:
-                    "endDate no puede ser anterior a startDate"
+                message: invalidField
+            });
+        }
+
+        if (!await findProjectById(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
             });
         }
 
         const sprint = await createSprint(
             req.params.id,
-            name,
+            name.trim(),
             goal ?? null,
             startDate ?? null,
             endDate ?? null
@@ -120,10 +184,19 @@ export async function putSprint(
             endDate
         } = req.body;
 
-        if (!name || !status) {
+        if (!status) {
             return res.status(400).json({
                 message:
                     "name y status son obligatorios"
+            });
+        }
+
+        const invalidField =
+            validateSprintFields(req.body);
+
+        if (invalidField) {
+            return res.status(400).json({
+                message: invalidField
             });
         }
 
@@ -134,27 +207,17 @@ export async function putSprint(
             });
         }
 
-        if (
-            startDate &&
-            endDate &&
-            new Date(endDate) <
-            new Date(startDate)
-        ) {
-            return res.status(400).json({
-                message:
-                    "endDate no puede ser anterior a startDate"
-            });
-        }
-
-        const sprint = await updateSprint(
-            req.params.id,
-            req.params.sprintId,
-            name,
-            goal ?? null,
-            status,
-            startDate ?? null,
-            endDate ?? null
-        );
+        const sprint = hasValidIds(req.params)
+            ? await updateSprint(
+                req.params.id,
+                req.params.sprintId,
+                name.trim(),
+                goal ?? null,
+                status,
+                startDate ?? null,
+                endDate ?? null
+            )
+            : undefined;
 
         if (!sprint) {
             return res.status(404).json({
@@ -177,10 +240,12 @@ export async function removeSprint(
     res: Response
 ) {
     try {
-        const sprint = await deleteSprint(
-            req.params.id,
-            req.params.sprintId
-        );
+        const sprint = hasValidIds(req.params)
+            ? await deleteSprint(
+                req.params.id,
+                req.params.sprintId
+            )
+            : undefined;
 
         if (!sprint) {
             return res.status(404).json({
@@ -208,6 +273,26 @@ export async function patchWorkItemSprint(
 ) {
     try {
         const {sprintId} = req.body;
+
+        if (
+            !isUuid(req.params.id) ||
+            !isUuid(req.params.itemId)
+        ) {
+            return res.status(404).json({
+                message:
+                    "Work item no encontrado"
+            });
+        }
+
+        if (
+            sprintId !== null &&
+            (typeof sprintId !== "string" || !isUuid(sprintId))
+        ) {
+            return res.status(400).json({
+                message:
+                    "sprintId debe ser un UUID válido o null"
+            });
+        }
 
         // null significa volver al backlog.
         if (sprintId !== null) {

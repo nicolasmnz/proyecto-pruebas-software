@@ -1,21 +1,27 @@
 import pool from "../config/database.js";
 
 
+// Columnas de un sprint; las fechas como texto (AAAA-MM-DD) igual que en
+// tareas y épicas, para que no se conviertan a timestamp según la zona horaria
+const SPRINT_COLUMNS = `
+    id,
+    project_id,
+    name,
+    goal,
+    status,
+    start_date::text AS start_date,
+    end_date::text AS end_date,
+    created_at,
+    updated_at
+`;
+
+
 export async function findSprintsByProject(
     projectId: string
 ) {
     const result = await pool.query(
         `
-        SELECT
-            id,
-            project_id,
-            name,
-            goal,
-            status,
-            start_date,
-            end_date,
-            created_at,
-            updated_at
+        SELECT ${SPRINT_COLUMNS}
         FROM sprints
         WHERE project_id = $1
         ORDER BY created_at DESC
@@ -33,16 +39,7 @@ export async function findSprintById(
 ) {
     const result = await pool.query(
         `
-        SELECT
-            id,
-            project_id,
-            name,
-            goal,
-            status,
-            start_date,
-            end_date,
-            created_at,
-            updated_at
+        SELECT ${SPRINT_COLUMNS}
         FROM sprints
         WHERE id = $1
           AND project_id = $2
@@ -79,7 +76,7 @@ export async function createSprint(
             $4,
             $5
         )
-        RETURNING *
+        RETURNING ${SPRINT_COLUMNS}
         `,
         [
             projectId,
@@ -114,7 +111,7 @@ export async function updateSprint(
             end_date = $5
         WHERE id = $6
           AND project_id = $7
-        RETURNING *
+        RETURNING ${SPRINT_COLUMNS}
         `,
         [
             name,
@@ -140,7 +137,7 @@ export async function deleteSprint(
         DELETE FROM sprints
         WHERE id = $1
           AND project_id = $2
-        RETURNING *
+        RETURNING ${SPRINT_COLUMNS}
         `,
         [sprintId, projectId]
     );
@@ -148,6 +145,7 @@ export async function deleteSprint(
     return result.rows[0];
 }
 
+// Las épicas agrupan trabajo de varios sprints: no se asignan a uno
 export async function assignWorkItemToSprint(
     projectId: string,
     itemId: string,
@@ -159,6 +157,7 @@ export async function assignWorkItemToSprint(
         SET sprint_id = $1
         WHERE id = $2
           AND project_id = $3
+          AND type <> 'EPIC'
         RETURNING *
         `,
         [

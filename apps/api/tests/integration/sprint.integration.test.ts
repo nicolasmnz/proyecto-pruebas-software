@@ -110,6 +110,21 @@ async function prepareData() {
 }
 
 
+async function createTestSprint(name: string) {
+
+    const response =
+        await request(app)
+            .post(
+                `/api/projects/${PROJECT_ID}/sprints`
+            )
+            .send({
+                name
+            });
+
+    return response.body;
+}
+
+
 describe(
     "Sprints API - integración",
     () => {
@@ -319,6 +334,335 @@ describe(
 
                 expect(
                     response.body.sprint_id
+                ).toBeNull();
+            }
+        );
+
+
+        test.each([
+            ["GET", `/api/projects/abc/sprints`],
+            ["GET", `/api/projects/${PROJECT_ID}/sprints/abc`],
+            ["PUT", `/api/projects/${PROJECT_ID}/sprints/abc`],
+            ["DELETE", `/api/projects/${PROJECT_ID}/sprints/abc`]
+        ])(
+            "%s %s con un id inválido responde 404",
+            async (method, url) => {
+
+                const response =
+                    await request(app)
+                        [method.toLowerCase() as "get" | "put" | "delete"](url)
+                        .send({
+                            name:
+                                "Sprint",
+
+                            status:
+                                "PLANNED"
+                        });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "rechaza asignar un sprint con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/sprint`
+                    )
+
+                    .send({
+                        sprintId:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "responde 404 al asignar sprint a una tarea con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/abc/sprint`
+                    )
+
+                    .send({
+                        sprintId: null
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test.each([
+            ["startDate inválida", { startDate: "mañana" }],
+            ["endDate que no existe", { endDate: "2026-02-30" }],
+            ["nombre de más de 100 caracteres", { name: "a".repeat(101) }],
+            ["nombre en blanco", { name: "   " }]
+        ])(
+            "POST rechaza %s",
+            async (_case, fields) => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test.each([
+            ["startDate inválida", { startDate: "mañana" }],
+            ["nombre de más de 100 caracteres", { name: "a".repeat(101) }]
+        ])(
+            "PUT rechaza %s",
+            async (_case, fields) => {
+
+                const sprint =
+                    await createTestSprint(
+                        "Sprint a validar"
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/sprints/${sprint.id}`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint",
+
+                        status:
+                            "PLANNED",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "POST responde 404 si el proyecto no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/99999999-9999-9999-9999-999999999999/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "devuelve las fechas en formato AAAA-MM-DD",
+            async () => {
+
+                const created =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint con fechas",
+
+                        startDate:
+                            "2026-11-01",
+
+                        endDate:
+                            "2026-11-14"
+                    });
+
+
+                expect(
+                    created.body
+                ).toMatchObject({
+                    start_date: "2026-11-01",
+                    end_date: "2026-11-14"
+                });
+
+
+                const updated =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint con fechas",
+
+                        status:
+                            "ACTIVE",
+
+                        startDate:
+                            "2026-11-02",
+
+                        endDate:
+                            "2026-11-15"
+                    });
+
+
+                expect(
+                    updated.body
+                ).toMatchObject({
+                    start_date: "2026-11-02",
+                    end_date: "2026-11-15"
+                });
+
+
+                const detail =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                        );
+
+
+                expect(
+                    detail.body.start_date
+                ).toBe("2026-11-02");
+
+
+                const list =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/sprints`
+                        );
+
+
+                expect(
+                    list.body[0].end_date
+                ).toBe("2026-11-15");
+
+
+                const removed =
+                    await request(app)
+                        .delete(
+                            `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                        );
+
+
+                expect(
+                    removed.body.sprint.start_date
+                ).toBe("2026-11-02");
+            }
+        );
+
+
+        test(
+            "no permite asignar una épica a un sprint",
+            async () => {
+
+                const sprint =
+                    await createTestSprint(
+                        "Sprint sin épicas"
+                    );
+
+
+                const epic =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Épica",
+
+                        createdBy:
+                            USER_ID
+                    });
+
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${epic.body.id}/sprint`
+                    )
+
+                    .send({
+                        sprintId:
+                            sprint.id
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+
+
+                const stored =
+                    await pool.query(
+                        `
+                        SELECT sprint_id
+                        FROM work_items
+                        WHERE id = $1
+                        `,
+                        [epic.body.id]
+                    );
+
+
+                expect(
+                    stored.rows[0].sprint_id
                 ).toBeNull();
             }
         );
