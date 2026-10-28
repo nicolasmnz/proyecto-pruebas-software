@@ -12,6 +12,7 @@ const item: BoardItem = {
   id: "1",
   item_number: 12,
   is_archived: false,
+  parent_id: null,
   type: "BUG",
   title: "Corregir autenticación",
   status: "TODO",

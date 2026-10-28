@@ -57,6 +57,7 @@ function buildItem(overrides: Partial<BoardItem>): BoardItem {
     id: "30000000-0000-0000-0000-000000000010",
     item_number: 1,
     is_archived: false,
+    parent_id: null,
     type: "TASK",
     title: "Tarea",
     status: "TODO",
