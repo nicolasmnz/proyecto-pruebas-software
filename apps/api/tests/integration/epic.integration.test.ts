@@ -478,5 +478,71 @@ describe(
                 ).not.toContain(epic.id);
             }
         );
+
+
+        test(
+            "rechaza asignar una tarea a una épica archivada",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic archivada"
+                    );
+
+
+                await request(app)
+                    .delete(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/epic`
+                    )
+
+                    .send({
+                        epicId:
+                            epic.id
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "GET responde 404 si la épica está archivada",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic archivada"
+                    );
+
+
+                await request(app)
+                    .delete(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    );
+
+
+                const response =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                        );
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
     }
 );

@@ -20,6 +20,7 @@ export async function findEpicsByProject(
 }
 
 
+// Las épicas archivadas no se pueden consultar ni recibir tareas
 export async function findEpicById(
     projectId: string,
     epicId: string
@@ -31,6 +32,7 @@ export async function findEpicById(
         WHERE id = $1
           AND project_id = $2
           AND type = 'EPIC'
+          AND is_archived = FALSE
         `,
         [
             epicId,
