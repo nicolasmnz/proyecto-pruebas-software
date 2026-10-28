@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { IdParams } from '../types/request.js';
+import { isValidDate } from '../utils/date.js';
 import { isUuid } from '../utils/uuid.js';
 
 import { findProjectById } from '../repositories/project.repository.js';
@@ -25,7 +26,6 @@ const MAX_TITLE_LENGTH = 200;
 const EDITABLE_TYPES = ['TASK', 'STORY', 'BUG'];
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const MAX_WIP_LIMIT = 999;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Orden de las columnas del tablero
 export const BOARD_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
@@ -62,17 +62,6 @@ function assertEditable(project: Project, action: string): Failure | null {
     return project.is_archived
         ? new Failure(409, `El proyecto está archivado. Restáuralo para ${action}`)
         : null;
-}
-
-function isValidDate(value: string): boolean {
-    if (!DATE_PATTERN.test(value)) {
-        return false;
-    }
-
-    const date = new Date(`${value}T00:00:00Z`);
-
-    return !Number.isNaN(date.getTime())
-        && date.toISOString().startsWith(value);
 }
 
 function normalizeText(value: unknown): string | null {

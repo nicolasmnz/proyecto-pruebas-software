@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { EpicParams, ProjectParams, WorkItemParams } from "../types/request.js";
 import {findEpicsByProject, findEpicById, createEpic, updateEpic, archiveEpic, assignWorkItemToEpic } from "../repositories/epic.repository.js";
+import { findProjectById } from "../repositories/project.repository.js";
+import { isValidDate } from "../utils/date.js";
 import { isUuid } from "../utils/uuid.js";
 
 
@@ -9,6 +11,47 @@ import { isUuid } from "../utils/uuid.js";
 // Un id con formato inválido no puede existir en la base
 function hasValidIds(params: EpicParams) {
     return isUuid(params.id) && isUuid(params.epicId);
+}
+
+
+// Coincide con work_items.title VARCHAR(200)
+const MAX_TITLE_LENGTH = 200;
+
+
+// Validación común a crear y editar; devuelve el mensaje de error o null
+function validateEpicFields(
+    body: Record<string, unknown>
+): string | null {
+    const { title, estimate, dueDate } = body;
+
+    if (
+        typeof title === "string" &&
+        title.length > MAX_TITLE_LENGTH
+    ) {
+        return `title no puede superar ${MAX_TITLE_LENGTH} caracteres`;
+    }
+
+    if (
+        estimate !== undefined &&
+        estimate !== null &&
+        (
+            typeof estimate !== "number" ||
+            !Number.isInteger(estimate) ||
+            estimate < 0
+        )
+    ) {
+        return "estimate debe ser un entero mayor o igual a 0";
+    }
+
+    if (
+        dueDate !== undefined &&
+        dueDate !== null &&
+        (typeof dueDate !== "string" || !isValidDate(dueDate))
+    ) {
+        return "dueDate debe tener formato AAAA-MM-DD o ser null";
+    }
+
+    return null;
 }
 
 
@@ -119,6 +162,15 @@ export async function postEpic(
             });
         }
 
+        const invalidField =
+            validateEpicFields(req.body);
+
+        if (invalidField) {
+            return res.status(400).json({
+                message: invalidField
+            });
+        }
+
         const selectedPriority =
             priority ?? "MEDIUM";
 
@@ -130,6 +182,12 @@ export async function postEpic(
             return res.status(400).json({
                 message:
                     "Prioridad inválida"
+            });
+        }
+
+        if (!await findProjectById(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
             });
         }
 
@@ -146,6 +204,14 @@ export async function postEpic(
         return res.status(201).json(epic);
 
     } catch (error) {
+        // 23503: createdBy no corresponde a un usuario existente
+        if ((error as { code?: string }).code === "23503") {
+            return res.status(400).json({
+                message:
+                    "createdBy no corresponde a un usuario existente"
+            });
+        }
+
         return res.status(500).json({
             message:
                 "Error creando épica"
@@ -194,6 +260,15 @@ export async function putEpic(
             return res.status(400).json({
                 message:
                     "Prioridad inválida"
+            });
+        }
+
+        const invalidField =
+            validateEpicFields(req.body);
+
+        if (invalidField) {
+            return res.status(400).json({
+                message: invalidField
             });
         }
 

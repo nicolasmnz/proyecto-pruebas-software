@@ -649,5 +649,134 @@ describe(
                 ).toBe(404);
             }
         );
+
+
+        test.each([
+            ["estimate negativo", { estimate: -1 }],
+            ["estimate decimal", { estimate: 1.5 }],
+            ["dueDate inválida", { dueDate: "2026-13-45" }],
+            ["title demasiado largo", { title: "a".repeat(201) }]
+        ])(
+            "POST rechaza %s",
+            async (_case, fields) => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            USER_ID,
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test.each([
+            ["estimate negativo", { estimate: -1 }],
+            ["dueDate inválida", { dueDate: "mañana" }]
+        ])(
+            "PUT rechaza %s",
+            async (_case, fields) => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic a validar"
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        status:
+                            "TODO",
+
+                        priority:
+                            "MEDIUM",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "POST responde 404 si el proyecto no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/99999999-9999-9999-9999-999999999999/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            USER_ID
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "POST rechaza un createdBy que no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            "99999999-9999-9999-9999-999999999999"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
     }
 );
