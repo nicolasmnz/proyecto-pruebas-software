@@ -1,12 +1,6 @@
 import { Request, Response } from "express";
-import { ProjectParams, WorkItemParams } from "../types/request.js";
+import { EpicParams, ProjectParams, WorkItemParams } from "../types/request.js";
 import {findEpicsByProject, findEpicById, createEpic, updateEpic, archiveEpic, assignWorkItemToEpic } from "../repositories/epic.repository.js";
-
-
-interface EpicParams {
-    projectId: string;
-    epicId: string;
-}
 
 
 
@@ -52,7 +46,7 @@ export async function getEpic(
 ) {
     try {
         const epic = await findEpicById(
-            req.params.projectId,
+            req.params.id,
             req.params.epicId
         );
 
@@ -173,7 +167,7 @@ export async function putEpic(
         }
 
         const epic = await updateEpic(
-            req.params.projectId,
+            req.params.id,
             req.params.epicId,
             title,
             description ?? null,
@@ -207,7 +201,7 @@ export async function deleteEpic(
 ) {
     try {
         const epic = await archiveEpic(
-            req.params.projectId,
+            req.params.id,
             req.params.epicId
         );
 
