@@ -92,6 +92,45 @@ describe("Tablero Kanban API", () => {
     expect(done.items).toHaveLength(1);
   });
 
+  test("incluye la épica de cada tarea en el tablero, las archivadas y la ficha", async () => {
+    const epic = await pool.query(
+      `INSERT INTO work_items (project_id, created_by, type, title)
+       VALUES ($1, $2, 'EPIC', 'Una épica') RETURNING id`,
+      [projectId, userId],
+    );
+    const epicId = epic.rows[0].id;
+
+    await addItem("Sin épica", "TODO", 0);
+    await addItem("Con épica", "TODO", 1);
+    await addItem("Archivada", "DONE", 0);
+    await pool.query(
+      `UPDATE work_items SET parent_id = $1 WHERE title IN ('Con épica', 'Archivada')`,
+      [epicId],
+    );
+    await pool.query(
+      `UPDATE work_items SET is_archived = TRUE WHERE title = 'Archivada'`,
+    );
+
+    const board = await request(app).get(`/api/projects/${projectId}/board`);
+    const [todo] = board.body.columns;
+
+    expect(todo.items.map((item: { parent_id: string | null }) => item.parent_id))
+      .toEqual([null, epicId]);
+    expect(board.body.archived[0].parent_id).toBe(epicId);
+
+    const detail = await request(app).get(
+      `/api/projects/${projectId}/work-items/${todo.items[1].id}`,
+    );
+
+    expect(detail.body.parent_id).toBe(epicId);
+
+    const created = await request(app)
+      .post(`/api/projects/${projectId}/work-items`)
+      .send({ title: "Nueva", createdBy: userId });
+
+    expect(created.body.parent_id).toBeNull();
+  });
+
   test("numera los elementos por proyecto en orden de creación", async () => {
     await addItem("Uno", "TODO", 0);
     await addItem("Dos", "DONE", 0);

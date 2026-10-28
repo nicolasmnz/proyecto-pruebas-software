@@ -1,0 +1,67 @@
+.epics-summary-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.epics-summary-new,
+.epics-summary-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0c66e4;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.epics-summary-new:hover,
+.epics-summary-all:hover {
+  text-decoration: underline;
+}
+
+.epics-summary-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0;
+  color: #626f86;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.epics-summary-status p {
+  margin: 0;
+}
+
+.epics-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.epics-summary-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.epics-summary-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.epics-summary-percentage {
+  flex-shrink: 0;
+  color: #44546f;
+}

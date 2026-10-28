@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectDetailPage from "./ProjectDetailPage";
+import { getBoard } from "../api/board";
+import { getEpics } from "../api/epics";
 import {
   ApiError,
   archiveProject,
@@ -23,6 +25,19 @@ vi.mock("../api/projects", async (importOriginal) => ({
   restoreProject: vi.fn(),
 }));
 
+// El resumen de épicas pide el tablero y las épicas del proyecto
+vi.mock("../api/board", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/board")>()),
+  getBoard: vi.fn(),
+}));
+
+vi.mock("../api/epics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/epics")>()),
+  getEpics: vi.fn(),
+}));
+
+const mockedGetBoard = vi.mocked(getBoard);
+const mockedGetEpics = vi.mocked(getEpics);
 const mockedGetProject = vi.mocked(getProject);
 const mockedUpdateProject = vi.mocked(updateProject);
 const mockedArchiveProject = vi.mocked(archiveProject);
@@ -75,6 +90,14 @@ async function renderLoadedPage(initialProject: Project = project) {
 describe("ProjectDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetBoard.mockResolvedValue({
+      project,
+      columns: [],
+      archived: [],
+      members: [],
+      wip_limits: {},
+    });
+    mockedGetEpics.mockResolvedValue([]);
   });
 
   test("muestra un indicador de carga", () => {
@@ -105,6 +128,19 @@ describe("ProjectDetailPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Creado").nextSibling).toHaveTextContent("2026");
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
+  });
+
+  test("enlaza al tablero y a las épicas del proyecto", async () => {
+    await renderLoadedPage();
+
+    expect(screen.getByRole("link", { name: "Ver tablero" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/board`,
+    );
+    expect(screen.getByRole("link", { name: "Ver épicas" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/epics`,
+    );
   });
 
   test("indica cuando el proyecto no tiene descripción", async () => {

@@ -22,7 +22,13 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Mover tareas entre columnas y reordenarlas (arrastrando o con botones accesibles por teclado).
 - Archivar tareas terminadas, una a una o todas las de Hecho, y restaurarlas.
 - Barra de progreso (por puntos y por tareas), puntos por columna y límite de trabajo en curso configurable.
-- Búsqueda por título o `#número` y filtros por tipo, prioridad y responsable.
+- Búsqueda por título o `#número` y filtros por tipo, prioridad, responsable y épica.
+
+**Épicas** (`/projects/:id/epics`) — ver [Épicas](#épicas)
+
+- Crear, editar (incluido el estado) y archivar épicas, con su barra de avance.
+- Asignar o quitar la épica de una tarea desde su ficha; cada tarjeta del tablero muestra su épica.
+- Resumen de las épicas más recientes en el detalle del proyecto y acceso al tablero filtrado por cada épica.
 
 ## Integrantes
 
@@ -112,7 +118,7 @@ El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql
 | `users` | Usuarios (contraseña con hash scrypt) |
 | `projects` | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB) |
 | `project_members` | Miembros de cada proyecto y su rol |
-| `work_items` | Épicas, historias, tareas y errores; `status`, `position`, `item_number` e `is_archived` |
+| `work_items` | Épicas, historias, tareas y errores; `status`, `position`, `item_number`, `is_archived` y `parent_id` (épica de la tarea) |
 | `sprints`, `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación |
 
 ### Migraciones
@@ -142,18 +148,30 @@ Reglas de comportamiento que conviene conocer:
 - **Responsable:** se elige entre los miembros del proyecto y quien lo creó. Se puede conservar el responsable actual aunque ya no sea miembro.
 - **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
-- **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
+- **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`, `epic`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
 - **Proyectos archivados:** su tablero es de solo lectura.
+
+## Épicas
+
+Una épica agrupa tareas relacionadas. Se guarda en `work_items` con `type = 'EPIC'` y sus tareas la referencian con `parent_id`.
+
+- **Dónde se gestionan:** en la página de épicas del proyecto, a la que se llega con *Ver épicas* desde el detalle. El detalle muestra además las tres épicas más recientes con su avance y un enlace para crear una nueva (`/epics?nueva` abre el formulario).
+- **Estado:** toda épica nueva empieza en *Por hacer*. Su estado se cambia a mano al editarla y no depende de sus tareas.
+- **Avance:** usa la misma regla que la barra del tablero, aplicada solo a las tareas de la épica (las archivadas cuentan como hechas).
+- **Asignar tareas:** desde la ficha de la tarea, con el campo *Épica* (o *Sin épica* para quitarla). Si falla el cambio de épica, los demás cambios de la ficha ya quedaron guardados y se avisa.
+- **Archivar:** la épica sale de la lista, pero sus tareas siguen en el tablero y conservan la referencia (la ficha la muestra como *Épica archivada*). No se le pueden asignar tareas nuevas.
+- **Tablero:** cada tarjeta muestra el nombre de su épica, y el filtro *Épica* permite ver una épica concreta o las tareas sin épica. *Ver en el tablero* abre el tablero ya filtrado (`?epic=`).
+- **Proyectos archivados:** sus épicas son de solo lectura.
 
 ## Pruebas
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
-| Unitarias API | Jest | 20 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 133 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 109 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 18 | `npm run test:e2e` |
+| Unitarias API | Jest | 30 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 174 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 142 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 21 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -204,9 +222,11 @@ npx playwright show-report                                         # informe de 
 | Archivo | Cubre |
 | ------- | ----- |
 | `components/BoardProgress.test.tsx` | Barra de progreso del tablero |
+| `components/EpicsSummary.test.tsx` | Resumen de épicas en el detalle del proyecto |
 | `layout/Layout.test.tsx` | Layout y barra lateral |
-| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites y ficha de tarea |
+| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea y épica de cada tarea |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
+| `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
 | `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
 
@@ -233,6 +253,9 @@ Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 | PATCH | `/projects/:id/work-items/:itemId/archive` | Archivar tarea (solo en Hecho) |
 | PATCH | `/projects/:id/work-items/:itemId/restore` | Restaurar tarea archivada |
 | PATCH | `/projects/:id/work-items/archive-done` | Archivar todas las tareas de Hecho |
+| PATCH | `/projects/:id/work-items/:itemId/epic` | Asignar épica: `{ "epicId": "..." }` (`null` la quita) |
+| GET / POST | `/projects/:id/epics` | Listar épicas activas / crear épica |
+| GET / PUT / DELETE | `/projects/:id/epics/:epicId` | Detalle / editar / archivar épica |
 
 Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que no es UUID), `409` proyecto archivado o acción no permitida en el estado actual.
 

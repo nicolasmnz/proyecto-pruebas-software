@@ -9,6 +9,8 @@ import {
   updateWorkItem,
 } from "../api/board";
 import type { BoardMember, WorkItemDetail } from "../api/board";
+import { assignWorkItemToEpic } from "../api/epics";
+import type { Epic } from "../api/epics";
 import { trapTab } from "../utils/focusTrap";
 import { formatDate, formatDueDate } from "../utils/format";
 import ConfirmDialog from "./ConfirmDialog";
@@ -22,6 +24,8 @@ interface TaskDialogProps {
   projectId: string;
   itemId: string;
   members: BoardMember[];
+  // Épicas activas del proyecto, para mostrar y cambiar la de la tarea
+  epics: Epic[];
   // En proyectos archivados la ficha solo se puede leer
   readOnly: boolean;
   onClose: () => void;
@@ -41,6 +45,7 @@ function TaskDialog({
   projectId,
   itemId,
   members,
+  epics,
   readOnly,
   onClose,
   onUpdated,
@@ -104,8 +109,37 @@ function TaskDialog({
   }
 
   async function handleSave(item: WorkItemDetail, values: TaskFormValues) {
+    const { epicId, ...fields } = values;
+
     // PUT reemplaza la ficha: lo que queda vacío en el formulario se borra
-    const updated = await updateWorkItem(projectId, item.id, values);
+    let updated = await updateWorkItem(projectId, item.id, fields);
+
+    // La épica no viaja en el PUT: se cambia solo si cambió
+    const parentId = epicId ?? null;
+
+    if (parentId !== item.parent_id) {
+      try {
+        const assigned = await assignWorkItemToEpic(
+          projectId,
+          item.id,
+          parentId,
+        );
+
+        updated = { ...updated, parent_id: assigned.parent_id };
+      } catch (error) {
+        // Los demás cambios ya se guardaron: el tablero los refleja y el
+        // formulario sigue abierto para reintentar
+        onUpdated(updated);
+
+        throw new Error(
+          `Se guardaron los demás cambios, pero no la épica: ${getErrorMessage(
+            error,
+            "no fue posible cambiarla",
+          )}`,
+          { cause: error },
+        );
+      }
+    }
 
     setResult({ key: requestKey, state: { status: "success", item: updated } });
     setIsEditing(false);
@@ -138,6 +172,13 @@ function TaskDialog({
           { id: item.assignee_id, name: item.assignee_name ?? "Responsable" },
         ]
       : members;
+
+  // La épica actual siempre se puede conservar, aunque esté archivada
+  const currentEpic = epics.find(({ id }) => id === item?.parent_id);
+  const selectableEpics =
+    item?.parent_id && !currentEpic
+      ? [...epics, { id: item.parent_id, title: "Épica archivada" }]
+      : epics;
 
   return (
     <>
@@ -213,8 +254,10 @@ function TaskDialog({
                     estimate: item.estimate ?? undefined,
                     assigneeId: item.assignee_id ?? undefined,
                     dueDate: item.due_date ?? undefined,
+                    epicId: item.parent_id ?? undefined,
                   }}
                   members={assignableMembers}
+                  epics={selectableEpics}
                   submitLabel="Guardar cambios"
                   submittingLabel="Guardando..."
                   onSubmit={(values) => handleSave(item, values)}
@@ -238,6 +281,13 @@ function TaskDialog({
                     <div>
                       <dt>Puntos</dt>
                       <dd>{item.estimate ?? "Sin estimar"}</dd>
+                    </div>
+                    <div>
+                      <dt>Épica</dt>
+                      <dd>
+                        {currentEpic?.title ??
+                          (item.parent_id ? "Épica archivada" : "Sin épica")}
+                      </dd>
                     </div>
                     <div>
                       <dt>Responsable</dt>

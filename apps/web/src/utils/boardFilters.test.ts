@@ -4,6 +4,7 @@ import type { BoardItem } from "../api/board";
 import {
   EMPTY_FILTERS,
   NO_ASSIGNEE,
+  NO_EPIC,
   hasActiveFilters,
   matchesFilters,
 } from "./boardFilters";
@@ -12,6 +13,7 @@ const item: BoardItem = {
   id: "1",
   item_number: 12,
   is_archived: false,
+  parent_id: null,
   type: "BUG",
   title: "Corregir autenticación",
   status: "TODO",
@@ -74,12 +76,39 @@ describe("matchesFilters", () => {
     ).toBe(true);
   });
 
+  test("filtra por épica o por tareas sin épica", () => {
+    const withEpic = { ...item, parent_id: "e1" };
+
+    expect(matchesFilters(withEpic, { ...EMPTY_FILTERS, epic: "e1" })).toBe(
+      true,
+    );
+    expect(matchesFilters(withEpic, { ...EMPTY_FILTERS, epic: "e2" })).toBe(
+      false,
+    );
+    expect(matchesFilters(item, { ...EMPTY_FILTERS, epic: "e1" })).toBe(false);
+    expect(matchesFilters(item, { ...EMPTY_FILTERS, epic: NO_EPIC })).toBe(
+      true,
+    );
+    expect(matchesFilters(withEpic, { ...EMPTY_FILTERS, epic: NO_EPIC })).toBe(
+      false,
+    );
+    // «Sin épica» se combina con el filtro de responsable
+    expect(
+      matchesFilters(item, {
+        ...EMPTY_FILTERS,
+        epic: NO_EPIC,
+        assignee: NO_ASSIGNEE,
+      }),
+    ).toBe(false);
+  });
+
   test("todos los criterios deben cumplirse a la vez", () => {
     const filters = {
       query: "corregir",
       type: "BUG",
       priority: "HIGH",
       assignee: "u1",
+      epic: "",
     };
 
     expect(matchesFilters(item, filters)).toBe(true);
