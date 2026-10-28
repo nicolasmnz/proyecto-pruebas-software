@@ -3,9 +3,14 @@ import { Link, useParams } from "react-router-dom";
 import { AlertTriangle, ChevronRight, Plus } from "lucide-react";
 
 import { getBoard } from "../api/board";
-import type { Board } from "../api/board";
+import type { Board, BoardItem } from "../api/board";
 import { ApiError } from "../api/projects";
-import { createSprint, getSprints, updateSprint } from "../api/sprints";
+import {
+  assignWorkItemToSprint,
+  createSprint,
+  getSprints,
+  updateSprint,
+} from "../api/sprints";
 import type { Sprint } from "../api/sprints";
 import SprintCard from "../components/SprintCard";
 import SprintForm from "../components/SprintForm";
@@ -16,6 +21,7 @@ import {
   describeLoad,
   getBacklogItems,
   getSprintItems,
+  isOpenSprint,
   sortSprints,
 } from "../utils/sprints";
 
@@ -40,6 +46,7 @@ function SprintsPage() {
   // Mensaje para lectores de pantalla tras cada acción
   const [announcement, setAnnouncement] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const createButtonRef = useRef<HTMLButtonElement>(null);
   const wasCreating = useRef(false);
 
@@ -129,6 +136,8 @@ function SprintsPage() {
   const readOnly = project.is_archived;
   const activeCount = countActiveSprints(sprints);
   const backlog = getBacklogItems(board);
+  const sortedSprints = sortSprints(sprints);
+  const moveTargets = sortedSprints.filter(isOpenSprint);
 
   // Aplica un cambio a los sprints ya cargados, sin volver a pedirlos
   function updateSprints(change: (sprints: Sprint[]) => Sprint[]) {
@@ -142,6 +151,54 @@ function SprintsPage() {
         result: { ...current.result, sprints: change(current.result.sprints) },
       };
     });
+  }
+
+  // Cambia el sprint de una tarea en el tablero ya cargado
+  function setItemSprint(itemId: string, sprintId: string | null) {
+    setResult((current) => {
+      if (current?.key !== requestKey || current.result.status !== "success") {
+        return current;
+      }
+
+      const move = (item: BoardItem) =>
+        item.id === itemId ? { ...item, sprint_id: sprintId } : item;
+      const { board } = current.result;
+
+      return {
+        key: requestKey,
+        result: {
+          ...current.result,
+          board: {
+            ...board,
+            columns: board.columns.map((column) => ({
+              ...column,
+              items: column.items.map(move),
+            })),
+            archived: board.archived.map(move),
+          },
+        },
+      };
+    });
+  }
+
+  async function handleMove(item: BoardItem, sprintId: string | null) {
+    try {
+      setActionError(null);
+
+      const moved = await assignWorkItemToSprint(project.id, item.id, sprintId);
+
+      setItemSprint(item.id, moved.sprint_id);
+
+      const target = sprints.find(({ id }) => id === moved.sprint_id);
+
+      setAnnouncement(
+        target
+          ? `Tarea "${item.title}" movida a ${target.name}.`
+          : `Tarea "${item.title}" devuelta al backlog.`,
+      );
+    } catch (error) {
+      setActionError(getErrorMessage(error, "No fue posible mover la tarea."));
+    }
   }
 
   async function handleCreate(values: SprintFormValues) {
@@ -208,6 +265,12 @@ function SprintsPage() {
         </p>
       )}
 
+      {actionError && (
+        <p role="alert" className="form-error board-error">
+          {actionError}
+        </p>
+      )}
+
       {/* Aviso de trabajo: se permite, pero no es lo habitual */}
       {activeCount > 1 && (
         <p className="sprints-warning">
@@ -235,7 +298,7 @@ function SprintsPage() {
         </p>
       ) : (
         <ul className="sprints-list" aria-label="Sprints del proyecto">
-          {sortSprints(sprints).map((sprint) => (
+          {sortedSprints.map((sprint) => (
             <li key={sprint.id}>
               <SprintCard
                 sprint={sprint}
@@ -243,6 +306,8 @@ function SprintsPage() {
                 onSave={
                   readOnly ? undefined : (values) => handleSave(sprint, values)
                 }
+                moveTargets={moveTargets}
+                onMoveItem={readOnly ? undefined : handleMove}
               />
             </li>
           ))}
@@ -258,6 +323,8 @@ function SprintsPage() {
         <SprintTaskList
           items={backlog}
           emptyText="No hay tareas en el backlog: todas están en un sprint."
+          moveTargets={moveTargets}
+          onMove={readOnly ? undefined : handleMove}
         />
       </section>
     </div>

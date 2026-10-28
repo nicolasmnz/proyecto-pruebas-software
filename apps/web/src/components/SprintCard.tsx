@@ -17,6 +17,8 @@ interface SprintCardProps {
   items: BoardItem[];
   // Sin esta función la tarjeta es de solo lectura (proyecto archivado)
   onSave?: (values: SprintFormValues) => Promise<void>;
+  moveTargets?: Pick<Sprint, "id" | "name">[];
+  onMoveItem?: (item: BoardItem, sprintId: string | null) => void;
 }
 
 function formatRange(sprint: Sprint) {
@@ -34,7 +36,13 @@ function formatRange(sprint: Sprint) {
   return end ? `Hasta el ${end}` : "Sin fechas";
 }
 
-function SprintCard({ sprint, items, onSave }: SprintCardProps) {
+function SprintCard({
+  sprint,
+  items,
+  onSave,
+  moveTargets,
+  onMoveItem,
+}: SprintCardProps) {
   const titleId = useId();
   const [isEditing, setIsEditing] = useState(false);
   const editButtonRef = useRef<HTMLButtonElement>(null);
@@ -88,6 +96,8 @@ function SprintCard({ sprint, items, onSave }: SprintCardProps) {
           <SprintTaskList
             items={items}
             emptyText="Este sprint aún no tiene tareas."
+            moveTargets={moveTargets}
+            onMove={onMoveItem}
           />
 
           {onSave && (

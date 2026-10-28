@@ -7,7 +7,12 @@ import SprintsPage from "./SprintsPage";
 import { getBoard } from "../api/board";
 import type { Board, BoardItem } from "../api/board";
 import { ApiError } from "../api/projects";
-import { createSprint, getSprints, updateSprint } from "../api/sprints";
+import {
+  assignWorkItemToSprint,
+  createSprint,
+  getSprints,
+  updateSprint,
+} from "../api/sprints";
 import type { Sprint } from "../api/sprints";
 
 vi.mock("../api/board", async (importOriginal) => ({
@@ -20,12 +25,14 @@ vi.mock("../api/sprints", async (importOriginal) => ({
   getSprints: vi.fn(),
   createSprint: vi.fn(),
   updateSprint: vi.fn(),
+  assignWorkItemToSprint: vi.fn(),
 }));
 
 const mockedGetBoard = vi.mocked(getBoard);
 const mockedGetSprints = vi.mocked(getSprints);
 const mockedCreateSprint = vi.mocked(createSprint);
 const mockedUpdateSprint = vi.mocked(updateSprint);
+const mockedAssignWorkItemToSprint = vi.mocked(assignWorkItemToSprint);
 
 const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const ACTIVE_ID = "50000000-0000-0000-0000-000000000001";
@@ -538,6 +545,129 @@ describe("SprintsPage", () => {
     });
   });
 
+  describe("mover tareas entre el backlog y los sprints", () => {
+    function optionsOf(select: HTMLElement) {
+      return within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent);
+    }
+
+    test("solo ofrece el backlog y los sprints planificados o activos", async () => {
+      await renderLoadedPage();
+
+      // Desde el backlog: no se ofrece el backlog ni el sprint completado
+      expect(
+        optionsOf(
+          within(backlog()).getByRole("combobox", {
+            name: "Mover «Corregir menú» a",
+          }),
+        ),
+      ).toEqual(["Mover a…", "Sprint 2", "Sprint 3"]);
+
+      // Desde un sprint: no se ofrece el mismo sprint
+      expect(
+        optionsOf(
+          within(sprintCard("Sprint 2")).getByRole("combobox", {
+            name: "Mover «Diseñar login» a",
+          }),
+        ),
+      ).toEqual(["Mover a…", "Backlog", "Sprint 3"]);
+
+      // Las archivadas no se replanifican
+      expect(
+        within(sprintCard("Sprint 1")).queryByRole("combobox"),
+      ).not.toBeInTheDocument();
+    });
+
+    test("asignar una tarea del backlog a un sprint la cambia de lugar", async () => {
+      const user = userEvent.setup();
+      mockedAssignWorkItemToSprint.mockResolvedValue({
+        id: "2",
+        sprint_id: PLANNED_ID,
+      });
+
+      await renderLoadedPage();
+
+      await user.selectOptions(
+        within(backlog()).getByRole("combobox", {
+          name: "Mover «Corregir menú» a",
+        }),
+        "Sprint 3",
+      );
+
+      expect(mockedAssignWorkItemToSprint).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "2",
+        PLANNED_ID,
+      );
+      expect(
+        await within(sprintCard("Sprint 3")).findByText("Corregir menú"),
+      ).toBeInTheDocument();
+      expect(
+        within(sprintCard("Sprint 3")).getByText("1 tarea · 0 pts"),
+      ).toBeInTheDocument();
+      expect(
+        within(backlog()).queryByText("Corregir menú"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText('Tarea "Corregir menú" movida a Sprint 3.'),
+      ).toBeInTheDocument();
+    });
+
+    test("devolver una tarea al backlog envía null", async () => {
+      const user = userEvent.setup();
+      mockedAssignWorkItemToSprint.mockResolvedValue({
+        id: "1",
+        sprint_id: null,
+      });
+
+      await renderLoadedPage();
+
+      await user.selectOptions(
+        within(sprintCard("Sprint 2")).getByRole("combobox", {
+          name: "Mover «Diseñar login» a",
+        }),
+        "Backlog",
+      );
+
+      expect(mockedAssignWorkItemToSprint).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        null,
+      );
+      expect(
+        await within(backlog()).findByText("Diseñar login"),
+      ).toBeInTheDocument();
+      expect(
+        within(sprintCard("Sprint 2")).getByText("1 tarea · 5 pts"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Tarea "Diseñar login" devuelta al backlog.'),
+      ).toBeInTheDocument();
+    });
+
+    test("si falla, muestra el error y la tarea no se mueve", async () => {
+      const user = userEvent.setup();
+      mockedAssignWorkItemToSprint.mockRejectedValue(
+        new Error("Error asignando sprint"),
+      );
+
+      await renderLoadedPage();
+
+      await user.selectOptions(
+        within(backlog()).getByRole("combobox", {
+          name: "Mover «Corregir menú» a",
+        }),
+        "Sprint 3",
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Error asignando sprint",
+      );
+      expect(within(backlog()).getByText("Corregir menú")).toBeInTheDocument();
+    });
+  });
+
   test("en un proyecto archivado los sprints son de solo lectura", async () => {
     await renderLoadedPage({
       ...board,
@@ -553,5 +683,6 @@ describe("SprintsPage", () => {
     expect(
       screen.queryByRole("button", { name: "Editar" }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
