@@ -4,6 +4,7 @@ import { describe, expect, test, beforeEach, afterAll } from "@jest/globals";
 import app from "../../src/app.js";
 import pool from "../../src/config/database.js";
 import { resetTestDatabase } from "../helpers/database.js";
+import { hashPassword } from "../../src/utils/password.js";
 
 describe("Auth API", () => {
   beforeEach(async () => {
@@ -64,6 +65,46 @@ describe("Auth API", () => {
     });
 
     expect(response.status).toBe(401);
+  });
+
+  test.each([
+    ["en mayúsculas", "LOGIN@Test.cl"],
+    ["con espacios alrededor", "  login@test.cl "],
+  ])(
+    "POST /api/auth/login acepta el correo %s",
+    async (_case, email) => {
+      await request(app).post("/api/users").send({
+        name: "Usuario Test",
+        email: "login@test.cl",
+        password: "123456",
+      });
+
+      const response = await request(app).post("/api/auth/login").send({
+        email,
+        password: "123456",
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.email).toBe("login@test.cl");
+    },
+  );
+
+  test("POST /api/auth/login encuentra cuentas guardadas con mayúsculas", async () => {
+    // Una cuenta creada antes de normalizar los correos
+    await pool.query(
+      `
+      INSERT INTO users (name, email, password_hash)
+      VALUES ($1, $2, $3)
+      `,
+      ["Usuario Antiguo", "Antiguo@Test.cl", await hashPassword("123456")],
+    );
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: "antiguo@test.cl",
+      password: "123456",
+    });
+
+    expect(response.status).toBe(200);
   });
 
   describe("cuenta desactivada", () => {

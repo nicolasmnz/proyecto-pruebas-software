@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import { IdParams } from "../types/request.js";
+import { normalizeEmail } from "../utils/email.js";
 
 import {
     findAllUsers,
@@ -69,15 +70,22 @@ export async function postUser(
             password
         } = req.body;
 
-        if (!name || !email || !password) {
+        if (
+            !name ||
+            typeof email !== "string" ||
+            !email.trim() ||
+            !password
+        ) {
             return res.status(400).json({
                 message:
                     "name, email y password son obligatorios"
             });
         }
 
+        const normalizedEmail = normalizeEmail(email);
+
         const existingUser =
-            await findUserByEmail(email);
+            await findUserByEmail(normalizedEmail);
 
         if (existingUser) {
             return res.status(409).json({
@@ -88,7 +96,7 @@ export async function postUser(
 
         const user = await createUser(
             name,
-            email,
+            normalizedEmail,
             password
         );
 
@@ -114,17 +122,33 @@ export async function putUser(
             email
         } = req.body;
 
-        if (!name || !email) {
+        if (
+            !name ||
+            typeof email !== "string" ||
+            !email.trim()
+        ) {
             return res.status(400).json({
                 message:
                     "name y email son obligatorios"
             });
         }
 
+        const normalizedEmail = normalizeEmail(email);
+
+        const existingUser =
+            await findUserByEmail(normalizedEmail);
+
+        if (existingUser && existingUser.id !== req.params.id) {
+            return res.status(409).json({
+                message:
+                    "El correo ya está registrado"
+            });
+        }
+
         const user = await updateUser(
             req.params.id,
             name,
-            email
+            normalizedEmail
         );
 
         if (!user) {
