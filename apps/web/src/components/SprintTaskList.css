@@ -1,0 +1,66 @@
+.sprint-tasks {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  list-style: none;
+}
+
+.sprint-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sprint-task + .sprint-task {
+  border-top: 1px solid #dfe1e6;
+}
+
+.sprint-task-key {
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sprint-task-title {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sprint-task-meta {
+  color: #44546f;
+  font-size: 12px;
+}
+
+.sprint-task-move {
+  padding: 4px 8px;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  background: #fff;
+  color: #292a2e;
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.sprint-task-move:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 1px;
+}
+
+.sprint-tasks-empty {
+  margin: 0;
+  padding: 12px;
+  border: 1px dashed #dfe1e6;
+  border-radius: 6px;
+  color: #626f86;
+  font-size: 14px;
+  text-align: center;
+}

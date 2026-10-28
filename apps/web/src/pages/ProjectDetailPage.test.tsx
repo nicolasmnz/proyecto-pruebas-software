@@ -130,7 +130,7 @@ describe("ProjectDetailPage", () => {
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
   });
 
-  test("enlaza al tablero y a las épicas del proyecto", async () => {
+  test("enlaza al tablero, a las épicas y a los sprints del proyecto", async () => {
     await renderLoadedPage();
 
     expect(screen.getByRole("link", { name: "Ver tablero" })).toHaveAttribute(
@@ -140,6 +140,10 @@ describe("ProjectDetailPage", () => {
     expect(screen.getByRole("link", { name: "Ver épicas" })).toHaveAttribute(
       "href",
       `/projects/${PROJECT_ID}/epics`,
+    );
+    expect(screen.getByRole("link", { name: "Ver sprints" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/sprints`,
     );
   });
 

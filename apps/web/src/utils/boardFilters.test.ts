@@ -14,6 +14,7 @@ const item: BoardItem = {
   item_number: 12,
   is_archived: false,
   parent_id: null,
+  sprint_id: null,
   type: "BUG",
   title: "Corregir autenticación",
   status: "TODO",

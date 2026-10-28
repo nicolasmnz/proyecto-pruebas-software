@@ -1,0 +1,71 @@
+.sprint-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 1px solid #dfe1e6;
+  border-radius: 8px;
+  background: #fff;
+  color: #292a2e;
+}
+
+.sprint-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.sprint-card-header h2 {
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.sprint-status {
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: #f1f2f4;
+  color: #44546f;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.sprint-status.is-active {
+  background: #e9f2ff;
+  color: #0055cc;
+}
+
+.sprint-status.is-completed {
+  background: #dcfff1;
+  color: #216e4e;
+}
+
+.sprint-card-load {
+  margin: 0 0 0 auto;
+  color: #44546f;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sprint-card-dates,
+.sprint-card-goal {
+  margin: 0;
+  color: #44546f;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.sprint-card-goal {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.sprint-card-actions {
+  justify-content: flex-start;
+}

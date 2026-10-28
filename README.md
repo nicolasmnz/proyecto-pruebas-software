@@ -30,6 +30,12 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Asignar o quitar la épica de una tarea desde su ficha; cada tarjeta del tablero muestra su épica.
 - Resumen de las épicas más recientes en el detalle del proyecto y acceso al tablero filtrado por cada épica.
 
+**Sprints** (`/projects/:id/sprints`) — ver [Sprints](#sprints)
+
+- Crear, editar (incluido el estado) y eliminar sprints con nombre, objetivo y fechas.
+- Backlog con las tareas sin sprint y movimiento de tareas entre el backlog y los sprints.
+- Cantidad de tareas y puntos por sprint, y aviso cuando hay más de un sprint activo.
+
 ## Integrantes
 
 | Nombre        | Rol en el Equipo      | Rol USM | GitHub |
@@ -119,7 +125,8 @@ El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql
 | `projects` | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB) |
 | `project_members` | Miembros de cada proyecto y su rol |
 | `work_items` | Épicas, historias, tareas y errores; `status`, `position`, `item_number`, `is_archived` y `parent_id` (épica de la tarea) |
-| `sprints`, `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación |
+| `sprints` | Iteraciones del proyecto con `status` y fechas; las tareas los referencian con `work_items.sprint_id` (`NULL` = backlog) |
+| `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación |
 
 ### Migraciones
 
@@ -163,15 +170,29 @@ Una épica agrupa tareas relacionadas. Se guarda en `work_items` con `type = 'EP
 - **Tablero:** cada tarjeta muestra el nombre de su épica, y el filtro *Épica* permite ver una épica concreta o las tareas sin épica. *Ver en el tablero* abre el tablero ya filtrado (`?epic=`).
 - **Proyectos archivados:** sus épicas son de solo lectura.
 
+## Sprints
+
+Un sprint es una iteración del proyecto. Las tareas sin sprint forman el *Backlog*.
+
+- **Dónde se gestionan:** en la página de sprints del proyecto, a la que se llega con *Ver sprints* desde el detalle.
+- **Orden:** primero el sprint activo, luego los planificados (por fecha de inicio) y al final los completados y cancelados.
+- **Estado:** todo sprint nuevo empieza *Planificado*; se cambia a mano al editarlo (*Activo*, *Completado* o *Cancelado*). La fecha de término no puede ser anterior a la de inicio.
+- **Varios sprints activos:** se permite, pero la página muestra un aviso porque lo habitual es trabajar en uno a la vez.
+- **Mover tareas:** cada tarea tiene un selector *Mover a* que solo ofrece el *Backlog* y los sprints *Planificados* o *Activos*. Las tareas archivadas no se replanifican, pero siguen contando en su sprint.
+- **Carga:** cada sprint y el backlog muestran su cantidad de tareas y la suma de sus puntos.
+- **Eliminar:** pide confirmación; las tareas del sprint vuelven al backlog.
+- **Épicas:** no se asignan a sprints, porque agrupan trabajo de varias iteraciones.
+- **Proyectos archivados:** sus sprints son de solo lectura.
+
 ## Pruebas
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
-| Unitarias API | Jest | 30 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 174 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 142 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 21 | `npm run test:e2e` |
+| Unitarias API | Jest | 31 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 205 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 157 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 23 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -227,6 +248,7 @@ npx playwright show-report                                         # informe de 
 | `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea y épica de cada tarea |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
 | `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
+| `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
 | `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
 
@@ -256,6 +278,9 @@ Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 | PATCH | `/projects/:id/work-items/:itemId/epic` | Asignar épica: `{ "epicId": "..." }` (`null` la quita) |
 | GET / POST | `/projects/:id/epics` | Listar épicas activas / crear épica |
 | GET / PUT / DELETE | `/projects/:id/epics/:epicId` | Detalle / editar / archivar épica |
+| PATCH | `/projects/:id/work-items/:itemId/sprint` | Asignar sprint: `{ "sprintId": "..." }` (`null` la devuelve al backlog) |
+| GET / POST | `/projects/:id/sprints` | Listar / crear sprints |
+| GET / PUT / DELETE | `/projects/:id/sprints/:sprintId` | Detalle / editar / eliminar sprint |
 
 Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que no es UUID), `409` proyecto archivado o acción no permitida en el estado actual.
 
@@ -271,7 +296,7 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 
 ## Alcance actual
 
-Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto, sprints y autenticación real en la interfaz (las altas usan un usuario de ejemplo fijo).
+Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto y autenticación real en la interfaz (las altas usan un usuario de ejemplo fijo).
 
 ## Flujo de trabajo
 
