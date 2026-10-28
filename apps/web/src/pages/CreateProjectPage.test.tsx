@@ -6,6 +6,7 @@ import { describe, expect, test, vi, beforeEach } from "vitest";
 import CreateProjectPage from "./CreateProjectPage";
 import { createProject } from "../api/projects";
 import { ProjectsContext } from "../context/projectsContext";
+import { TEST_USER, withSession } from "../test/session";
 
 vi.mock("../api/projects", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/projects")>()),
@@ -18,24 +19,26 @@ const reloadProjects = vi.fn(async () => {});
 
 function renderPage() {
   render(
-    <ProjectsContext.Provider
-      value={{
-        projects: [],
-        archivedProjects: [],
-        isLoading: false,
-        error: null,
-        reload: reloadProjects,
-      }}
-    >
-      <MemoryRouter initialEntries={["/projects/new"]}>
-        <Routes>
-          <Route path="/projects/new" element={<CreateProjectPage />} />
+    withSession(
+      <ProjectsContext.Provider
+        value={{
+          projects: [],
+          archivedProjects: [],
+          isLoading: false,
+          error: null,
+          reload: reloadProjects,
+        }}
+      >
+        <MemoryRouter initialEntries={["/projects/new"]}>
+          <Routes>
+            <Route path="/projects/new" element={<CreateProjectPage />} />
 
-          <Route path="/projects" element={<h1>Listado</h1>} />
-          <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </ProjectsContext.Provider>,
+            <Route path="/projects" element={<h1>Listado</h1>} />
+            <Route path="/projects/:projectId" element={<h1>Proyecto</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectsContext.Provider>,
+    ),
   );
 }
 
@@ -94,6 +97,7 @@ describe("CreateProjectPage", () => {
       expect.objectContaining({
         name: "Proyecto Test",
         description: "Descripción Test",
+        createdBy: TEST_USER.id,
       }),
     );
 

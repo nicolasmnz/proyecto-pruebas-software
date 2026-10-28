@@ -26,6 +26,7 @@ import type { Board, BoardItem, WorkItemDetail } from "../api/board";
 import { assignWorkItemToEpic, getEpics } from "../api/epics";
 import type { Epic } from "../api/epics";
 import { ApiError } from "../api/projects";
+import { TEST_USER, withSession } from "../test/session";
 
 vi.mock("../api/board", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/board")>()),
@@ -135,13 +136,15 @@ const board: Board = {
 
 function renderPage(search = "") {
   render(
-    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board${search}`]}>
-      <Routes>
-        <Route path="/projects" element={<h1>Listado</h1>} />
-        <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
-        <Route path="/projects/:projectId/board" element={<BoardPage />} />
-      </Routes>
-    </MemoryRouter>,
+    withSession(
+      <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board${search}`]}>
+        <Routes>
+          <Route path="/projects" element={<h1>Listado</h1>} />
+          <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
+          <Route path="/projects/:projectId/board" element={<BoardPage />} />
+        </Routes>
+      </MemoryRouter>,
+    ),
   );
 }
 
@@ -275,7 +278,7 @@ describe("BoardPage", () => {
         priority: "HIGH",
         estimate: 5,
         status: "IN_PROGRESS",
-        createdBy: expect.any(String),
+        createdBy: TEST_USER.id,
       });
 
       const items = await within(inProgress).findAllByRole("listitem");

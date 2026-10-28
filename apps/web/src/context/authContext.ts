@@ -23,3 +23,14 @@ export const AuthContext = createContext<AuthContextValue>({
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+// Usuario de la sesión en las páginas internas, que RequireAuth protege
+export function useCurrentUser() {
+  const { user } = useAuth();
+
+  if (!user) {
+    throw new Error("Esta página requiere una sesión iniciada");
+  }
+
+  return user;
+}

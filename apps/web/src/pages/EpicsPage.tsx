@@ -11,6 +11,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import EpicCard from "../components/EpicCard";
 import EpicForm from "../components/EpicForm";
 import type { EpicFormValues } from "../components/EpicForm";
+import { useCurrentUser } from "../context/authContext";
 import { getEpicItems, getProgress } from "../utils/progress";
 
 import "./BoardPage.css";
@@ -21,14 +22,13 @@ type Result =
   | { status: "not-found" }
   | { status: "error"; message: string };
 
-const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
-
 function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
 function EpicsPage() {
   const { projectId = "" } = useParams();
+  const currentUser = useCurrentUser();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
@@ -151,7 +151,7 @@ function EpicsPage() {
   async function handleCreate(values: EpicFormValues) {
     const epic = await createEpic(project.id, {
       ...values,
-      createdBy: TEMP_USER_ID,
+      createdBy: currentUser.id,
     });
 
     // La API las lista de la más reciente a la más antigua
