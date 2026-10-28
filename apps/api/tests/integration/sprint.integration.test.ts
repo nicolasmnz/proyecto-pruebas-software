@@ -505,5 +505,104 @@ describe(
                 ).toBe(404);
             }
         );
+
+
+        test(
+            "devuelve las fechas en formato AAAA-MM-DD",
+            async () => {
+
+                const created =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint con fechas",
+
+                        startDate:
+                            "2026-11-01",
+
+                        endDate:
+                            "2026-11-14"
+                    });
+
+
+                expect(
+                    created.body
+                ).toMatchObject({
+                    start_date: "2026-11-01",
+                    end_date: "2026-11-14"
+                });
+
+
+                const updated =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint con fechas",
+
+                        status:
+                            "ACTIVE",
+
+                        startDate:
+                            "2026-11-02",
+
+                        endDate:
+                            "2026-11-15"
+                    });
+
+
+                expect(
+                    updated.body
+                ).toMatchObject({
+                    start_date: "2026-11-02",
+                    end_date: "2026-11-15"
+                });
+
+
+                const detail =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                        );
+
+
+                expect(
+                    detail.body.start_date
+                ).toBe("2026-11-02");
+
+
+                const list =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/sprints`
+                        );
+
+
+                expect(
+                    list.body[0].end_date
+                ).toBe("2026-11-15");
+
+
+                const removed =
+                    await request(app)
+                        .delete(
+                            `/api/projects/${PROJECT_ID}/sprints/${created.body.id}`
+                        );
+
+
+                expect(
+                    removed.body.sprint.start_date
+                ).toBe("2026-11-02");
+            }
+        );
     }
 );
