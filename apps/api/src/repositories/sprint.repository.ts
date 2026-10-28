@@ -145,6 +145,7 @@ export async function deleteSprint(
     return result.rows[0];
 }
 
+// Las épicas agrupan trabajo de varios sprints: no se asignan a uno
 export async function assignWorkItemToSprint(
     projectId: string,
     itemId: string,
@@ -156,6 +157,7 @@ export async function assignWorkItemToSprint(
         SET sprint_id = $1
         WHERE id = $2
           AND project_id = $3
+          AND type <> 'EPIC'
         RETURNING *
         `,
         [

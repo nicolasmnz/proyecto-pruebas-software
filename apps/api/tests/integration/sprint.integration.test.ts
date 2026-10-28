@@ -604,5 +604,67 @@ describe(
                 ).toBe("2026-11-02");
             }
         );
+
+
+        test(
+            "no permite asignar una épica a un sprint",
+            async () => {
+
+                const sprint =
+                    await createTestSprint(
+                        "Sprint sin épicas"
+                    );
+
+
+                const epic =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Épica",
+
+                        createdBy:
+                            USER_ID
+                    });
+
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${epic.body.id}/sprint`
+                    )
+
+                    .send({
+                        sprintId:
+                            sprint.id
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+
+
+                const stored =
+                    await pool.query(
+                        `
+                        SELECT sprint_id
+                        FROM work_items
+                        WHERE id = $1
+                        `,
+                        [epic.body.id]
+                    );
+
+
+                expect(
+                    stored.rows[0].sprint_id
+                ).toBeNull();
+            }
+        );
     }
 );
