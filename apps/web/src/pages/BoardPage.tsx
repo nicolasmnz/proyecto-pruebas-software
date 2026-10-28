@@ -20,6 +20,8 @@ import type {
   WorkItemDetail,
   WorkItemStatus,
 } from "../api/board";
+import { getEpics } from "../api/epics";
+import type { Epic } from "../api/epics";
 import ArchivedItems from "../components/ArchivedItems";
 import ConfirmDialog from "../components/ConfirmDialog";
 import BoardToolbar from "../components/BoardToolbar";
@@ -35,7 +37,7 @@ import type { BoardFilters } from "../utils/boardFilters";
 import "./BoardPage.css";
 
 type Result =
-  | { status: "success"; board: Board }
+  | { status: "success"; board: Board; epics: Epic[] }
   | { status: "not-found" }
   | { status: "error"; message: string };
 
@@ -68,8 +70,11 @@ function BoardPage() {
     const setState = (value: Result) =>
       setResult({ key: requestKey, result: value });
 
-    getBoard(projectId, controller.signal)
-      .then((board) => setState({ status: "success", board }))
+    Promise.all([
+      getBoard(projectId, controller.signal),
+      getEpics(projectId, controller.signal),
+    ])
+      .then(([board, epics]) => setState({ status: "success", board, epics }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
@@ -164,7 +169,7 @@ function BoardPage() {
 
       return {
         key: requestKey,
-        result: { status: "success", board: change(current.result.board) },
+        result: { ...current.result, board: change(current.result.board) },
       };
     });
   }
@@ -479,6 +484,7 @@ function BoardPage() {
           projectId={project.id}
           itemId={openItemId}
           members={state.board.members}
+          epics={state.epics}
           readOnly={project.is_archived}
           onClose={() => setOpenItemId(null)}
           onUpdated={handleItemUpdated}

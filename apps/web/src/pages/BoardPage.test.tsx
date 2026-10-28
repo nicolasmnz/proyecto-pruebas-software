@@ -23,6 +23,8 @@ import {
   updateWorkItem,
 } from "../api/board";
 import type { Board, BoardItem, WorkItemDetail } from "../api/board";
+import { assignWorkItemToEpic, getEpics } from "../api/epics";
+import type { Epic } from "../api/epics";
 import { ApiError } from "../api/projects";
 
 vi.mock("../api/board", async (importOriginal) => ({
@@ -39,7 +41,15 @@ vi.mock("../api/board", async (importOriginal) => ({
   archiveDoneItems: vi.fn(),
 }));
 
+vi.mock("../api/epics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/epics")>()),
+  getEpics: vi.fn(),
+  assignWorkItemToEpic: vi.fn(),
+}));
+
 const mockedGetBoard = vi.mocked(getBoard);
+const mockedGetEpics = vi.mocked(getEpics);
+const mockedAssignWorkItemToEpic = vi.mocked(assignWorkItemToEpic);
 const mockedCreateWorkItem = vi.mocked(createWorkItem);
 const mockedMoveWorkItem = vi.mocked(moveWorkItem);
 const mockedArchiveWorkItem = vi.mocked(archiveWorkItem);
@@ -137,6 +147,7 @@ function renderPage(search = "") {
 describe("BoardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetEpics.mockResolvedValue([]);
   });
 
   test("muestra un estado de carga y luego las tres columnas", async () => {
@@ -959,6 +970,218 @@ describe("BoardPage", () => {
       expect(within(dialog).getByLabelText(/Título/)).toHaveValue(
         "Diseñar login v2",
       );
+    });
+
+    describe("épica de la tarea", () => {
+      const LOGIN_EPIC_ID = "e0000000-0000-0000-0000-000000000001";
+      const REPORTS_EPIC_ID = "e0000000-0000-0000-0000-000000000002";
+
+      function buildEpic(id: string, title: string): Epic {
+        return {
+          id,
+          project_id: PROJECT_ID,
+          item_number: 20,
+          is_archived: false,
+          type: "EPIC",
+          title,
+          description: null,
+          status: "TODO",
+          priority: "MEDIUM",
+          estimate: null,
+          due_date: null,
+          created_by: "u1",
+          created_at: "2026-10-01T12:00:00Z",
+          updated_at: "2026-10-01T12:00:00Z",
+        };
+      }
+
+      async function openEpicDialog(parentId: string | null) {
+        mockedGetEpics.mockResolvedValue([
+          buildEpic(LOGIN_EPIC_ID, "Autenticación"),
+          buildEpic(REPORTS_EPIC_ID, "Reportes"),
+        ]);
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({ ...detail, parent_id: parentId });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        return screen.findByRole("dialog", { name: "Diseñar login" });
+      }
+
+      test("la ficha muestra la épica y permite cambiarla", async () => {
+        const dialog = await openEpicDialog(LOGIN_EPIC_ID);
+
+        expect(within(dialog).getByText("Autenticación")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: LOGIN_EPIC_ID,
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+        mockedAssignWorkItemToEpic.mockResolvedValue({
+          id: "1",
+          parent_id: REPORTS_EPIC_ID,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        const epic = within(dialog).getByLabelText("Épica");
+
+        expect(epic).toHaveValue(LOGIN_EPIC_ID);
+
+        await userEvent.selectOptions(epic, "Reportes");
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        // La épica no viaja en el PUT
+        expect(mockedUpdateWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", {
+          title: "Diseñar login",
+          description: "Pantalla de inicio de sesión.",
+          type: "TASK",
+          priority: "HIGH",
+          estimate: 3,
+          assigneeId: undefined,
+          dueDate: "2026-10-31",
+        });
+        expect(mockedAssignWorkItemToEpic).toHaveBeenCalledWith(
+          PROJECT_ID,
+          "1",
+          REPORTS_EPIC_ID,
+        );
+        expect(await within(dialog).findByText("Reportes")).toBeInTheDocument();
+      });
+
+      test("elegir «Sin épica» la quita enviando null", async () => {
+        const dialog = await openEpicDialog(LOGIN_EPIC_ID);
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: LOGIN_EPIC_ID,
+        });
+        mockedAssignWorkItemToEpic.mockResolvedValue({
+          id: "1",
+          parent_id: null,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.selectOptions(
+          within(dialog).getByLabelText("Épica"),
+          "Sin épica",
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(mockedAssignWorkItemToEpic).toHaveBeenCalledWith(
+          PROJECT_ID,
+          "1",
+          null,
+        );
+        expect(
+          await within(dialog).findByText("Sin épica"),
+        ).toBeInTheDocument();
+      });
+
+      test("si la épica no cambia no se llama a la asignación", async () => {
+        const dialog = await openEpicDialog(null);
+
+        expect(within(dialog).getByText("Sin épica")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          title: "Diseñar login v2",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.type(within(dialog).getByLabelText(/Título/), " v2");
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        await screen.findByRole("dialog", { name: "Diseñar login v2" });
+
+        expect(mockedUpdateWorkItem).toHaveBeenCalled();
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+      });
+
+      test("si falla cambiar la épica avisa que lo demás sí se guardó", async () => {
+        const dialog = await openEpicDialog(null);
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          title: "Diseñar login v2",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+        mockedAssignWorkItemToEpic.mockRejectedValue(
+          new Error("Error asignando épica"),
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.type(within(dialog).getByLabelText(/Título/), " v2");
+        await userEvent.selectOptions(
+          within(dialog).getByLabelText("Épica"),
+          "Autenticación",
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+          "Se guardaron los demás cambios, pero no la épica: Error asignando épica",
+        );
+        // El formulario sigue abierto con lo elegido para reintentar
+        expect(within(dialog).getByLabelText("Épica")).toHaveValue(
+          LOGIN_EPIC_ID,
+        );
+        // El tablero ya muestra el título guardado
+        expect(
+          within(screen.getByRole("region", { name: "Por hacer" })).getByRole(
+            "button",
+            { name: "Diseñar login v2" },
+          ),
+        ).toBeInTheDocument();
+      });
+
+      test("una tarea de una épica archivada la conserva al editar", async () => {
+        const ARCHIVED_EPIC_ID = "e0000000-0000-0000-0000-000000000009";
+        const dialog = await openEpicDialog(ARCHIVED_EPIC_ID);
+
+        expect(within(dialog).getByText("Épica archivada")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: ARCHIVED_EPIC_ID,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        expect(within(dialog).getByLabelText("Épica")).toHaveValue(
+          ARCHIVED_EPIC_ID,
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(mockedUpdateWorkItem).toHaveBeenCalled();
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+      });
     });
 
     test("cancelar la edición vuelve a la ficha sin guardar", async () => {
