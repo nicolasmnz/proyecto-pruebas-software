@@ -3,11 +3,21 @@ import type { Request, Response } from "express";
 
 import { login } from "../../src/controllers/auth.controller.js";
 import { findUserByEmail } from "../../src/repositories/user.repository.js";
-import { hashPassword } from "../../src/utils/password.js";
+import { hashPassword, verifyPassword } from "../../src/utils/password.js";
 
 jest.mock("../../src/repositories/user.repository.js");
 
+// verifyPassword real, pero observable
+jest.mock("../../src/utils/password.js", () => {
+  const actual = jest.requireActual<
+    typeof import("../../src/utils/password.js")
+  >("../../src/utils/password.js");
+
+  return { ...actual, verifyPassword: jest.fn(actual.verifyPassword) };
+});
+
 const mockedFindUserByEmail = jest.mocked(findUserByEmail);
+const mockedVerifyPassword = jest.mocked(verifyPassword);
 
 function createResponse() {
   const res = {
@@ -62,6 +72,20 @@ describe("auth.controller login", () => {
       res as unknown as Response,
     );
 
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
+  test("calcula scrypt aunque el usuario no exista, para no delatarlo por el tiempo", async () => {
+    mockedFindUserByEmail.mockResolvedValue(undefined);
+    mockedVerifyPassword.mockClear();
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "nadie@pruebas.cl", password: "123456" }),
+      res as unknown as Response,
+    );
+
+    expect(mockedVerifyPassword).toHaveBeenCalledTimes(1);
     expect(res.status).toHaveBeenCalledWith(401);
   });
 

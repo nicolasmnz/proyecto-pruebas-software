@@ -1,6 +1,12 @@
+import { randomBytes } from "node:crypto";
 import { Request, Response } from "express";
 import { findUserByEmail } from "../repositories/user.repository.js";
 import { verifyPassword } from "../utils/password.js";
+
+
+// Hash de relleno con el formato real: con un correo inexistente se calcula
+// scrypt igual que con uno registrado, y el tiempo de respuesta no lo delata
+const DUMMY_HASH = `scrypt$${randomBytes(16).toString("hex")}$${randomBytes(64).toString("hex")}`;
 
 
 export async function login(
@@ -28,6 +34,8 @@ export async function login(
         const user = await findUserByEmail(email);
 
         if (!user) {
+            await verifyPassword(password, DUMMY_HASH);
+
             return res.status(401).json({
                 message: "Correo o contraseña incorrectos"
             });
