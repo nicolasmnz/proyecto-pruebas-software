@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import Layout from "./layout/Layout";
+import RequireAuth from "./layout/RequireAuth";
 import AuthProvider from "./context/AuthProvider";
 import ProjectsProvider from "./context/ProjectsProvider";
 import ProjectsPage from "./pages/ProjectsPage";
@@ -22,7 +23,13 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route path="/login" element={<LoginPage />} />
 
-            <Route element={<Layout />}>
+            <Route
+              element={
+                <RequireAuth>
+                  <Layout />
+                </RequireAuth>
+              }
+            >
               <Route index element={<Navigate to="/projects" replace />} />
 
               <Route path="/projects" element={<ProjectsPage />} />

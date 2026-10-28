@@ -1,4 +1,6 @@
 .sidebar {
+  display: flex;
+  flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -92,4 +94,42 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis; /* nombres largos de proyecto en una sola línea */
+}
+
+/* Usuario conectado: queda al fondo de la barra */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 4px 4px;
+  border-top: 1px solid #dfe1e6;
+}
+
+.sidebar-user {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 8px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  overflow: hidden;
+  color: #292a2e;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-email {
+  overflow: hidden;
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-logout {
+  width: 100%;
 }
