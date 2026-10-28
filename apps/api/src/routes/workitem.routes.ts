@@ -12,8 +12,10 @@ import {
     putWipLimits,
     putWorkItem
 } from '../controllers/workitem.controller.js';
+import {patchWorkItemSprint} from '../controllers/sprint.controller.js';
+import {patchWorkItemEpic} from '../controllers/epic.controller.js';
 
-const router = Router();
+const router = Router({mergeParams: true});
 
 router.get('/:id/board', getBoard);
 
@@ -35,5 +37,9 @@ router.patch('/:id/work-items/:itemId', patchWorkItem);
 router.patch('/:id/work-items/:itemId/archive', patchArchiveWorkItem);
 
 router.patch('/:id/work-items/:itemId/restore', patchRestoreWorkItem);
+
+router.patch('/:id/work-items/:itemId/sprint',patchWorkItemSprint);
+
+router.patch('/:id/work-items/:itemId/epic',patchWorkItemEpic);
 
 export default router;
