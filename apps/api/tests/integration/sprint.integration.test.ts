@@ -412,5 +412,98 @@ describe(
                 ).toBe(404);
             }
         );
+
+
+        test.each([
+            ["startDate inválida", { startDate: "mañana" }],
+            ["endDate que no existe", { endDate: "2026-02-30" }],
+            ["nombre de más de 100 caracteres", { name: "a".repeat(101) }],
+            ["nombre en blanco", { name: "   " }]
+        ])(
+            "POST rechaza %s",
+            async (_case, fields) => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test.each([
+            ["startDate inválida", { startDate: "mañana" }],
+            ["nombre de más de 100 caracteres", { name: "a".repeat(101) }]
+        ])(
+            "PUT rechaza %s",
+            async (_case, fields) => {
+
+                const sprint =
+                    await createTestSprint(
+                        "Sprint a validar"
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/sprints/${sprint.id}`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint",
+
+                        status:
+                            "PLANNED",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "POST responde 404 si el proyecto no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/99999999-9999-9999-9999-999999999999/sprints`
+                    )
+
+                    .send({
+                        name:
+                            "Sprint"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
     }
 );

@@ -2,9 +2,11 @@ import {jest,describe,test,expect,beforeEach} from "@jest/globals";
 import {postSprint,patchWorkItemSprint} from "../../src/controllers/sprint.controller.js";
 
 import * as sprintRepository from "../../src/repositories/sprint.repository.js";
+import * as projectRepository from "../../src/repositories/project.repository.js";
 
 
 jest.mock("../../src/repositories/sprint.repository.js");
+jest.mock("../../src/repositories/project.repository.js");
 
 const PROJECT_ID = "93000000-0000-0000-0000-000000000001";
 const ITEM_ID = "93000000-0000-0000-0000-000000000002";
@@ -13,6 +15,7 @@ const OTHER_SPRINT_ID = "93000000-0000-0000-0000-000000000004";
 const USER_ID = "93000000-0000-0000-0000-000000000005";
 
 
+const findProjectByIdMock = projectRepository.findProjectById as jest.MockedFunction<typeof projectRepository.findProjectById>;
 const createSprintMock =sprintRepository.createSprint as jest.MockedFunction<typeof sprintRepository.createSprint>;
 const findSprintByIdMock =sprintRepository.findSprintById as jest.MockedFunction<typeof sprintRepository.findSprintById>;
 const assignWorkItemToSprintMock =sprintRepository.assignWorkItemToSprint as jest.MockedFunction<typeof sprintRepository.assignWorkItemToSprint>;
@@ -45,6 +48,16 @@ describe(
                 };
 
                 const res =createResponse();
+                findProjectByIdMock
+                    .mockResolvedValue({
+                        id: PROJECT_ID,
+                        name: "Proyecto",
+                        description: null,
+                        created_by: USER_ID,
+                        is_archived: false,
+                        created_at: new Date(),
+                        updated_at: new Date()
+                    });
                 createSprintMock
                     .mockResolvedValue({
                         id: SPRINT_ID,
