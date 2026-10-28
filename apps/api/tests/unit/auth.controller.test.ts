@@ -71,6 +71,24 @@ describe("auth.controller login", () => {
     expect(res.status).toHaveBeenCalledWith(403);
   });
 
+  test("responde 401 si el usuario está desactivado y la contraseña es incorrecta", async () => {
+    mockedFindUserByEmail.mockResolvedValue({
+      id: "1",
+      name: "Sofía",
+      email: "sofia@pruebas.cl",
+      password_hash: storedHash,
+      is_active: false,
+    });
+    const res = createResponse();
+
+    await login(
+      createRequest({ email: "sofia@pruebas.cl", password: "incorrecta" }),
+      res as unknown as Response,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(401);
+  });
+
   test("responde 401 si la contraseña es incorrecta", async () => {
     mockedFindUserByEmail.mockResolvedValue({
       id: "1",

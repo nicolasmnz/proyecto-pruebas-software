@@ -65,4 +65,36 @@ describe("Auth API", () => {
 
     expect(response.status).toBe(401);
   });
+
+  describe("cuenta desactivada", () => {
+    beforeEach(async () => {
+      const created = await request(app).post("/api/users").send({
+        name: "Usuario Inactivo",
+        email: "inactivo@test.cl",
+        password: "123456",
+      });
+
+      await request(app).delete(`/api/users/${created.body.id}`);
+    });
+
+    test("con contraseña incorrecta responde 401 y no revela que está desactivada", async () => {
+      const response = await request(app).post("/api/auth/login").send({
+        email: "inactivo@test.cl",
+        password: "incorrecta",
+      });
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Correo o contraseña incorrectos");
+    });
+
+    test("con la contraseña correcta responde 403", async () => {
+      const response = await request(app).post("/api/auth/login").send({
+        email: "inactivo@test.cl",
+        password: "123456",
+      });
+
+      expect(response.status).toBe(403);
+      expect(response.body.message).toBe("Usuario desactivado");
+    });
+  });
 });

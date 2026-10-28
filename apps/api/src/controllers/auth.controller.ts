@@ -27,12 +27,6 @@ export async function login(
             });
         }
 
-        if (!user.is_active) {
-            return res.status(403).json({
-                message: "Usuario desactivado"
-            });
-        }
-
         const isValidPassword = await verifyPassword(
             password,
             user.password_hash
@@ -41,6 +35,13 @@ export async function login(
         if (!isValidPassword) {
             return res.status(401).json({
                 message: "Correo o contraseña incorrectos"
+            });
+        }
+
+        // Solo quien conoce la contraseña sabe que la cuenta está desactivada
+        if (!user.is_active) {
+            return res.status(403).json({
+                message: "Usuario desactivado"
             });
         }
 
