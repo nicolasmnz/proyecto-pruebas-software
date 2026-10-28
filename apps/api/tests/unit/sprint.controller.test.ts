@@ -6,6 +6,12 @@ import * as sprintRepository from "../../src/repositories/sprint.repository.js";
 
 jest.mock("../../src/repositories/sprint.repository.js");
 
+const PROJECT_ID = "93000000-0000-0000-0000-000000000001";
+const ITEM_ID = "93000000-0000-0000-0000-000000000002";
+const SPRINT_ID = "93000000-0000-0000-0000-000000000003";
+const OTHER_SPRINT_ID = "93000000-0000-0000-0000-000000000004";
+const USER_ID = "93000000-0000-0000-0000-000000000005";
+
 
 const createSprintMock =sprintRepository.createSprint as jest.MockedFunction<typeof sprintRepository.createSprint>;
 const findSprintByIdMock =sprintRepository.findSprintById as jest.MockedFunction<typeof sprintRepository.findSprintById>;
@@ -28,7 +34,7 @@ describe(
         test("crea un sprint válido",async () => {
 
                 const req: any = {
-                    params: {id: "project-1"},
+                    params: {id: PROJECT_ID},
 
                     body: {
                         name: "Sprint 1",
@@ -41,8 +47,8 @@ describe(
                 const res =createResponse();
                 createSprintMock
                     .mockResolvedValue({
-                        id: "sprint-1",
-                        project_id: "project-1",
+                        id: SPRINT_ID,
+                        project_id: PROJECT_ID,
                         name: "Sprint 1",
                         goal: "Implementar épicas",
                         status: "PLANNED",
@@ -62,7 +68,7 @@ describe(
 
         test("rechaza sprint sin nombre",async () => {
                 const req: any = {
-                    params: {id: "project-1"},
+                    params: {id: PROJECT_ID},
                     body: {}
                 };
 
@@ -78,7 +84,7 @@ describe(
         test("rechaza fecha de término anterior al inicio",async () => {
 
                 const req: any = {
-                    params: {id: "project-1"},
+                    params: {id: PROJECT_ID},
 
                     body: {
                         name: "Sprint inválido",
@@ -100,12 +106,12 @@ describe(
                 const req: any = {
 
                     params: {
-                        id: "project-1",
-                        itemId: "item-1"
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
                     },
 
                     body: {
-                        sprintId: "sprint-1"
+                        sprintId: SPRINT_ID
                     }
                 };
 
@@ -113,8 +119,8 @@ describe(
 
                 findSprintByIdMock
                     .mockResolvedValue({
-                        id: "sprint-1",
-                        project_id: "project-1",
+                        id: SPRINT_ID,
+                        project_id: PROJECT_ID,
                         name: "Sprint 1",
                         goal: null,
                         status: "PLANNED",
@@ -127,11 +133,11 @@ describe(
 
                 assignWorkItemToSprintMock
                     .mockResolvedValue({
-                        id: "item-1",
-                        project_id: "project-1",
-                        sprint_id: "sprint-1",
+                        id: ITEM_ID,
+                        project_id: PROJECT_ID,
+                        sprint_id: SPRINT_ID,
                         parent_id: null,
-                        created_by: "user-1",
+                        created_by: USER_ID,
                         assignee_id: null,
                         type: "TASK",
                         title: "Tarea",
@@ -152,16 +158,16 @@ describe(
                 expect(
                     findSprintByIdMock
                 ).toHaveBeenCalledWith(
-                    "project-1",
-                    "sprint-1"
+                    PROJECT_ID,
+                    SPRINT_ID
                 );
 
                 expect(
                     assignWorkItemToSprintMock
                 ).toHaveBeenCalledWith(
-                    "project-1",
-                    "item-1",
-                    "sprint-1"
+                    PROJECT_ID,
+                    ITEM_ID,
+                    SPRINT_ID
                 );
             }
         );
@@ -170,12 +176,12 @@ describe(
         test("rechaza Sprint perteneciente a otro proyecto",async () => {
                 const req: any = {
                     params: {
-                        id: "project-1",
-                        itemId: "item-1"
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
                     },
 
                     body: {
-                        sprintId: "sprint-otro"
+                        sprintId: OTHER_SPRINT_ID
                     }
                 };
 
@@ -183,6 +189,27 @@ describe(
                 findSprintByIdMock.mockResolvedValue(undefined);
                 await patchWorkItemSprint(req,res);
                 expect(res.status).toHaveBeenCalledWith(400);
+                expect(assignWorkItemToSprintMock).not.toHaveBeenCalled();
+            }
+        );
+
+
+        test("rechaza un sprintId que no es UUID sin consultar la base",async () => {
+                const req: any = {
+                    params: {
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
+                    },
+
+                    body: {
+                        sprintId: "abc"
+                    }
+                };
+
+                const res = createResponse();
+                await patchWorkItemSprint(req,res);
+                expect(res.status).toHaveBeenCalledWith(400);
+                expect(findSprintByIdMock).not.toHaveBeenCalled();
                 expect(assignWorkItemToSprintMock).not.toHaveBeenCalled();
             }
         );

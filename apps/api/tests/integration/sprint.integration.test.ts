@@ -110,6 +110,21 @@ async function prepareData() {
 }
 
 
+async function createTestSprint(name: string) {
+
+    const response =
+        await request(app)
+            .post(
+                `/api/projects/${PROJECT_ID}/sprints`
+            )
+            .send({
+                name
+            });
+
+    return response.body;
+}
+
+
 describe(
     "Sprints API - integración",
     () => {
@@ -320,6 +335,81 @@ describe(
                 expect(
                     response.body.sprint_id
                 ).toBeNull();
+            }
+        );
+
+
+        test.each([
+            ["GET", `/api/projects/abc/sprints`],
+            ["GET", `/api/projects/${PROJECT_ID}/sprints/abc`],
+            ["PUT", `/api/projects/${PROJECT_ID}/sprints/abc`],
+            ["DELETE", `/api/projects/${PROJECT_ID}/sprints/abc`]
+        ])(
+            "%s %s con un id inválido responde 404",
+            async (method, url) => {
+
+                const response =
+                    await request(app)
+                        [method.toLowerCase() as "get" | "put" | "delete"](url)
+                        .send({
+                            name:
+                                "Sprint",
+
+                            status:
+                                "PLANNED"
+                        });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "rechaza asignar un sprint con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/sprint`
+                    )
+
+                    .send({
+                        sprintId:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "responde 404 al asignar sprint a una tarea con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/abc/sprint`
+                    )
+
+                    .send({
+                        sprintId: null
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
             }
         );
     }
