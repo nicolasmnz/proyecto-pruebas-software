@@ -4,6 +4,13 @@ import * as epicRepository from "../../src/repositories/epic.repository.js";
 
 jest.mock("../../src/repositories/epic.repository.js");
 
+const PROJECT_ID = "92000000-0000-0000-0000-000000000001";
+const ITEM_ID = "92000000-0000-0000-0000-000000000002";
+const EPIC_ID = "92000000-0000-0000-0000-000000000003";
+const OTHER_EPIC_ID = "92000000-0000-0000-0000-000000000004";
+const MISSING_ITEM_ID = "92000000-0000-0000-0000-000000000005";
+const USER_ID = "92000000-0000-0000-0000-000000000006";
+
 
 const findEpicByIdMock = epicRepository.findEpicById as jest.MockedFunction<typeof epicRepository.findEpicById>;
 
@@ -25,11 +32,11 @@ describe("patchWorkItemEpic",() => {
         test("asigna correctamente un Work Item a una épica",async () => {
                 const req: any = {
                     params: {
-                        id: "project-1",
-                        itemId: "item-1"
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
                     },
                     body: {
-                        epicId: "epic-1"
+                        epicId: EPIC_ID
                     }
                 };
 
@@ -38,8 +45,8 @@ describe("patchWorkItemEpic",() => {
 
                 findEpicByIdMock
                     .mockResolvedValue({
-                        id: "epic-1",
-                        project_id: "project-1",
+                        id: EPIC_ID,
+                        project_id: PROJECT_ID,
                         type: "EPIC",
                         title: "Epic 1",
                         description: null,
@@ -49,7 +56,7 @@ describe("patchWorkItemEpic",() => {
                         position: 0,
                         sprint_id: null,
                         parent_id: null,
-                        created_by: "user-1",
+                        created_by: USER_ID,
                         assignee_id: null,
                         due_date: null,
                         created_at: new Date(),
@@ -59,11 +66,11 @@ describe("patchWorkItemEpic",() => {
 
                 assignWorkItemToEpicMock
                     .mockResolvedValue({
-                        id: "item-1",
-                        project_id: "project-1",
+                        id: ITEM_ID,
+                        project_id: PROJECT_ID,
                         sprint_id: null,
-                        parent_id: "epic-1",
-                        created_by: "user-1",
+                        parent_id: EPIC_ID,
+                        created_by: USER_ID,
                         assignee_id: null,
                         type: "TASK",
                         title: "Tarea",
@@ -84,17 +91,17 @@ describe("patchWorkItemEpic",() => {
                 expect(
                     findEpicByIdMock
                 ).toHaveBeenCalledWith(
-                    "project-1",
-                    "epic-1"
+                    PROJECT_ID,
+                    EPIC_ID
                 );
 
 
                 expect(
                     assignWorkItemToEpicMock
                 ).toHaveBeenCalledWith(
-                    "project-1",
-                    "item-1",
-                    "epic-1"
+                    PROJECT_ID,
+                    ITEM_ID,
+                    EPIC_ID
                 );
 
                 expect(res.status).toHaveBeenCalledWith(200);
@@ -105,12 +112,12 @@ describe("patchWorkItemEpic",() => {
         test("retorna 400 si la épica no pertenece al proyecto",async () => {
                 const req: any = {
                     params: {
-                        id: "project-1",
-                        itemId: "item-1"
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
                     },
 
                     body: {
-                        epicId: "epic-invalida"
+                        epicId: OTHER_EPIC_ID
                     }
                 };
 
@@ -137,8 +144,8 @@ describe("patchWorkItemEpic",() => {
         test("permite quitar un Work Item de una épica",async () => {
                 const req: any = {
                     params: {
-                        id: "project-1",
-                        itemId: "item-1"
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
                     },
 
                     body: {
@@ -152,11 +159,11 @@ describe("patchWorkItemEpic",() => {
 
                 assignWorkItemToEpicMock
                     .mockResolvedValue({
-                        id: "item-1",
-                        project_id: "project-1",
+                        id: ITEM_ID,
+                        project_id: PROJECT_ID,
                         sprint_id: null,
                         parent_id: null,
-                        created_by: "user-1",
+                        created_by: USER_ID,
                         assignee_id: null,
                         type: "TASK",
                         title: "Tarea",
@@ -178,8 +185,8 @@ describe("patchWorkItemEpic",() => {
                 expect(
                     assignWorkItemToEpicMock
                 ).toHaveBeenCalledWith(
-                    "project-1",
-                    "item-1",
+                    PROJECT_ID,
+                    ITEM_ID,
                     null
                 );
 
@@ -192,8 +199,8 @@ describe("patchWorkItemEpic",() => {
 
                 const req: any = {
                     params: {
-                        id: "project-1",
-                        itemId: "item-inexistente"
+                        id: PROJECT_ID,
+                        itemId: MISSING_ITEM_ID
                     },
 
                     body: {
@@ -211,6 +218,32 @@ describe("patchWorkItemEpic",() => {
 
                 await patchWorkItemEpic(req,res);
                 expect(res.status).toHaveBeenCalledWith(404);
+            }
+        );
+
+
+        test("retorna 400 si epicId no es un UUID",async () => {
+
+                const req: any = {
+                    params: {
+                        id: PROJECT_ID,
+                        itemId: ITEM_ID
+                    },
+
+                    body: {
+                        epicId: "abc"
+                    }
+                };
+
+                const res =createResponse();
+
+                await patchWorkItemEpic(req,res);
+
+                expect(res.status).toHaveBeenCalledWith(400);
+
+                expect(findEpicByIdMock).not.toHaveBeenCalled();
+
+                expect(assignWorkItemToEpicMock).not.toHaveBeenCalled();
             }
         );
     }

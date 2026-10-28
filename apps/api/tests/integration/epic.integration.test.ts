@@ -544,5 +544,110 @@ describe(
                 ).toBe(404);
             }
         );
+
+
+        test.each([
+            ["GET", `/api/projects/abc/epics`],
+            ["GET", `/api/projects/${PROJECT_ID}/epics/abc`],
+            ["PUT", `/api/projects/${PROJECT_ID}/epics/abc`],
+            ["DELETE", `/api/projects/${PROJECT_ID}/epics/abc`]
+        ])(
+            "%s %s con un id inválido responde 404",
+            async (method, url) => {
+
+                const response =
+                    await request(app)
+                        [method.toLowerCase() as "get" | "put" | "delete"](url)
+                        .send({
+                            title:
+                                "Epic",
+
+                            status:
+                                "TODO",
+
+                            priority:
+                                "MEDIUM"
+                        });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "POST rechaza un createdBy con formato inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "rechaza asignar una épica con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/epic`
+                    )
+
+                    .send({
+                        epicId:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "responde 404 al asignar épica a una tarea con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/abc/epic`
+                    )
+
+                    .send({
+                        epicId: null
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
     }
 );
