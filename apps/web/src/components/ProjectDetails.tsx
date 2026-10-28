@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Archive,
   ArchiveRestore,
+  CalendarRange,
   ChevronRight,
   KanbanSquare,
   Layers,
@@ -164,6 +165,13 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
             >
               <Layers size={16} aria-hidden="true" />
               Ver épicas
+            </Link>
+            <Link
+              to={`/projects/${project.id}/sprints`}
+              className="btn-secondary"
+            >
+              <CalendarRange size={16} aria-hidden="true" />
+              Ver sprints
             </Link>
             <button
               ref={editButtonRef}
