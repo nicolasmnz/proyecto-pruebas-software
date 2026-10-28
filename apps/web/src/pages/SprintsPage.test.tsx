@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -465,9 +465,11 @@ describe("SprintsPage", () => {
       expect(
         screen.queryByRole("region", { name: "Nuevo sprint" }),
       ).not.toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "Nuevo sprint" }),
-      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Nuevo sprint" }),
+        ).toHaveFocus(),
+      );
     });
   });
 
@@ -515,9 +517,11 @@ describe("SprintsPage", () => {
       });
 
       expect(within(updated).getByText("Activo")).toBeInTheDocument();
-      expect(
-        within(updated).getByRole("button", { name: "Editar" }),
-      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          within(updated).getByRole("button", { name: "Editar" }),
+        ).toHaveFocus(),
+      );
       // Ahora hay dos sprints activos: aparece el aviso
       expect(
         screen.getByText(/Hay 2 sprints activos al mismo tiempo/),

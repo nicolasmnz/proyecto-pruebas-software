@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -391,7 +391,9 @@ describe("EpicsPage", () => {
 
       const form = screen.getByRole("region", { name: "Nueva épica" });
 
-      expect(within(form).getByLabelText(/Título/)).toHaveFocus();
+      await waitFor(() =>
+        expect(within(form).getByLabelText(/Título/)).toHaveFocus(),
+      );
 
       await user.click(within(form).getByRole("button", { name: "Cancelar" }));
 
@@ -411,7 +413,11 @@ describe("EpicsPage", () => {
       expect(
         screen.queryByRole("region", { name: "Nueva épica" }),
       ).not.toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Nueva épica" })).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Nueva épica" }),
+        ).toHaveFocus(),
+      );
     });
   });
 
@@ -469,9 +475,11 @@ describe("EpicsPage", () => {
       const updated = await screen.findByRole("article", { name: "Acceso" });
 
       expect(within(updated).getByText("Hecho")).toBeInTheDocument();
-      expect(
-        within(updated).getByRole("button", { name: "Editar" }),
-      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          within(updated).getByRole("button", { name: "Editar" }),
+        ).toHaveFocus(),
+      );
     });
 
     test("muestra el error de la API sin cerrar el formulario", async () => {
