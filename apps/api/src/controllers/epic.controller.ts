@@ -1,14 +1,58 @@
 import { Request, Response } from "express";
-import { ProjectParams, WorkItemParams } from "../types/request.js";
+import { EpicParams, ProjectParams, WorkItemParams } from "../types/request.js";
 import {findEpicsByProject, findEpicById, createEpic, updateEpic, archiveEpic, assignWorkItemToEpic } from "../repositories/epic.repository.js";
+import { findProjectById } from "../repositories/project.repository.js";
+import { isValidDate } from "../utils/date.js";
+import { isUuid } from "../utils/uuid.js";
 
 
-interface EpicParams {
-    projectId: string;
-    epicId: string;
+
+
+// Un id con formato inválido no puede existir en la base
+function hasValidIds(params: EpicParams) {
+    return isUuid(params.id) && isUuid(params.epicId);
 }
 
 
+// Coincide con work_items.title VARCHAR(200)
+const MAX_TITLE_LENGTH = 200;
+
+
+// Validación común a crear y editar; devuelve el mensaje de error o null
+function validateEpicFields(
+    body: Record<string, unknown>
+): string | null {
+    const { title, estimate, dueDate } = body;
+
+    if (
+        typeof title === "string" &&
+        title.length > MAX_TITLE_LENGTH
+    ) {
+        return `title no puede superar ${MAX_TITLE_LENGTH} caracteres`;
+    }
+
+    if (
+        estimate !== undefined &&
+        estimate !== null &&
+        (
+            typeof estimate !== "number" ||
+            !Number.isInteger(estimate) ||
+            estimate < 0
+        )
+    ) {
+        return "estimate debe ser un entero mayor o igual a 0";
+    }
+
+    if (
+        dueDate !== undefined &&
+        dueDate !== null &&
+        (typeof dueDate !== "string" || !isValidDate(dueDate))
+    ) {
+        return "dueDate debe tener formato AAAA-MM-DD o ser null";
+    }
+
+    return null;
+}
 
 
 const VALID_STATUS = [
@@ -30,6 +74,12 @@ export async function getEpics(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
+            });
+        }
+
         const epics =
             await findEpicsByProject(
                 req.params.id
@@ -51,10 +101,12 @@ export async function getEpic(
     res: Response
 ) {
     try {
-        const epic = await findEpicById(
-            req.params.projectId,
-            req.params.epicId
-        );
+        const epic = hasValidIds(req.params)
+            ? await findEpicById(
+                req.params.id,
+                req.params.epicId
+            )
+            : undefined;
 
         if (!epic) {
             return res.status(404).json({
@@ -87,10 +139,35 @@ export async function postEpic(
             createdBy
         } = req.body;
 
+        if (!isUuid(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
+            });
+        }
+
         if (!title || !createdBy) {
             return res.status(400).json({
                 message:
                     "title y createdBy son obligatorios"
+            });
+        }
+
+        if (
+            typeof createdBy !== "string" ||
+            !isUuid(createdBy)
+        ) {
+            return res.status(400).json({
+                message:
+                    "createdBy debe ser un UUID válido"
+            });
+        }
+
+        const invalidField =
+            validateEpicFields(req.body);
+
+        if (invalidField) {
+            return res.status(400).json({
+                message: invalidField
             });
         }
 
@@ -108,6 +185,12 @@ export async function postEpic(
             });
         }
 
+        if (!await findProjectById(req.params.id)) {
+            return res.status(404).json({
+                message: "Proyecto no encontrado"
+            });
+        }
+
         const epic = await createEpic(
             req.params.id,
             title,
@@ -121,6 +204,14 @@ export async function postEpic(
         return res.status(201).json(epic);
 
     } catch (error) {
+        // 23503: createdBy no corresponde a un usuario existente
+        if ((error as { code?: string }).code === "23503") {
+            return res.status(400).json({
+                message:
+                    "createdBy no corresponde a un usuario existente"
+            });
+        }
+
         return res.status(500).json({
             message:
                 "Error creando épica"
@@ -172,16 +263,27 @@ export async function putEpic(
             });
         }
 
-        const epic = await updateEpic(
-            req.params.projectId,
-            req.params.epicId,
-            title,
-            description ?? null,
-            status,
-            priority,
-            estimate ?? null,
-            dueDate ?? null
-        );
+        const invalidField =
+            validateEpicFields(req.body);
+
+        if (invalidField) {
+            return res.status(400).json({
+                message: invalidField
+            });
+        }
+
+        const epic = hasValidIds(req.params)
+            ? await updateEpic(
+                req.params.id,
+                req.params.epicId,
+                title,
+                description ?? null,
+                status,
+                priority,
+                estimate ?? null,
+                dueDate ?? null
+            )
+            : undefined;
 
         if (!epic) {
             return res.status(404).json({
@@ -206,10 +308,12 @@ export async function deleteEpic(
     res: Response
 ) {
     try {
-        const epic = await archiveEpic(
-            req.params.projectId,
-            req.params.epicId
-        );
+        const epic = hasValidIds(req.params)
+            ? await archiveEpic(
+                req.params.id,
+                req.params.epicId
+            )
+            : undefined;
 
         if (!epic) {
             return res.status(404).json({
@@ -238,6 +342,26 @@ export async function patchWorkItemEpic(
 ) {
     try {
         const { epicId } = req.body;
+
+        if (
+            !isUuid(req.params.id) ||
+            !isUuid(req.params.itemId)
+        ) {
+            return res.status(404).json({
+                message:
+                    "Work item no encontrado"
+            });
+        }
+
+        if (
+            epicId !== null &&
+            (typeof epicId !== "string" || !isUuid(epicId))
+        ) {
+            return res.status(400).json({
+                message:
+                    "epicId debe ser un UUID válido o null"
+            });
+        }
 
         /*
          * epicId = null significa quitar el Work Item de su épica actual.

@@ -1,12 +1,36 @@
 import pool from "../config/database.js";
 
 
+// Columnas de una épica; due_date como texto (AAAA-MM-DD) igual que en las
+// tareas, para que no se convierta a timestamp según la zona horaria
+const EPIC_COLUMNS = `
+    id,
+    project_id,
+    sprint_id,
+    parent_id,
+    created_by,
+    assignee_id,
+    type,
+    title,
+    description,
+    status,
+    priority,
+    estimate,
+    item_number,
+    is_archived,
+    position,
+    due_date::text AS due_date,
+    created_at,
+    updated_at
+`;
+
+
 export async function findEpicsByProject(
     projectId: string
 ) {
     const result = await pool.query(
         `
-        SELECT *
+        SELECT ${EPIC_COLUMNS}
         FROM work_items
         WHERE project_id = $1
           AND type = 'EPIC'
@@ -20,17 +44,19 @@ export async function findEpicsByProject(
 }
 
 
+// Las épicas archivadas no se pueden consultar ni recibir tareas
 export async function findEpicById(
     projectId: string,
     epicId: string
 ) {
     const result = await pool.query(
         `
-        SELECT *
+        SELECT ${EPIC_COLUMNS}
         FROM work_items
         WHERE id = $1
           AND project_id = $2
           AND type = 'EPIC'
+          AND is_archived = FALSE
         `,
         [
             epicId,
@@ -77,7 +103,7 @@ export async function createEpic(
             0,
             $7
         )
-        RETURNING *
+        RETURNING ${EPIC_COLUMNS}
         `,
         [
             projectId,
@@ -117,7 +143,7 @@ export async function updateEpic(
         WHERE id = $7
           AND project_id = $8
           AND type = 'EPIC'
-        RETURNING *
+        RETURNING ${EPIC_COLUMNS}
         `,
         [
             title,
@@ -146,7 +172,7 @@ export async function archiveEpic(
         WHERE id = $1
           AND project_id = $2
           AND type = 'EPIC'
-        RETURNING *
+        RETURNING ${EPIC_COLUMNS}
         `,
         [
             epicId,

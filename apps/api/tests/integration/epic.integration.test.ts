@@ -105,6 +105,23 @@ async function prepareData() {
 }
 
 
+async function createTestEpic(title: string) {
+
+    const response =
+        await request(app)
+            .post(
+                `/api/projects/${PROJECT_ID}/epics`
+            )
+            .send({
+                title,
+                createdBy:
+                    USER_ID
+            });
+
+    return response.body;
+}
+
+
 describe(
     "Epics API - integración",
     () => {
@@ -320,6 +337,526 @@ describe(
                 expect(
                     response.status
                 ).toBe(400);
+            }
+        );
+
+
+        test(
+            "GET obtiene una épica por id",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic detalle"
+                    );
+
+
+                const response =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                        );
+
+
+                expect(
+                    response.status
+                ).toBe(200);
+
+
+                expect(
+                    response.body.id
+                ).toBe(epic.id);
+            }
+        );
+
+
+        test(
+            "GET responde 404 si la épica no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/99999999-9999-9999-9999-999999999999`
+                        );
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "PUT actualiza una épica",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic original"
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    )
+
+                    .send({
+                        title:
+                            "Epic editada",
+
+                        status:
+                            "IN_PROGRESS",
+
+                        priority:
+                            "CRITICAL",
+
+                        estimate: 8
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(200);
+
+
+                expect(
+                    response.body
+                ).toMatchObject({
+                    id: epic.id,
+                    title: "Epic editada",
+                    status: "IN_PROGRESS",
+                    priority: "CRITICAL",
+                    estimate: 8
+                });
+            }
+        );
+
+
+        test(
+            "DELETE archiva una épica y la saca del listado",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic a archivar"
+                    );
+
+
+                const response =
+                    await request(app)
+                        .delete(
+                            `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                        );
+
+
+                expect(
+                    response.status
+                ).toBe(200);
+
+
+                expect(
+                    response.body.epic.is_archived
+                ).toBe(true);
+
+
+                const list =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics`
+                        );
+
+
+                expect(
+                    list.body.map(
+                        (item: { id: string }) => item.id
+                    )
+                ).not.toContain(epic.id);
+            }
+        );
+
+
+        test(
+            "rechaza asignar una tarea a una épica archivada",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic archivada"
+                    );
+
+
+                await request(app)
+                    .delete(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/epic`
+                    )
+
+                    .send({
+                        epicId:
+                            epic.id
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "GET responde 404 si la épica está archivada",
+            async () => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic archivada"
+                    );
+
+
+                await request(app)
+                    .delete(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    );
+
+
+                const response =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                        );
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test.each([
+            ["GET", `/api/projects/abc/epics`],
+            ["GET", `/api/projects/${PROJECT_ID}/epics/abc`],
+            ["PUT", `/api/projects/${PROJECT_ID}/epics/abc`],
+            ["DELETE", `/api/projects/${PROJECT_ID}/epics/abc`]
+        ])(
+            "%s %s con un id inválido responde 404",
+            async (method, url) => {
+
+                const response =
+                    await request(app)
+                        [method.toLowerCase() as "get" | "put" | "delete"](url)
+                        .send({
+                            title:
+                                "Epic",
+
+                            status:
+                                "TODO",
+
+                            priority:
+                                "MEDIUM"
+                        });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "POST rechaza un createdBy con formato inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "rechaza asignar una épica con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/${ITEM_ID}/epic`
+                    )
+
+                    .send({
+                        epicId:
+                            "abc"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "responde 404 al asignar épica a una tarea con id inválido",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .patch(
+                        `/api/projects/${PROJECT_ID}/work-items/abc/epic`
+                    )
+
+                    .send({
+                        epicId: null
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test.each([
+            ["estimate negativo", { estimate: -1 }],
+            ["estimate decimal", { estimate: 1.5 }],
+            ["dueDate inválida", { dueDate: "2026-13-45" }],
+            ["title demasiado largo", { title: "a".repeat(201) }]
+        ])(
+            "POST rechaza %s",
+            async (_case, fields) => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            USER_ID,
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test.each([
+            ["estimate negativo", { estimate: -1 }],
+            ["dueDate inválida", { dueDate: "mañana" }]
+        ])(
+            "PUT rechaza %s",
+            async (_case, fields) => {
+
+                const epic =
+                    await createTestEpic(
+                        "Epic a validar"
+                    );
+
+
+                const response =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/epics/${epic.id}`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        status:
+                            "TODO",
+
+                        priority:
+                            "MEDIUM",
+
+                        ...fields
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "POST responde 404 si el proyecto no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/99999999-9999-9999-9999-999999999999/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            USER_ID
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(404);
+            }
+        );
+
+
+        test(
+            "POST rechaza un createdBy que no existe",
+            async () => {
+
+                const response =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic",
+
+                        createdBy:
+                            "99999999-9999-9999-9999-999999999999"
+                    });
+
+
+                expect(
+                    response.status
+                ).toBe(400);
+            }
+        );
+
+
+        test(
+            "devuelve la fecha límite en formato AAAA-MM-DD",
+            async () => {
+
+                const created =
+                    await request(app)
+
+                    .post(
+                        `/api/projects/${PROJECT_ID}/epics`
+                    )
+
+                    .send({
+                        title:
+                            "Epic con fecha",
+
+                        createdBy:
+                            USER_ID,
+
+                        dueDate:
+                            "2026-11-01"
+                    });
+
+
+                expect(
+                    created.body.due_date
+                ).toBe("2026-11-01");
+
+
+                const updated =
+                    await request(app)
+
+                    .put(
+                        `/api/projects/${PROJECT_ID}/epics/${created.body.id}`
+                    )
+
+                    .send({
+                        title:
+                            "Epic con fecha",
+
+                        status:
+                            "TODO",
+
+                        priority:
+                            "MEDIUM",
+
+                        dueDate:
+                            "2026-12-24"
+                    });
+
+
+                expect(
+                    updated.body.due_date
+                ).toBe("2026-12-24");
+
+
+                const detail =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics/${created.body.id}`
+                        );
+
+
+                expect(
+                    detail.body.due_date
+                ).toBe("2026-12-24");
+
+
+                const list =
+                    await request(app)
+                        .get(
+                            `/api/projects/${PROJECT_ID}/epics`
+                        );
+
+
+                expect(
+                    list.body[0].due_date
+                ).toBe("2026-12-24");
             }
         );
     }

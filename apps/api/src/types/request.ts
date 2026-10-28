@@ -11,6 +11,11 @@ export interface SprintParams {
     sprintId: string;
 }
 
+export interface EpicParams {
+    id: string;
+    epicId: string;
+}
+
 export interface WorkItemParams {
     id: string;
     itemId: string;
