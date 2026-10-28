@@ -96,10 +96,12 @@ test.describe("épicas", () => {
     await epic.getByRole("link", { name: /Ver en el tablero/ }).click();
 
     await expect(page).toHaveURL(/\/board\?epic=/);
-    await expect(page.getByLabel("Épica")).toHaveValue(/.+/);
+    await expect(page.getByLabel("Épica", { exact: true })).toHaveValue(/.+/);
     await expect(card(todo, "Pantalla de login")).toBeVisible();
 
-    await page.getByLabel("Épica").selectOption({ label: "Sin épica" });
+    await page
+      .getByLabel("Épica", { exact: true })
+      .selectOption({ label: "Sin épica" });
 
     await expect(todo.getByText("Sin resultados")).toBeVisible();
   });
