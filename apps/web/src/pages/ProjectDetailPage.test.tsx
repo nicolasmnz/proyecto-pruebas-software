@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -275,7 +275,7 @@ describe("ProjectDetailPage", () => {
       expect(screen.getByRole("status")).toHaveTextContent(
         "Proyecto actualizado.",
       );
-      expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
       expect(reloadProjects).toHaveBeenCalledTimes(1);
     });
 
@@ -347,15 +347,17 @@ describe("ProjectDetailPage", () => {
       });
 
       // El foco empieza en la opción segura
-      expect(
-        within(dialog).getByRole("button", { name: "Cancelar" }),
-      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          within(dialog).getByRole("button", { name: "Cancelar" }),
+        ).toHaveFocus(),
+      );
 
       await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
       expect(mockedArchiveProject).not.toHaveBeenCalled();
-      expect(screen.getByRole("button", { name: "Archivar" })).toHaveFocus();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Archivar" })).toHaveFocus());
     });
 
     test("Escape cierra el diálogo", async () => {
