@@ -7,6 +7,7 @@ import ProjectsProvider from "./context/ProjectsProvider";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import BoardPage from "./pages/BoardPage";
+import EpicsPage from "./pages/EpicsPage";
 import CreateProjectPage from "./pages/CreateProjectPage";
 import "./index.css";
 
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
             />
             <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="/projects/:projectId/board" element={<BoardPage />} />
+            <Route path="/projects/:projectId/epics" element={<EpicsPage />} />
 
             <Route path="/settings" element={<div>Configuracion</div>} />
           </Route>

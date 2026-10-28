@@ -1,0 +1,4 @@
+/* Estado (al editar), prioridad, fecha y puntos: se acomodan al ancho */
+.task-form-row.epic-form-row {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}

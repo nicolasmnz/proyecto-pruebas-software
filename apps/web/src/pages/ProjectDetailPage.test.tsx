@@ -107,6 +107,19 @@ describe("ProjectDetailPage", () => {
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
   });
 
+  test("enlaza al tablero y a las épicas del proyecto", async () => {
+    await renderLoadedPage();
+
+    expect(screen.getByRole("link", { name: "Ver tablero" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/board`,
+    );
+    expect(screen.getByRole("link", { name: "Ver épicas" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/epics`,
+    );
+  });
+
   test("indica cuando el proyecto no tiene descripción", async () => {
     mockedGetProject.mockResolvedValue({ ...project, description: null });
 

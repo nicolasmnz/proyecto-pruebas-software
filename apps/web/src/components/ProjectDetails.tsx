@@ -5,6 +5,7 @@ import {
   ArchiveRestore,
   ChevronRight,
   KanbanSquare,
+  Layers,
   Pencil,
 } from "lucide-react";
 
@@ -155,6 +156,13 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
             <Link to={`/projects/${project.id}/board`} className="btn-primary">
               <KanbanSquare size={16} aria-hidden="true" />
               Ver tablero
+            </Link>
+            <Link
+              to={`/projects/${project.id}/epics`}
+              className="btn-secondary"
+            >
+              <Layers size={16} aria-hidden="true" />
+              Ver épicas
             </Link>
             <button
               ref={editButtonRef}
