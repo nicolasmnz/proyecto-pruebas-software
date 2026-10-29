@@ -789,6 +789,82 @@ describe("Tablero Kanban API", () => {
       expect(saved.rows[0].assignee_id).toBeNull();
     });
 
+    describe("integrantes de solo lectura (VIEWER)", () => {
+      let viewerId: string;
+
+      beforeEach(async () => {
+        const viewer = await pool.query(
+          `
+          INSERT INTO users (name, email, password_hash)
+          VALUES ('Vera Lectora', 'vera@test.cl', 'hash-de-prueba')
+          RETURNING id
+          `,
+        );
+
+        viewerId = viewer.rows[0].id;
+
+        await pool.query(
+          "INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'VIEWER')",
+          [projectId, viewerId],
+        );
+      });
+
+      test("el tablero no los ofrece como responsables", async () => {
+        const response = await request(app).get(
+          `/api/projects/${projectId}/board`,
+        );
+
+        expect(response.body.members).toEqual([
+          { id: userId, name: "Ana Pérez" },
+          { id: memberId, name: "Beto Miembro" },
+        ]);
+      });
+
+      test("PUT rechaza asignarles una tarea", async () => {
+        const itemId = await createItem();
+
+        const response = await request(app)
+          .put(url(itemId))
+          .send({ ...validBody, assigneeId: viewerId });
+
+        expect(response.status).toBe(400);
+        expect(response.body.message).toBe(
+          "assigneeId debe ser un miembro del proyecto",
+        );
+      });
+
+      test("PUT conserva a un responsable al que le bajaron el rol", async () => {
+        const itemId = await createItem();
+
+        await pool.query(
+          "UPDATE work_items SET assignee_id = $2 WHERE id = $1",
+          [itemId, viewerId],
+        );
+
+        const response = await request(app)
+          .put(url(itemId))
+          .send({ ...validBody, assigneeId: viewerId });
+
+        expect(response.status).toBe(200);
+        expect(response.body.assignee_id).toBe(viewerId);
+      });
+
+      test("quien creó el proyecto es asignable salvo que la tabla lo marque VIEWER", async () => {
+        await pool.query(
+          "INSERT INTO project_members (project_id, user_id, role) VALUES ($1, $2, 'VIEWER')",
+          [projectId, userId],
+        );
+
+        const response = await request(app).get(
+          `/api/projects/${projectId}/board`,
+        );
+
+        expect(response.body.members).toEqual([
+          { id: memberId, name: "Beto Miembro" },
+        ]);
+      });
+    });
+
     test("PUT conserva al responsable actual aunque ya no sea miembro", async () => {
       const itemId = await createItem();
 

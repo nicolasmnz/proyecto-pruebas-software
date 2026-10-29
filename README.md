@@ -170,7 +170,7 @@ Reglas de comportamiento que conviene conocer:
 - **Orden:** dentro de cada columna se ordena por `position` y, si coincide, por número de tarea. Al mover o reordenar, la columna de destino se renumera de forma consecutiva.
 - **Identificador:** `#N`, único dentro del proyecto y asignado al crear la tarea.
 - **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
-- **Responsable:** se elige entre los miembros del proyecto y quien lo creó. Se puede conservar el responsable actual aunque ya no sea miembro.
+- **Responsable:** se elige entre los miembros del proyecto y quien lo creó, salvo los de solo lectura (*VIEWER*). Se puede conservar el responsable actual aunque ya no sea miembro o le hayan bajado el rol.
 - **Enlace a una tarea:** `?task=<id>` abre la ficha de esa tarea al cargar el tablero; al abrir o cerrar una ficha la URL se actualiza sin perder los filtros.
 - **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
@@ -222,7 +222,7 @@ Resumen para quien dirige el proyecto, al que se llega con *Ver panel* desde el 
 - **Avance del proyecto:** la misma barra del tablero (por puntos o, sin estimaciones, por cantidad).
 - **Sprint activo:** sus fechas, los días que quedan (o el atraso si ya pasó su fecha de término) y su avance. Si no hay ninguno se indica; si hay varios, se muestran todos.
 - **Épicas:** cada una con su avance, que cuenta sus hijos directos (ver [Épicas](#épicas)), y un enlace al tablero filtrado por ella.
-- **Carga por integrante:** tareas y puntos pendientes (ni terminados ni archivados) de cada miembro, incluidos los que no tienen tareas, de la mayor a la menor carga, más la fila *Sin asignar*. Cada fila abre el tablero filtrado por ese responsable.
+- **Carga por integrante:** tareas y puntos pendientes (ni terminados ni archivados) de cada integrante que puede recibir tareas (no los *VIEWER*), incluidos los que no tienen tareas, de la mayor a la menor carga, más la fila *Sin asignar*. Cada fila abre el tablero filtrado por ese responsable.
 - **Tareas vencidas:** las no terminadas con fecha límite anterior a hoy, de la más atrasada, con su responsable. Cada una abre su ficha en el tablero.
 
 ## Mis tareas
@@ -242,7 +242,7 @@ Página con las tareas asignadas al usuario conectado, a la que se llega desde *
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
 | Componentes y utilidades web | Vitest + React Testing Library | 296 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 182 | `npm run test:integration` |
+| Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
 | E2E | Playwright (Chromium) | 33 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
