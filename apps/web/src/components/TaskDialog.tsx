@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Dices, Pencil, Trash2, X } from "lucide-react";
 
 import {
   STATUS_LABELS,
@@ -13,7 +13,9 @@ import { assignWorkItemToEpic } from "../api/epics";
 import type { Epic } from "../api/epics";
 import { trapTab } from "../utils/focusTrap";
 import { formatDate, formatDueDate } from "../utils/format";
+import type { RouletteSlice } from "../utils/roulette";
 import ConfirmDialog from "./ConfirmDialog";
+import RoulettePanel from "./RoulettePanel";
 import TaskForm from "./TaskForm";
 import type { TaskFormValues } from "./TaskForm";
 import { PRIORITY_LABELS, TYPE_LABELS } from "./taskLabels";
@@ -29,6 +31,8 @@ interface TaskDialogProps {
   // Historia de la que cuelga la tarea (épica → historia → tarea): la épica
   // es la de la historia y no se cambia desde aquí, para no romper el vínculo
   story?: Pick<BoardItem, "item_number" | "title" | "parent_id"> | null;
+  // Probabilidad de cada integrante en la ruleta; sin integrantes no se ofrece
+  roulette?: RouletteSlice[];
   // En proyectos archivados la ficha solo se puede leer
   readOnly: boolean;
   onClose: () => void;
@@ -50,6 +54,7 @@ function TaskDialog({
   members,
   epics,
   story = null,
+  roulette = [],
   readOnly,
   onClose,
   onUpdated,
@@ -64,6 +69,7 @@ function TaskDialog({
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isRouletteOpen, setIsRouletteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -149,6 +155,24 @@ function TaskDialog({
     setResult({ key: requestKey, state: { status: "success", item: updated } });
     setIsEditing(false);
     onUpdated(updated);
+  }
+
+  // La ruleta solo cambia el responsable: el resto de la ficha se reenvía tal cual
+  async function handleRouletteAssign(item: WorkItemDetail, memberId: string) {
+    const updated = await updateWorkItem(projectId, item.id, {
+      title: item.title,
+      description: item.description ?? undefined,
+      type: item.type as TaskFormValues["type"],
+      priority: item.priority,
+      estimate: item.estimate ?? undefined,
+      assigneeId: memberId,
+      dueDate: item.due_date ?? undefined,
+    });
+
+    setResult({ key: requestKey, state: { status: "success", item: updated } });
+    setIsRouletteOpen(false);
+    onUpdated(updated);
+    dialogRef.current?.focus();
   }
 
   async function handleDelete(item: WorkItemDetail) {
@@ -353,8 +377,31 @@ function TaskDialog({
                     )}
                   </section>
 
-                  {!readOnly && (
+                  {isRouletteOpen && (
+                    <RoulettePanel
+                      slices={roulette}
+                      onAssign={(memberId) =>
+                        handleRouletteAssign(item, memberId)
+                      }
+                      onCancel={() => setIsRouletteOpen(false)}
+                    />
+                  )}
+
+                  {!readOnly && !isRouletteOpen && (
                     <div className="actions task-dialog-actions">
+                      {/* Solo para tareas sin responsable que aún se trabajan */}
+                      {!item.assignee_id &&
+                        !item.is_archived &&
+                        roulette.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => setIsRouletteOpen(true)}
+                          >
+                            <Dices size={16} aria-hidden="true" />
+                            Girar ruleta
+                          </button>
+                        )}
                       <button
                         type="button"
                         className="btn-secondary"

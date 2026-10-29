@@ -7,7 +7,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
 import {
@@ -1419,6 +1419,150 @@ describe("BoardPage", () => {
       });
 
       expect(within(dialog).getByText("Archivada")).toBeInTheDocument();
+    });
+
+    describe("ruleta de asignación", () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      test("una tarea sin responsable se asigna con la ruleta", async () => {
+        // Ana y Beto no tienen carga: 50 % cada uno; 0 cae en Ana
+        vi.spyOn(Math, "random").mockReturnValue(0);
+
+        const dialog = await openDialog();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          assignee_id: "u1",
+          assignee_name: "Ana Pérez",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        );
+
+        const roulette = within(dialog).getByRole("region", {
+          name: "Ruleta de asignación",
+        });
+
+        expect(roulette).toHaveTextContent("Ana Pérez50 %");
+        expect(roulette).toHaveTextContent("Beto Soto50 %");
+
+        await userEvent.click(
+          within(roulette).getByRole("button", { name: "Girar" }),
+        );
+        await userEvent.click(
+          within(roulette).getByRole("button", { name: "Asignar a Ana Pérez" }),
+        );
+
+        // Solo cambia el responsable: lo demás se reenvía tal cual
+        expect(mockedUpdateWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", {
+          title: "Diseñar login",
+          description: "Pantalla de inicio de sesión.",
+          type: "TASK",
+          priority: "HIGH",
+          estimate: 3,
+          assigneeId: "u1",
+          dueDate: "2026-10-31",
+        });
+        await waitFor(() =>
+          expect(
+            within(dialog).getByText("Responsable").nextSibling,
+          ).toHaveTextContent("Ana Pérez"),
+        );
+        expect(
+          within(dialog).queryByRole("region", {
+            name: "Ruleta de asignación",
+          }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("cancelar la ruleta vuelve a la ficha sin asignar", async () => {
+        const dialog = await openDialog();
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Cancelar" }),
+        );
+
+        expect(mockedUpdateWorkItem).not.toHaveBeenCalled();
+        expect(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        ).toBeInTheDocument();
+      });
+
+      test("no se ofrece si la tarea ya tiene responsable", async () => {
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({
+          ...detail,
+          assignee_id: "u2",
+          assignee_name: "Beto Soto",
+        });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("no se ofrece en un proyecto archivado", async () => {
+        mockedGetBoard.mockResolvedValue({
+          ...board,
+          project: { ...board.project, is_archived: true },
+        });
+        mockedGetWorkItem.mockResolvedValue(detail);
+
+        renderPage("?task=1");
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("no se ofrece en una tarea archivada", async () => {
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({
+          ...detail,
+          is_archived: true,
+          status: "DONE",
+        });
+
+        renderPage("?task=1");
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
     });
 
     test("con ?task= en la URL abre esa ficha al cargar el tablero", async () => {
