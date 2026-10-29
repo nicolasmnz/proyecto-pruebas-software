@@ -35,6 +35,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Archivar tareas terminadas, una a una o todas las de Hecho, y restaurarlas.
 - Barra de progreso (por puntos y por tareas), puntos por columna y límite de trabajo en curso configurable.
 - Búsqueda por título o `#número` y filtros por tipo, prioridad, responsable y épica.
+- Ruleta de asignación: elige al azar a quién asignar una tarea sin responsable, con más probabilidad para quien tiene menos carga.
 
 **Épicas** (`/projects/:id/epics`) — ver [Épicas](#épicas)
 
@@ -172,6 +173,7 @@ Reglas de comportamiento que conviene conocer:
 - **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
 - **Responsable:** se elige entre los miembros del proyecto y quien lo creó, salvo los de solo lectura (*VIEWER*). Se puede conservar el responsable actual aunque ya no sea miembro o le hayan bajado el rol.
 - **Enlace a una tarea:** `?task=<id>` abre la ficha de esa tarea al cargar el tablero; al abrir o cerrar una ficha la URL se actualiza sin perder los filtros.
+- **Ruleta de asignación:** en la ficha de una tarea sin responsable (no archivada, en un proyecto activo), *Girar ruleta* muestra a quienes pueden recibirla y su probabilidad. El peso de cada uno es `1 / (1 + puntos pendientes)`; una tarea pendiente sin estimar cuenta como 1 punto. La ruleta solo propone: la tarea se asigna al confirmar *Asignar a…*, y *Volver a girar* o *Cancelar* no asignan nada. Con la reducción de movimiento del sistema el resultado aparece sin animación, y siempre se anuncia por escrito.
 - **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
 - **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`, `epic`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
@@ -241,9 +243,9 @@ Página con las tareas asignadas al usuario conectado, a la que se llega desde *
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 296 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 319 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 33 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 34 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -296,12 +298,13 @@ npx playwright show-report                                         # informe de 
 | Archivo | Cubre |
 | ------- | ----- |
 | `components/BoardProgress.test.tsx` | Barra de progreso del tablero |
+| `components/RoulettePanel.test.tsx` | Ruleta de asignación: porcentajes, giro, volver a girar, cancelar y animación |
 | `components/EpicsSummary.test.tsx` | Resumen de épicas en el detalle del proyecto |
 | `context/AuthProvider.test.tsx` | Sesión: iniciar, recuperar al recargar y cerrar |
 | `context/authContext.test.tsx` | Usuario de la sesión en las páginas internas |
 | `layout/Layout.test.tsx` | Layout, barra lateral, usuario conectado y cierre de sesión |
 | `layout/RequireAuth.test.tsx` | Redirección al login de las páginas internas |
-| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea (también desde `?task=`) y épica de cada tarea |
+| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea (también desde `?task=`), épica de cada tarea y ruleta de asignación |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
 | `pages/DashboardPage.test.tsx` | Panel del proyecto: acceso por rol, avances, carga por integrante y vencidas |
 | `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |

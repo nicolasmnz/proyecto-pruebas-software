@@ -35,6 +35,7 @@ import { useCurrentUser } from "../context/authContext";
 import { hasActiveFilters, matchesFilters } from "../utils/boardFilters";
 import type { BoardFilters } from "../utils/boardFilters";
 import { getEpicId, getParentStory, indexItems } from "../utils/hierarchy";
+import { getRouletteOdds } from "../utils/roulette";
 
 import "./BoardPage.css";
 
@@ -533,6 +534,9 @@ function BoardPage() {
           members={state.board.members}
           epics={state.epics}
           story={openItem ? getParentStory(openItem, itemsById) : null}
+          roulette={getRouletteOdds(state.board.members, [
+            ...itemsById.values(),
+          ])}
           readOnly={project.is_archived}
           onClose={() => setOpenItemId(null)}
           onUpdated={handleItemUpdated}
