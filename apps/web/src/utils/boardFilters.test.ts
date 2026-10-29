@@ -77,6 +77,22 @@ describe("matchesFilters", () => {
     ).toBe(true);
   });
 
+  test("usa la épica recibida, que puede venir de la historia de la tarea", () => {
+    // La tarea cuelga de la historia «s1», que es de la épica «e1»
+    const viaStory = { ...item, parent_id: "s1" };
+
+    expect(
+      matchesFilters(viaStory, { ...EMPTY_FILTERS, epic: "e1" }, "e1"),
+    ).toBe(true);
+    expect(
+      matchesFilters(viaStory, { ...EMPTY_FILTERS, epic: NO_EPIC }, "e1"),
+    ).toBe(false);
+    // Si su historia no tiene épica, la tarea tampoco
+    expect(
+      matchesFilters(viaStory, { ...EMPTY_FILTERS, epic: NO_EPIC }, null),
+    ).toBe(true);
+  });
+
   test("filtra por épica o por tareas sin épica", () => {
     const withEpic = { ...item, parent_id: "e1" };
 

@@ -1075,6 +1075,81 @@ describe("BoardPage", () => {
         expect(await within(dialog).findByText("Reportes")).toBeInTheDocument();
       });
 
+      // #3 Administrar miembros es una historia de Autenticación y #1 cuelga de ella
+      const storyBoard: Board = {
+        ...board,
+        columns: board.columns.map((column) => ({
+          ...column,
+          items: column.items.map((item) =>
+            item.id === "3"
+              ? { ...item, parent_id: LOGIN_EPIC_ID }
+              : item.id === "1"
+                ? { ...item, parent_id: "3" }
+                : item,
+          ),
+        })),
+      };
+
+      async function openStoryTaskDialog() {
+        mockedGetEpics.mockResolvedValue([
+          buildEpic(LOGIN_EPIC_ID, "Autenticación"),
+          buildEpic(REPORTS_EPIC_ID, "Reportes"),
+        ]);
+        mockedGetBoard.mockResolvedValue(storyBoard);
+        mockedGetWorkItem.mockResolvedValue({ ...detail, parent_id: "3" });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        return screen.findByRole("dialog", { name: "Diseñar login" });
+      }
+
+      test("si la tarea cuelga de una historia, muestra la épica de la historia", async () => {
+        const dialog = await openStoryTaskDialog();
+
+        expect(within(dialog).getByText(/^Autenticación/)).toHaveTextContent(
+          "AutenticaciónPor su historia #3 Administrar miembros",
+        );
+        expect(
+          within(dialog).queryByText("Épica archivada"),
+        ).not.toBeInTheDocument();
+      });
+
+      test("la épica heredada no se puede cambiar y guardar no toca la historia", async () => {
+        const dialog = await openStoryTaskDialog();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: "3",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        const epic = within(dialog).getByLabelText("Épica");
+
+        expect(epic).toBeDisabled();
+        expect(epic).toHaveValue(LOGIN_EPIC_ID);
+        expect(epic).toHaveAccessibleDescription(
+          "La épica viene de su historia #3 Administrar miembros.",
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        await waitFor(() => expect(mockedUpdateWorkItem).toHaveBeenCalled());
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+        expect(
+          await within(dialog).findByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+      });
+
       test("elegir «Sin épica» la quita enviando null", async () => {
         const dialog = await openEpicDialog(LOGIN_EPIC_ID);
 
@@ -1621,6 +1696,45 @@ describe("BoardPage", () => {
           "Diseñar login",
           "Corregir menú",
         ]);
+      });
+
+      test("las tareas de una historia heredan su épica en la tarjeta y en el filtro", async () => {
+        // #3 (historia) es de Autenticación y #2 cuelga de ella
+        mockedGetBoard.mockResolvedValue({
+          ...epicBoard,
+          columns: epicBoard.columns.map((column) => ({
+            ...column,
+            items: column.items.map((item) =>
+              item.id === "3"
+                ? { ...item, parent_id: EPIC_ID }
+                : item.id === "2"
+                  ? { ...item, parent_id: "3" }
+                  : item,
+            ),
+          })),
+        });
+
+        renderPage();
+
+        const todo = await screen.findByRole("region", { name: "Por hacer" });
+        const [, menu] = within(todo).getAllByRole("article");
+
+        expect(menu).toHaveTextContent("Épica: Autenticación");
+
+        const epic = screen.getByLabelText("Épica");
+
+        await userEvent.selectOptions(epic, "Autenticación");
+
+        expect(titlesIn("Por hacer")).toEqual([
+          "Diseñar login",
+          "Corregir menú",
+        ]);
+        expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+
+        await userEvent.selectOptions(epic, "Sin épica");
+
+        expect(titlesIn("Por hacer")).toEqual([]);
+        expect(titlesIn("En progreso")).toEqual([]);
       });
 
       test("la épica se lee de la URL", async () => {

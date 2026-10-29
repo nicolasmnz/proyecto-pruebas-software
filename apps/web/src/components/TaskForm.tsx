@@ -22,6 +22,8 @@ interface TaskFormProps {
   members?: BoardMember[];
   // Con épicas el formulario permite elegir la épica de la tarea
   epics?: Pick<Epic, "id" | "title">[];
+  // Si se indica, la épica se muestra pero no se puede cambiar
+  epicHint?: string;
   submitLabel?: string;
   submittingLabel?: string;
   onSubmit: (values: TaskFormValues) => Promise<void>;
@@ -32,6 +34,7 @@ function TaskForm({
   initialValues,
   members,
   epics,
+  epicHint,
   submitLabel = "Crear",
   submittingLabel = "Creando...",
   onSubmit,
@@ -210,6 +213,8 @@ function TaskForm({
             id={epicId}
             name="epic"
             defaultValue={initialValues?.epicId ?? ""}
+            disabled={Boolean(epicHint)}
+            aria-describedby={epicHint ? `${epicId}-hint` : undefined}
           >
             <option value="">Sin épica</option>
             {epics.map((epic) => (
@@ -218,6 +223,11 @@ function TaskForm({
               </option>
             ))}
           </select>
+          {epicHint && (
+            <p id={`${epicId}-hint`} className="field-hint">
+              {epicHint}
+            </p>
+          )}
         </div>
       )}
 

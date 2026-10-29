@@ -8,7 +8,7 @@ import {
   getWorkItem,
   updateWorkItem,
 } from "../api/board";
-import type { BoardMember, WorkItemDetail } from "../api/board";
+import type { BoardItem, BoardMember, WorkItemDetail } from "../api/board";
 import { assignWorkItemToEpic } from "../api/epics";
 import type { Epic } from "../api/epics";
 import { trapTab } from "../utils/focusTrap";
@@ -26,6 +26,9 @@ interface TaskDialogProps {
   members: BoardMember[];
   // Épicas activas del proyecto, para mostrar y cambiar la de la tarea
   epics: Epic[];
+  // Historia de la que cuelga la tarea (épica → historia → tarea): la épica
+  // es la de la historia y no se cambia desde aquí, para no romper el vínculo
+  story?: Pick<BoardItem, "item_number" | "title" | "parent_id"> | null;
   // En proyectos archivados la ficha solo se puede leer
   readOnly: boolean;
   onClose: () => void;
@@ -46,6 +49,7 @@ function TaskDialog({
   itemId,
   members,
   epics,
+  story = null,
   readOnly,
   onClose,
   onUpdated,
@@ -114,10 +118,11 @@ function TaskDialog({
     // PUT reemplaza la ficha: lo que queda vacío en el formulario se borra
     let updated = await updateWorkItem(projectId, item.id, fields);
 
-    // La épica no viaja en el PUT: se cambia solo si cambió
+    // La épica no viaja en el PUT: se cambia solo si cambió. Si la tarea
+    // cuelga de una historia, su parent_id es la historia y no se toca
     const parentId = epicId ?? null;
 
-    if (parentId !== item.parent_id) {
+    if (!story && parentId !== item.parent_id) {
       try {
         const assigned = await assignWorkItemToEpic(
           projectId,
@@ -174,11 +179,13 @@ function TaskDialog({
       : members;
 
   // La épica actual siempre se puede conservar, aunque esté archivada
-  const currentEpic = epics.find(({ id }) => id === item?.parent_id);
+  const epicId = story ? story.parent_id : (item?.parent_id ?? null);
+  const currentEpic = epics.find(({ id }) => id === epicId);
   const selectableEpics =
-    item?.parent_id && !currentEpic
-      ? [...epics, { id: item.parent_id, title: "Épica archivada" }]
+    epicId && !currentEpic
+      ? [...epics, { id: epicId, title: "Épica archivada" }]
       : epics;
+  const storyLabel = story ? `#${story.item_number} ${story.title}` : null;
 
   return (
     <>
@@ -254,10 +261,15 @@ function TaskDialog({
                     estimate: item.estimate ?? undefined,
                     assigneeId: item.assignee_id ?? undefined,
                     dueDate: item.due_date ?? undefined,
-                    epicId: item.parent_id ?? undefined,
+                    epicId: epicId ?? undefined,
                   }}
                   members={assignableMembers}
                   epics={selectableEpics}
+                  epicHint={
+                    storyLabel
+                      ? `La épica viene de su historia ${storyLabel}.`
+                      : undefined
+                  }
                   submitLabel="Guardar cambios"
                   submittingLabel="Guardando..."
                   onSubmit={(values) => handleSave(item, values)}
@@ -286,7 +298,12 @@ function TaskDialog({
                       <dt>Épica</dt>
                       <dd>
                         {currentEpic?.title ??
-                          (item.parent_id ? "Épica archivada" : "Sin épica")}
+                          (epicId ? "Épica archivada" : "Sin épica")}
+                        {storyLabel && (
+                          <span className="task-dialog-story">
+                            Por su historia {storyLabel}
+                          </span>
+                        )}
                       </dd>
                     </div>
                     <div>

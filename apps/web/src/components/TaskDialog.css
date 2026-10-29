@@ -79,6 +79,14 @@
   overflow-wrap: anywhere;
 }
 
+/* Épica heredada: de qué historia viene */
+.task-dialog-story {
+  display: block;
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .task-dialog-section {
   margin: 0 0 4px;
   color: #626f86;
