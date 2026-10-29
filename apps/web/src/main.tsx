@@ -12,6 +12,7 @@ import BoardPage from "./pages/BoardPage";
 import EpicsPage from "./pages/EpicsPage";
 import SprintsPage from "./pages/SprintsPage";
 import CreateProjectPage from "./pages/CreateProjectPage";
+import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import MyTasksPage from "./pages/MyTasksPage";
 import "./index.css";
@@ -55,6 +56,10 @@ createRoot(document.getElementById("root")!).render(
               <Route
                 path="/projects/:projectId/sprints"
                 element={<SprintsPage />}
+              />
+              <Route
+                path="/projects/:projectId/dashboard"
+                element={<DashboardPage />}
               />
 
               <Route path="/settings" element={<div>Configuracion</div>} />
