@@ -154,4 +154,29 @@ describe("Users API", () => {
       expect(response.body.email).toBe("propio@test.cl");
     });
   });
+
+  describe("ids que no son UUID", () => {
+    test("GET /api/users/:id responde 404", async () => {
+      const response = await request(app).get("/api/users/abc");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Usuario no encontrado");
+    });
+
+    test("PUT /api/users/:id responde 404", async () => {
+      const response = await request(app)
+        .put("/api/users/abc")
+        .send({ name: "Usuario", email: "usuario@test.cl" });
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Usuario no encontrado");
+    });
+
+    test("DELETE /api/users/:id responde 404", async () => {
+      const response = await request(app).delete("/api/users/abc");
+
+      expect(response.status).toBe(404);
+      expect(response.body.message).toBe("Usuario no encontrado");
+    });
+  });
 });
