@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
@@ -134,6 +134,11 @@ const board: Board = {
   wip_limits: {},
 };
 
+// Muestra la búsqueda de la URL para comprobar qué guarda el tablero en ella
+function SearchProbe() {
+  return <p data-testid="search">{useLocation().search}</p>;
+}
+
 function renderPage(search = "") {
   render(
     withSession(
@@ -141,7 +146,15 @@ function renderPage(search = "") {
         <Routes>
           <Route path="/projects" element={<h1>Listado</h1>} />
           <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
-          <Route path="/projects/:projectId/board" element={<BoardPage />} />
+          <Route
+            path="/projects/:projectId/board"
+            element={
+              <>
+                <BoardPage />
+                <SearchProbe />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>,
     ),
@@ -1331,6 +1344,45 @@ describe("BoardPage", () => {
       });
 
       expect(within(dialog).getByText("Archivada")).toBeInTheDocument();
+    });
+
+    test("con ?task= en la URL abre esa ficha al cargar el tablero", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage("?task=1");
+
+      expect(
+        await screen.findByRole("dialog", { name: "Diseñar login" }),
+      ).toBeInTheDocument();
+      expect(mockedGetWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        expect.anything(),
+      );
+    });
+
+    test("abrir la ficha la guarda en la URL y cerrarla la quita, sin perder los filtros", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage("?q=login");
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Diseñar login",
+      });
+
+      expect(screen.getByTestId("search")).toHaveTextContent("?q=login&task=1");
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Cerrar" }),
+      );
+
+      expect(screen.getByTestId("search")).toHaveTextContent(/^\?q=login$/);
     });
   });
 

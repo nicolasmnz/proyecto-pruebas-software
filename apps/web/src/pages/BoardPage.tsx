@@ -49,14 +49,15 @@ function BoardPage() {
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
-  // Tarea cuya ficha está abierta
-  const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [isLimitsOpen, setIsLimitsOpen] = useState(false);
   const [isArchiveAllOpen, setIsArchiveAllOpen] = useState(false);
   const [isArchivingAll, setIsArchivingAll] = useState(false);
   const [archiveAllError, setArchiveAllError] = useState<string | null>(null);
   // Los filtros viven en la URL para poder compartir o recargar la vista
   const [searchParams, setSearchParams] = useSearchParams();
+  // Tarea cuya ficha está abierta (?task=): permite enlazar una tarea, por
+  // ejemplo desde «Mis tareas»
+  const openItemId = searchParams.get("task");
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -152,9 +153,28 @@ function BoardPage() {
     if (next.priority) params.set("priority", next.priority);
     if (next.assignee) params.set("assignee", next.assignee);
     if (next.epic) params.set("epic", next.epic);
+    if (openItemId) params.set("task", openItemId);
 
     // Escribir en el buscador no llena el historial del navegador
     setSearchParams(params, { replace: true });
+  }
+
+  // Abrir o cerrar la ficha no llena el historial del navegador
+  function setOpenItemId(itemId: string | null) {
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+
+        if (itemId) {
+          params.set("task", itemId);
+        } else {
+          params.delete("task");
+        }
+
+        return params;
+      },
+      { replace: true },
+    );
   }
 
   const allItems = state.board.columns.flatMap((column) => column.items);
