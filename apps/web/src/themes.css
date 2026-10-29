@@ -4,6 +4,8 @@
  */
 
 :root {
+  color-scheme: light;
+
   /* Fondos */
   --color-bg: #fff;
   --color-surface: #fff;
@@ -13,6 +15,8 @@
   --color-neutral-strong: #e9ebee;
   --color-hover-soft: #f8fafd;
   --color-pressed-soft: #eef2f9;
+  /* Contadores y fondos de botones de las columnas */
+  --color-chip: #dfe1e6;
 
   /* Bordes */
   --color-border: #dfe1e6;
@@ -54,4 +58,217 @@
   /* Sombras y fondo de los diálogos */
   --shadow-rgb: 9 30 66;
   --color-backdrop: rgb(9 30 66 / 40%);
+}
+
+/* Tema oscuro */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #1d2125;
+  --color-surface: #22272b;
+  --color-surface-subtle: #161a1d;
+  --color-surface-hover: #2c333a;
+  --color-neutral: #2c333a;
+  --color-neutral-strong: #38414a;
+  --color-hover-soft: #282e33;
+  --color-pressed-soft: #333b43;
+  --color-chip: #38414a;
+
+  --color-border: #38414a;
+  --color-border-strong: #4c5561;
+
+  --color-text-strong: #dee4ea;
+  --color-text: #c7d1db;
+  --color-text-secondary: #a8b5c2;
+  --color-text-subtle: #96a3b3;
+
+  --color-accent: #579dff;
+  --color-accent-hover: #85b8ff;
+  --color-accent-strong: #85b8ff;
+  --color-accent-subtle: #1c2b41;
+  --color-accent-muted: #09326c;
+  --color-accent-disabled: #2c4565;
+  --color-on-accent: #161a1d;
+
+  --color-on-solid: #fff;
+
+  --color-danger: #f87168;
+  --color-danger-hover: #fd9891;
+  --color-danger-text: #fd9891;
+  --color-danger-subtle: #5d1f1a;
+  --color-danger-surface: #42221f;
+  --color-on-danger: #161a1d;
+  --color-success: #4bce97;
+  --color-success-text: #7ee2b8;
+  --color-success-subtle: #1c3329;
+  --color-warning-text: #f8e6a0;
+  --color-warning-subtle: #533f04;
+  --color-warning-surface: #332e1b;
+  --color-epic: #b8acf6;
+
+  --shadow-rgb: 0 0 0;
+  --color-backdrop: rgb(0 0 0 / 60%);
+}
+
+/* Alto contraste: negro sobre blanco y acento propio (ignora el elegido) */
+:root[data-theme="contrast"] {
+  color-scheme: light;
+
+  --color-bg: #fff;
+  --color-surface: #fff;
+  --color-surface-subtle: #fff;
+  --color-surface-hover: #ebebeb;
+  --color-neutral: #ebebeb;
+  --color-neutral-strong: #d6d6d6;
+  --color-hover-soft: #ebebeb;
+  --color-pressed-soft: #d6d6d6;
+  --color-chip: #d6d6d6;
+
+  --color-border: #000;
+  --color-border-strong: #000;
+
+  --color-text-strong: #000;
+  --color-text: #000;
+  --color-text-secondary: #1a1a1a;
+  --color-text-subtle: #333;
+
+  --color-accent: #0040a3;
+  --color-accent-hover: #002e75;
+  --color-accent-strong: #002e75;
+  --color-accent-subtle: #e3ecff;
+  --color-accent-muted: #c7d8ff;
+  --color-accent-disabled: #6b7a94;
+  --color-on-accent: #fff;
+
+  --color-on-solid: #fff;
+
+  --color-danger: #a1000c;
+  --color-danger-hover: #7a0009;
+  --color-danger-text: #8a000a;
+  --color-danger-subtle: #ffe3e3;
+  --color-danger-surface: #fff0f0;
+  --color-on-danger: #fff;
+  --color-success: #00643a;
+  --color-success-text: #00512f;
+  --color-success-subtle: #e2f6ec;
+  --color-warning-text: #4d3700;
+  --color-warning-subtle: #ffefbf;
+  --color-warning-surface: #fff7d9;
+  --color-epic: #3b2994;
+
+  --shadow-rgb: 0 0 0;
+  --color-backdrop: rgb(0 0 0 / 70%);
+
+  /* Los colores de los avatares no llegan a 7:1 con texto blanco */
+  --color-avatar-override: #000;
+}
+
+/* Alto contraste oscuro: blanco sobre negro, para usarlo de noche */
+:root[data-theme="contrast-dark"] {
+  color-scheme: dark;
+
+  --color-bg: #000;
+  --color-surface: #000;
+  --color-surface-subtle: #000;
+  --color-surface-hover: #1f1f1f;
+  --color-neutral: #1f1f1f;
+  --color-neutral-strong: #333;
+  --color-hover-soft: #1f1f1f;
+  --color-pressed-soft: #333;
+  --color-chip: #333;
+
+  --color-border: #fff;
+  --color-border-strong: #fff;
+
+  --color-text-strong: #fff;
+  --color-text: #fff;
+  --color-text-secondary: #e6e6e6;
+  --color-text-subtle: #ccc;
+
+  --color-accent: #8cb4ff;
+  --color-accent-hover: #b8d0ff;
+  --color-accent-strong: #b8d0ff;
+  --color-accent-subtle: #001a40;
+  --color-accent-muted: #0a2a5c;
+  --color-accent-disabled: #5c6f91;
+  --color-on-accent: #000;
+
+  --color-on-solid: #000;
+
+  --color-danger: #ff8080;
+  --color-danger-hover: #ffa3a3;
+  --color-danger-text: #ffa3a3;
+  --color-danger-subtle: #3d0000;
+  --color-danger-surface: #2a0000;
+  --color-on-danger: #000;
+  --color-success: #5fe0a0;
+  --color-success-text: #8af0bd;
+  --color-success-subtle: #002914;
+  --color-warning-text: #ffe08a;
+  --color-warning-subtle: #3d2e00;
+  --color-warning-surface: #2a2000;
+  --color-epic: #c9bfff;
+
+  --shadow-rgb: 0 0 0;
+  --color-backdrop: rgb(0 0 0 / 70%);
+
+  /* Avatares blancos con texto negro, como en el alto contraste claro */
+  --color-avatar-override: #fff;
+  /* Sobre el fondo negro, la sombra no separa los diálogos de la página */
+  --color-dialog-ring: #fff;
+}
+
+/* Colores de acento (el azul es el de base). Alto contraste no los usa */
+:root[data-accent="green"] {
+  --color-accent: #1a7a50;
+  --color-accent-hover: #146240;
+  --color-accent-strong: #146240;
+  --color-accent-subtle: #e3fcef;
+  --color-accent-muted: #c6f3dd;
+  --color-accent-disabled: #8fcfb0;
+}
+
+:root[data-accent="purple"] {
+  --color-accent: #6e5dc6;
+  --color-accent-hover: #5e4db2;
+  --color-accent-strong: #5241a3;
+  --color-accent-subtle: #f3f0ff;
+  --color-accent-muted: #dfd8fd;
+  --color-accent-disabled: #b8acf6;
+}
+
+:root[data-accent="orange"] {
+  --color-accent: #a54800;
+  --color-accent-hover: #873b00;
+  --color-accent-strong: #873b00;
+  --color-accent-subtle: #fff3eb;
+  --color-accent-muted: #fedec8;
+  --color-accent-disabled: #f5b48a;
+}
+
+:root[data-theme="dark"][data-accent="green"] {
+  --color-accent: #4bce97;
+  --color-accent-hover: #7ee2b8;
+  --color-accent-strong: #7ee2b8;
+  --color-accent-subtle: #1c3329;
+  --color-accent-muted: #164b35;
+  --color-accent-disabled: #23483a;
+}
+
+:root[data-theme="dark"][data-accent="purple"] {
+  --color-accent: #9f8fef;
+  --color-accent-hover: #b8acf6;
+  --color-accent-strong: #b8acf6;
+  --color-accent-subtle: #2b273f;
+  --color-accent-muted: #352c63;
+  --color-accent-disabled: #3d3762;
+}
+
+:root[data-theme="dark"][data-accent="orange"] {
+  --color-accent: #fea362;
+  --color-accent-hover: #fec195;
+  --color-accent-strong: #fec195;
+  --color-accent-subtle: #38291e;
+  --color-accent-muted: #5f3811;
+  --color-accent-disabled: #5a3f2a;
 }

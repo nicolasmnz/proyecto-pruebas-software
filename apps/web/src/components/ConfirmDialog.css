@@ -15,7 +15,10 @@
   padding: 24px;
   border-radius: 8px;
   background: var(--color-surface);
-  box-shadow: 0 8px 24px rgb(var(--shadow-rgb) / 25%);
+  /* El anillo solo se ve en alto contraste, donde la sombra no separa */
+  box-shadow:
+    0 0 0 1px var(--color-dialog-ring, transparent),
+    0 8px 24px rgb(var(--shadow-rgb) / 25%);
   color: var(--color-text);
 }
 

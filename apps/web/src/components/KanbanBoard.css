@@ -43,7 +43,7 @@
   gap: 4px;
   padding: 0 6px;
   border-radius: 8px;
-  background: var(--color-border);
+  background: var(--color-chip);
   color: var(--color-text-secondary);
   font-size: 12px;
   line-height: 16px;
@@ -89,7 +89,7 @@
 }
 
 .kanban-add-button:hover {
-  background: var(--color-border);
+  background: var(--color-chip);
 }
 
 .kanban-add-button:focus-visible {
@@ -133,7 +133,7 @@
 }
 
 .kanban-column-action:hover {
-  background: var(--color-border);
+  background: var(--color-chip);
 }
 
 .kanban-column-action:focus-visible {

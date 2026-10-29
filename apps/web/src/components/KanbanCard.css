@@ -94,8 +94,8 @@
 }
 
 .kanban-assignee.is-empty {
-  background: var(--color-border);
-  color: var(--color-text-subtle);
+  background: var(--color-chip);
+  color: var(--color-text-secondary);
 }
 
 .kanban-card[draggable="true"] {
