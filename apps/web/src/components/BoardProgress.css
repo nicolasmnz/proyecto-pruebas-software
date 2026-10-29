@@ -13,7 +13,7 @@
 
 .board-progress-header h2 {
   margin: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -22,7 +22,7 @@
 
 .board-progress-header p {
   margin: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 20px;
 }
@@ -31,13 +31,13 @@
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
-  background: #dfe1e6;
+  background: var(--color-border);
 }
 
 .board-progress-fill {
   height: 100%;
   border-radius: 4px;
-  background: #1f845a;
+  background: var(--color-success);
   transition: width 0.3s;
 }
 

@@ -1,0 +1,57 @@
+/*
+ * Colores de la aplicación. Cada variable nombra una función (texto, fondo,
+ * acento...) y no un color: los temas solo cambian estos valores.
+ */
+
+:root {
+  /* Fondos */
+  --color-bg: #fff;
+  --color-surface: #fff;
+  --color-surface-subtle: #f7f8f9;
+  --color-surface-hover: #f8f9fa;
+  --color-neutral: #f1f2f4;
+  --color-neutral-strong: #e9ebee;
+  --color-hover-soft: #f8fafd;
+  --color-pressed-soft: #eef2f9;
+
+  /* Bordes */
+  --color-border: #dfe1e6;
+  --color-border-strong: #c1c7d0;
+
+  /* Texto */
+  --color-text-strong: #1f1f1f;
+  --color-text: #292a2e;
+  --color-text-secondary: #44546f;
+  --color-text-subtle: #626f86;
+
+  /* Acento: botones principales, enlaces, foco y elementos activos */
+  --color-accent: #0c66e4;
+  --color-accent-hover: #0055cc;
+  --color-accent-strong: #0055cc;
+  --color-accent-subtle: #e9f2ff;
+  --color-accent-muted: #dce9fd;
+  --color-accent-disabled: #8fb8f6;
+  --color-on-accent: #fff;
+
+  /* Texto sobre los colores fijos de los avatares */
+  --color-on-solid: #fff;
+
+  /* Estados */
+  --color-danger: #c9372c;
+  --color-danger-hover: #ae2e24;
+  --color-danger-text: #ae2e24;
+  --color-danger-subtle: #ffd5d2;
+  --color-danger-surface: #ffeceb;
+  --color-on-danger: #fff;
+  --color-success: #1f845a;
+  --color-success-text: #216e4e;
+  --color-success-subtle: #dcfff1;
+  --color-warning-text: #7f5f01;
+  --color-warning-subtle: #fce4a6;
+  --color-warning-surface: #fff7d6;
+  --color-epic: #5e4db2;
+
+  /* Sombras y fondo de los diálogos */
+  --shadow-rgb: 9 30 66;
+  --color-backdrop: rgb(9 30 66 / 40%);
+}

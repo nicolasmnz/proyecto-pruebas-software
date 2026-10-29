@@ -2,7 +2,7 @@
   max-width: 560px;
   margin: 0 auto; /* centra horizontalmente */
   padding: 24px 0;
-  color: #292a2e;
+  color: var(--color-text);
 }
 
 .create-project h1 {
@@ -16,5 +16,5 @@
   margin: 0 0 24px;
   font-size: 14px;
   line-height: 20px;
-  color: #626f86;
+  color: var(--color-text-subtle);
 }

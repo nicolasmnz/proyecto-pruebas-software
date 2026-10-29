@@ -6,7 +6,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: rgb(9 30 66 / 40%);
+  background: var(--color-backdrop);
 }
 
 .dialog {
@@ -14,9 +14,9 @@
   width: min(440px, 100%);
   padding: 24px;
   border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 8px 24px rgb(9 30 66 / 25%);
-  color: #292a2e;
+  background: var(--color-surface);
+  box-shadow: 0 8px 24px rgb(var(--shadow-rgb) / 25%);
+  color: var(--color-text);
 }
 
 .dialog h2 {
@@ -27,7 +27,7 @@
 }
 
 .dialog-body {
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 20px;
 }

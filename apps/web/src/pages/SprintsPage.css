@@ -1,7 +1,7 @@
 .sprints-page {
   max-width: 1120px;
   margin: 0 auto;
-  color: #292a2e;
+  color: var(--color-text);
 }
 
 .sprints-header {
@@ -24,8 +24,8 @@
   margin: 0 0 16px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: #fff7d6;
-  color: #7f5f01;
+  background: var(--color-warning-surface);
+  color: var(--color-warning-text);
   font-size: 14px;
   line-height: 20px;
 }
@@ -58,9 +58,9 @@
 .sprints-empty {
   margin: 0 0 24px;
   padding: 24px;
-  border: 1px dashed #dfe1e6;
+  border: 1px dashed var(--color-border);
   border-radius: 8px;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 14px;
   text-align: center;
 }
@@ -88,6 +88,6 @@
 
 .sprints-backlog-header p {
   margin: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }

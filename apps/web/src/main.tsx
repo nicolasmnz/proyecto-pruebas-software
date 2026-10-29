@@ -15,6 +15,7 @@ import CreateProjectPage from "./pages/CreateProjectPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import MyTasksPage from "./pages/MyTasksPage";
+import "./themes.css";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(

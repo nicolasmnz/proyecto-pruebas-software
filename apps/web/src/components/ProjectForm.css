@@ -13,11 +13,11 @@
 .field label {
   font-size: 12px;
   font-weight: 600;
-  color: #626f86;
+  color: var(--color-text-subtle);
 }
 
 .required {
-  color: #c9372c;
+  color: var(--color-danger);
 }
 
 .field input,
@@ -25,10 +25,10 @@
   box-sizing: border-box;
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #dfe1e6;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: #fff;
-  color: #292a2e;
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
   font-size: 14px;
   line-height: 20px;
@@ -39,15 +39,15 @@
 
 .field input:hover,
 .field textarea:hover {
-  background: #f8f9fa;
+  background: var(--color-surface-hover);
 }
 
 .field input:focus,
 .field textarea:focus {
   outline: none;
-  background: #fff;
-  border-color: #0c66e4;
-  box-shadow: 0 0 0 1px #0c66e4;
+  background: var(--color-surface);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
 }
 
 .field textarea {
@@ -64,8 +64,8 @@
   margin: 0;
   padding: 8px 12px;
   border-radius: 6px;
-  background: #ffeceb;
-  color: #ae2e24;
+  background: var(--color-danger-surface);
+  color: var(--color-danger-text);
   font-size: 14px;
   line-height: 20px;
 }

@@ -150,7 +150,8 @@ function RoulettePanel({
                     starts[index] + slice.probability * 360,
                   )}
                   fill={SLICE_COLORS[index % SLICE_COLORS.length]}
-                  stroke="#fff"
+                  // El separador toma el color de fondo del tema
+                  style={{ stroke: "var(--color-surface)" }}
                   strokeWidth="0.01"
                 />
               ))

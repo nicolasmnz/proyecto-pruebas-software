@@ -10,7 +10,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: #0c66e4;
+  color: var(--color-accent);
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -28,7 +28,7 @@
   align-items: center;
   gap: 8px 12px;
   margin: 0;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 14px;
   line-height: 20px;
 }
@@ -63,5 +63,5 @@
 
 .epics-summary-percentage {
   flex-shrink: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
 }
