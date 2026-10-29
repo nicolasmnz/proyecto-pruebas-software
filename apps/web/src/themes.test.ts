@@ -89,6 +89,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["--color-accent", "--color-surface"],
   ["--color-accent", "--color-accent-subtle"],
   ["--color-accent-strong", "--color-accent-subtle"],
+  ["--color-text", "--color-accent-subtle"],
+  ["--color-text-secondary", "--color-accent-subtle"],
   ["--color-on-accent", "--color-accent"],
   ["--color-on-accent", "--color-accent-hover"],
   ["--color-danger-text", "--color-surface"],

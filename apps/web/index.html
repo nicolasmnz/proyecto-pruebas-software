@@ -11,6 +11,53 @@
       rel="stylesheet"
     />
     <title>Mira</title>
+    <script>
+      // Aplica el tema guardado antes de que cargue la app, para que no
+      // parpadee. Repite las reglas de applyTheme (src/utils/theme.ts)
+      (function () {
+        var theme = "system";
+        var accent = "blue";
+        var highContrast = false;
+
+        try {
+          var stored = JSON.parse(localStorage.getItem("mira.theme")) || {};
+
+          if (["system", "light", "dark"].indexOf(stored.theme) >= 0) {
+            theme = stored.theme;
+          }
+
+          if (
+            ["blue", "green", "purple", "orange"].indexOf(stored.accent) >= 0
+          ) {
+            accent = stored.accent;
+          }
+
+          highContrast = stored.highContrast === true;
+        } catch (error) {
+          // Sin preferencia legible se usan los valores por defecto
+        }
+
+        if (theme === "system") {
+          theme =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+        }
+
+        if (highContrast) {
+          theme = theme === "dark" ? "contrast-dark" : "contrast";
+        }
+
+        var root = document.documentElement;
+
+        root.setAttribute("data-theme", theme);
+
+        if (!highContrast && accent !== "blue") {
+          root.setAttribute("data-accent", accent);
+        }
+      })();
+    </script>
   </head>
 
   <body>
