@@ -1,0 +1,54 @@
+.login-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 24px 16px;
+  background: #f7f8f9;
+  color: #292a2e;
+}
+
+.login-card {
+  box-sizing: border-box;
+  width: min(400px, 100%);
+  padding: 32px;
+  border: 1px solid #dfe1e6;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(9 30 66 / 12%);
+}
+
+.login-brand {
+  margin: 0 0 4px;
+  color: #0c66e4;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.login-card h1 {
+  margin: 0 0 24px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.field-error {
+  margin: 0;
+  color: #ae2e24;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: #c9372c;
+}
+
+.login-submit {
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 24px 20px;
+  }
+}

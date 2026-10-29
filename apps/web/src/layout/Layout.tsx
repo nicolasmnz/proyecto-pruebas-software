@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { startTransition, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Archive, Settings, FolderClosed, Menu, X } from "lucide-react";
+import { Archive, Settings, FolderClosed, LogOut, Menu, X } from "lucide-react";
 
 import SideBar from "../components/SideBar";
 import Button from "../components/Button";
+import { useAuth } from "../context/authContext";
 import { useProjects } from "../context/projectsContext";
 import "./Layout.css";
 
 function Layout() {
   const navigate = useNavigate();
   const { projects, archivedProjects } = useProjects();
+  const { user, logout } = useAuth();
   // Solo tiene efecto en pantallas pequeñas, donde la barra lateral se oculta
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -42,6 +44,15 @@ function Layout() {
       icon: Settings,
     },
   ];
+
+  function handleLogout() {
+    setIsMenuOpen(false);
+    navigate("/login", { replace: true });
+    // El router navega dentro de una transición: cerrar la sesión en otra
+    // hace que ambos cambios se apliquen juntos. Si no, RequireAuth vería un
+    // instante sin usuario en esta página y mandaría a /login?redirect=...
+    startTransition(() => logout());
+  }
 
   function closeMenuOnNavigation(event: MouseEvent<HTMLDivElement>) {
     if ((event.target as HTMLElement).closest("a")) {
@@ -82,7 +93,27 @@ function Layout() {
         }
         onClick={closeMenuOnNavigation}
       >
-        <SideBar items={sideBarItems}>
+        <SideBar
+          items={sideBarItems}
+          footer={
+            user && (
+              <>
+                <p className="sidebar-user">
+                  <span className="sidebar-user-name">{user.name}</span>
+                  <span className="sidebar-user-email">{user.email}</span>
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary sidebar-logout"
+                  onClick={handleLogout}
+                >
+                  <LogOut size={16} aria-hidden="true" />
+                  Cerrar sesión
+                </button>
+              </>
+            )
+          }
+        >
           <Button
             content="Nuevo proyecto"
             onClick={() => {

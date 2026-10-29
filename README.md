@@ -10,6 +10,12 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 ## Funcionalidades
 
+**Sesión** (`/login`) — ver [Inicio de sesión](#inicio-de-sesión)
+
+- Iniciar sesión con correo y contraseña; las páginas internas piden sesión y, al entrar, se vuelve a la página pedida.
+- La barra lateral muestra al usuario conectado y el botón *Cerrar sesión*.
+- Los proyectos, tareas y épicas se crean a nombre del usuario conectado.
+
 **Proyectos**
 
 - Listar, buscar y ver el detalle de proyectos.
@@ -184,15 +190,25 @@ Un sprint es una iteración del proyecto. Las tareas sin sprint forman el *Backl
 - **Épicas:** no se asignan a sprints, porque agrupan trabajo de varias iteraciones.
 - **Proyectos archivados:** sus sprints son de solo lectura.
 
+## Inicio de sesión
+
+La interfaz pide iniciar sesión con un [usuario de prueba](#usuarios-de-prueba) (por ejemplo, `ana@pruebas.cl` / `123456`).
+
+- **Validación:** los campos vacíos se indican sin llamar a la API. Con credenciales incorrectas se muestra *Correo o contraseña incorrectos*, y con una cuenta desactivada, *Usuario desactivado*.
+- **Páginas internas:** sin sesión redirigen a `/login?redirect=…` y, al entrar, se vuelve a esa página. Solo se aceptan rutas internas como destino.
+- **Sesión:** se guarda en `localStorage` (`mira.session`), así que sigue al recargar o cerrar el navegador. *Cerrar sesión* la borra y vuelve al login.
+- **Autoría:** `createdBy` de proyectos, tareas y épicas es el usuario conectado.
+- **Limitación:** `POST /api/auth/login` no entrega un token, así que la sesión controla la navegación, pero la API sigue abierta. Una sesión segura con token sería una historia de backend aparte.
+
 ## Pruebas
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
-| Unitarias API | Jest | 31 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 205 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 157 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 23 | `npm run test:e2e` |
+| Unitarias API | Jest | 34 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 235 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 169 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 28 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -231,6 +247,8 @@ npm run dev:web            # terminal 2
 npm run test:e2e           # terminal 3
 ```
 
+Antes de los specs, `tests/e2e/auth.setup.ts` inicia sesión con `ana@pruebas.cl` y guarda la sesión en `playwright/.auth/user.json` (ignorado por git); los demás specs la reutilizan. `login.spec.ts` parte sin sesión.
+
 ```bash
 npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el navegador
 npx playwright show-report                                         # informe de la última ejecución
@@ -244,10 +262,14 @@ npx playwright show-report                                         # informe de 
 | ------- | ----- |
 | `components/BoardProgress.test.tsx` | Barra de progreso del tablero |
 | `components/EpicsSummary.test.tsx` | Resumen de épicas en el detalle del proyecto |
-| `layout/Layout.test.tsx` | Layout y barra lateral |
+| `context/AuthProvider.test.tsx` | Sesión: iniciar, recuperar al recargar y cerrar |
+| `context/authContext.test.tsx` | Usuario de la sesión en las páginas internas |
+| `layout/Layout.test.tsx` | Layout, barra lateral, usuario conectado y cierre de sesión |
+| `layout/RequireAuth.test.tsx` | Redirección al login de las páginas internas |
 | `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea y épica de cada tarea |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
 | `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
+| `pages/LoginPage.test.tsx` | Inicio de sesión: validación, errores de la API y vuelta a la página pedida |
 | `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
 | `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
@@ -296,7 +318,7 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 
 ## Alcance actual
 
-Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto y autenticación real en la interfaz (las altas usan un usuario de ejemplo fijo).
+Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto y protección de la API con token (la sesión de la interfaz solo controla la navegación).
 
 ## Flujo de trabajo
 

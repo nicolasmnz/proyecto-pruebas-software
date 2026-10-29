@@ -30,6 +30,7 @@ import KanbanBoard from "../components/KanbanBoard";
 import TaskDialog from "../components/TaskDialog";
 import WipLimitsDialog from "../components/WipLimitsDialog";
 import type { TaskFormValues } from "../components/TaskForm";
+import { useCurrentUser } from "../context/authContext";
 
 import { hasActiveFilters, matchesFilters } from "../utils/boardFilters";
 import type { BoardFilters } from "../utils/boardFilters";
@@ -41,10 +42,9 @@ type Result =
   | { status: "not-found" }
   | { status: "error"; message: string };
 
-const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
-
 function BoardPage() {
   const { projectId = "" } = useParams();
+  const currentUser = useCurrentUser();
   const [attempt, setAttempt] = useState(0);
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
@@ -186,7 +186,7 @@ function BoardPage() {
     const item = await createWorkItem(project.id, {
       ...values,
       status,
-      createdBy: TEMP_USER_ID,
+      createdBy: currentUser.id,
     });
 
     // La tarea nueva queda al final de su columna, sin recargar el tablero
