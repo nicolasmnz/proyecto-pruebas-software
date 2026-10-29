@@ -3,10 +3,10 @@
   flex-direction: column;
   gap: 12px;
   padding: 16px 20px;
-  border: 1px solid #dfe1e6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
-  color: #292a2e;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .epic-card-header {
@@ -18,7 +18,7 @@
 
 .epic-card-key {
   margin: 0;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -43,8 +43,8 @@
 .epic-status {
   padding: 2px 6px;
   border-radius: 3px;
-  background: #f1f2f4;
-  color: #44546f;
+  background: var(--color-neutral);
+  color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -52,18 +52,18 @@
 }
 
 .epic-status.is-in_progress {
-  background: #e9f2ff;
-  color: #0055cc;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-strong);
 }
 
 .epic-status.is-done {
-  background: #dcfff1;
-  color: #216e4e;
+  background: var(--color-success-subtle);
+  color: var(--color-success-text);
 }
 
 .epic-card-description {
   margin: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 22px;
   white-space: pre-line;
@@ -80,7 +80,7 @@
 }
 
 .epic-card-meta dt {
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
 }
@@ -91,7 +91,7 @@
 
 .epic-card-progress p {
   margin: 0 0 6px;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 20px;
 }

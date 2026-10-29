@@ -55,6 +55,11 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Avance del proyecto, del sprint activo y de cada épica.
 - Carga pendiente por integrante y tareas vencidas con su responsable.
 
+**Configuración** (`/settings`) — ver [Temas](#temas)
+
+- Tema claro, oscuro o según el sistema, alto contraste (claro u oscuro) y cuatro colores de acento.
+- La elección se aplica al instante en toda la aplicación, incluido el login, y se recuerda en el navegador.
+
 ## Integrantes
 
 | Nombre        | Rol en el Equipo      | Rol USM | GitHub |
@@ -237,15 +242,28 @@ Página con las tareas asignadas al usuario conectado, a la que se llega desde *
 - **Terminadas:** se ocultan por defecto; *Mostrar terminadas* las incluye y queda en la URL (`?done=1`).
 - **Abrir una tarea:** lleva al tablero de su proyecto con la ficha abierta (`/projects/:id/board?task=<id>`).
 
+## Temas
+
+La página *Configuración* (`/settings`, en la barra lateral) cambia la apariencia de la aplicación.
+
+- **Tema:** *Según el sistema* (por defecto) sigue la preferencia clara u oscura del sistema operativo y cambia sola cuando esta cambia; *Claro* y *Oscuro* la fijan.
+- **Alto contraste:** casilla que se aplica sobre el tema: negro sobre blanco en claro y blanco sobre negro en oscuro. Con *Según el sistema* pasa solo al alto contraste oscuro de noche, sin que haya que volver a elegir.
+- **Color de acento:** azul (por defecto), verde, morado o naranja; colorea botones principales, enlaces y selecciones. El alto contraste usa su propio acento, así que la elección se deshabilita mientras está activo y se conserva para cuando se quite.
+- **Dónde se guarda:** en el `localStorage` del navegador (`mira.theme`), por lo que es propia de cada navegador y no de la cuenta. Se mantiene al cerrar sesión.
+- **Sin parpadeo:** un script en `apps/web/index.html` aplica el tema guardado antes de cargar la aplicación. `themeScript.test.ts` comprueba que da el mismo resultado que `applyTheme` (`utils/theme.ts`).
+- **Contraste:** los textos cumplen WCAG AA (4,5:1) en los temas claro y oscuro con cualquier acento, y AAA (7:1) en los dos altos contrastes. Lo verifica `themes.test.ts` leyendo los colores de `themes.css`.
+
+Los colores están definidos como variables en `apps/web/src/themes.css`: `:root` tiene el tema claro y `[data-theme]` / `[data-accent]` en `<html>` los sobrescriben. Los CSS de los componentes solo usan `var(--color-…)`. Para añadir un color nuevo, defínelo en el tema claro, en `dark`, `contrast` y `contrast-dark` (`themes.test.ts` falla si falta en alguno) y, si es un par de texto y fondo, agrégalo a `TEXT_PAIRS` en ese test.
+
 ## Pruebas
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 319 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 34 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 38 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -313,8 +331,9 @@ npx playwright show-report                                         # informe de 
 | `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
 | `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos, y *Ver panel* según el rol |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
+| `pages/SettingsPage.test.tsx` | Configuración: tema, acento, seguir al sistema, alto contraste claro y oscuro, y preferencia guardada |
 
-Además hay pruebas de utilidades en `utils/*.test.ts`, de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
+Además hay pruebas de utilidades en `utils/*.test.ts`, de los temas en `themes.test.ts` (contraste y variables completas) y `themeScript.test.ts` (script de `index.html`), de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
 
 ## API
 

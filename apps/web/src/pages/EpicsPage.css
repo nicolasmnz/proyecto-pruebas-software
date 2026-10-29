@@ -1,7 +1,7 @@
 .epics-page {
   max-width: 1120px;
   margin: 0 auto;
-  color: #292a2e;
+  color: var(--color-text);
 }
 
 .epics-header {
@@ -40,9 +40,9 @@
 .epics-empty {
   margin: 0;
   padding: 24px;
-  border: 1px dashed #dfe1e6;
+  border: 1px dashed var(--color-border);
   border-radius: 8px;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 14px;
   text-align: center;
 }

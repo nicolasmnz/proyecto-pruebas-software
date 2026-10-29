@@ -1,7 +1,7 @@
 .dashboard-page {
   max-width: 1120px;
   margin: 0 auto;
-  color: #292a2e;
+  color: var(--color-text);
 }
 
 .dashboard-grid {
@@ -14,9 +14,9 @@
 .dashboard-card {
   min-width: 0;
   padding: 16px;
-  border: 1px solid #dfe1e6;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .dashboard-card-wide {
@@ -36,15 +36,15 @@
 .dashboard-count {
   padding: 0 8px;
   border-radius: 10px;
-  background: #ffd5d2;
-  color: #ae2e24;
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-text);
   font-size: 12px;
   line-height: 20px;
 }
 
 .dashboard-meter p {
   margin: 0 0 6px;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 20px;
 }
@@ -67,7 +67,7 @@
 
 .dashboard-muted {
   margin: 0;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 13px;
   line-height: 20px;
 }
@@ -77,13 +77,13 @@
   align-items: center;
   gap: 4px;
   margin: 0 0 8px;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 20px;
 }
 
 .dashboard-timing.is-late {
-  color: #ae2e24;
+  color: var(--color-danger-text);
   font-weight: 600;
 }
 
@@ -96,7 +96,7 @@
 }
 
 .dashboard-card a {
-  color: #0c66e4;
+  color: var(--color-accent);
   text-decoration: none;
 }
 
@@ -105,14 +105,14 @@
 }
 
 .dashboard-card a:focus-visible {
-  outline: 2px solid #0c66e4;
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 3px;
 }
 
 .dashboard-empty {
   margin: 0;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 14px;
   line-height: 20px;
 }
@@ -131,7 +131,7 @@
 .dashboard-table th,
 .dashboard-table td {
   padding: 6px 8px;
-  border-bottom: 1px solid #dfe1e6;
+  border-bottom: 1px solid var(--color-border);
   text-align: right;
 }
 
@@ -141,7 +141,7 @@
 }
 
 .dashboard-table thead th {
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
 }
@@ -149,7 +149,7 @@
 .dashboard-table tr.is-unassigned th,
 .dashboard-table tr.is-unassigned td {
   border-bottom: none;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-style: italic;
 }
 
@@ -170,7 +170,7 @@
 }
 
 .dashboard-overdue li + li {
-  border-top: 1px solid #dfe1e6;
+  border-top: 1px solid var(--color-border);
 }
 
 .dashboard-overdue-link {
@@ -181,13 +181,13 @@
 
 .dashboard-overdue-key {
   margin-right: 6px;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
 }
 
 .dashboard-overdue-late {
-  color: #ae2e24;
+  color: var(--color-danger-text);
   font-size: 13px;
   font-weight: 600;
 }
