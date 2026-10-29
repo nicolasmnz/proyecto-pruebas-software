@@ -1,0 +1,180 @@
+.my-tasks-page {
+  max-width: 880px;
+  margin: 0 auto;
+  color: #292a2e;
+}
+
+.my-tasks-header {
+  margin-bottom: 16px;
+}
+
+.my-tasks-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.my-tasks-header p {
+  margin: 4px 0 0;
+  color: #626f86;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.my-tasks-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.my-tasks-options input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #0c66e4;
+}
+
+.my-tasks-group + .my-tasks-group {
+  margin-top: 24px;
+}
+
+.my-tasks-group h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.my-tasks-group h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.my-tasks-group h2 a:hover {
+  color: #0c66e4;
+  text-decoration: underline;
+}
+
+.my-tasks-list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid #dfe1e6;
+  border-radius: 6px;
+  list-style: none;
+}
+
+.my-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 10px 12px;
+}
+
+.my-task + .my-task {
+  border-top: 1px solid #dfe1e6;
+}
+
+.my-task-link {
+  display: flex;
+  flex: 1 1 240px;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  color: #292a2e;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+}
+
+.my-task-link:hover .my-task-title {
+  color: #0c66e4;
+  text-decoration: underline;
+}
+
+.my-task-link:focus-visible {
+  outline: 2px solid #0c66e4;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.my-task-key {
+  flex-shrink: 0;
+  color: #626f86;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.my-task-title {
+  overflow-wrap: anywhere;
+}
+
+.my-task-status,
+.my-task-overdue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.my-task-status {
+  background: #f1f2f4;
+  color: #44546f;
+}
+
+.my-task-status.is-in_progress {
+  background: #e9f2ff;
+  color: #0055cc;
+}
+
+.my-task-status.is-done {
+  background: #dcfff1;
+  color: #216e4e;
+}
+
+.my-task-due {
+  color: #44546f;
+}
+
+.my-task-due.is-overdue {
+  color: #ae2e24;
+  font-weight: 600;
+}
+
+.my-task-overdue {
+  background: #ffd5d2;
+  color: #ae2e24;
+}
+
+.my-tasks-empty {
+  padding: 32px 16px;
+  border: 1px dashed #dfe1e6;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.my-tasks-empty h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.my-tasks-empty p {
+  margin: 0 auto 16px;
+  max-width: 420px;
+  color: #626f86;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.my-tasks-empty p:last-child {
+  margin-bottom: 0;
+}

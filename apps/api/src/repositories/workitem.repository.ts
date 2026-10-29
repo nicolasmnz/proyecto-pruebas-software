@@ -108,6 +108,29 @@ export async function createWorkItem(data: CreateWorkItemData) {
     return result.rows[0];
 }
 
+// Tareas asignadas a un usuario en todos los proyectos activos, de la fecha
+// límite más cercana a la más lejana; las que no tienen fecha van al final.
+// Se excluyen las épicas, las tareas archivadas y los proyectos archivados
+export async function findAssignedItems(userId: string) {
+    const result = await pool.query(
+        `
+        SELECT
+            ${BOARD_ITEM_COLUMNS},
+            p.name AS project_name
+        ${BOARD_ITEM_FROM}
+        JOIN projects p ON p.id = w.project_id
+        WHERE w.assignee_id = $1
+          AND w.type <> 'EPIC'
+          AND NOT w.is_archived
+          AND NOT p.is_archived
+        ORDER BY w.due_date ASC NULLS LAST, p.name ASC, w.item_number ASC
+        `,
+        [userId]
+    );
+
+    return result.rows;
+}
+
 // Usuarios activos que participan del proyecto: sus miembros y quien lo creó
 export async function findProjectMembers(projectId: string) {
     const result = await pool.query(

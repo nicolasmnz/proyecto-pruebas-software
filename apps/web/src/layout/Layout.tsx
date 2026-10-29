@@ -1,7 +1,15 @@
 import { startTransition, useState } from "react";
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Archive, Settings, FolderClosed, LogOut, Menu, X } from "lucide-react";
+import {
+  Archive,
+  Settings,
+  FolderClosed,
+  ListTodo,
+  LogOut,
+  Menu,
+  X,
+} from "lucide-react";
 
 import SideBar from "../components/SideBar";
 import Button from "../components/Button";
@@ -23,6 +31,11 @@ function Layout() {
   });
 
   const sideBarItems = [
+    {
+      label: "Mis tareas",
+      path: "/my-tasks",
+      icon: ListTodo,
+    },
     {
       label: "Proyectos",
       icon: FolderClosed,

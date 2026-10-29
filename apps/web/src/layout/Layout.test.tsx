@@ -198,6 +198,15 @@ describe("Layout", () => {
     ).toHaveAttribute("aria-current", "page");
   });
 
+  test("la barra lateral enlaza a Mis tareas", () => {
+    renderLayout();
+
+    expect(screen.getByRole("link", { name: "Mis tareas" })).toHaveAttribute(
+      "href",
+      "/my-tasks",
+    );
+  });
+
   test("muestra el nombre y el correo del usuario conectado", () => {
     renderLayout();
 
