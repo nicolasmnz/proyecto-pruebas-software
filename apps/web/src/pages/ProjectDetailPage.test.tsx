@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import ProjectDetailPage from "./ProjectDetailPage";
 import { getBoard } from "../api/board";
 import { getEpics } from "../api/epics";
+import { getProjectMembers } from "../api/members";
+import type { ProjectRole } from "../api/members";
 import {
   ApiError,
   archiveProject,
@@ -15,6 +17,7 @@ import {
 } from "../api/projects";
 import type { Project } from "../api/projects";
 import { ProjectsContext } from "../context/projectsContext";
+import { TEST_USER, withSession } from "../test/session";
 
 vi.mock("../api/projects", async (importOriginal) => ({
   // Se mantiene ApiError real para que funcione instanceof
@@ -36,6 +39,13 @@ vi.mock("../api/epics", async (importOriginal) => ({
   getEpics: vi.fn(),
 }));
 
+// El botón «Ver panel» depende del rol del usuario conectado
+vi.mock("../api/members", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/members")>()),
+  getProjectMembers: vi.fn(),
+}));
+
+const mockedGetProjectMembers = vi.mocked(getProjectMembers);
 const mockedGetBoard = vi.mocked(getBoard);
 const mockedGetEpics = vi.mocked(getEpics);
 const mockedGetProject = vi.mocked(getProject);
@@ -59,24 +69,32 @@ const project: Project = {
 
 function renderPage() {
   render(
-    <ProjectsContext.Provider
-      value={{
-        projects: [],
-        archivedProjects: [],
-        isLoading: false,
-        error: null,
-        reload: reloadProjects,
-      }}
-    >
-      <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}`]}>
-        <Routes>
-          <Route path="/projects" element={<h1>Listado</h1>} />
-          <Route path="/projects/archived" element={<h1>Archivados</h1>} />
-          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    </ProjectsContext.Provider>,
+    withSession(
+      <ProjectsContext.Provider
+        value={{
+          projects: [],
+          archivedProjects: [],
+          isLoading: false,
+          error: null,
+          reload: reloadProjects,
+        }}
+      >
+        <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}`]}>
+          <Routes>
+            <Route path="/projects" element={<h1>Listado</h1>} />
+            <Route path="/projects/archived" element={<h1>Archivados</h1>} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectsContext.Provider>,
+    ),
   );
+}
+
+function withRole(role: ProjectRole) {
+  mockedGetProjectMembers.mockResolvedValue([
+    { id: TEST_USER.id, name: TEST_USER.name, email: TEST_USER.email, role },
+  ]);
 }
 
 async function renderLoadedPage(initialProject: Project = project) {
@@ -98,6 +116,7 @@ describe("ProjectDetailPage", () => {
       wip_limits: {},
     });
     mockedGetEpics.mockResolvedValue([]);
+    mockedGetProjectMembers.mockResolvedValue([]);
   });
 
   test("muestra un indicador de carga", () => {
@@ -146,6 +165,37 @@ describe("ProjectDetailPage", () => {
       `/projects/${PROJECT_ID}/sprints`,
     );
   });
+
+  test.each(["OWNER", "ADMIN"] as const)(
+    "como %s enlaza al panel del proyecto",
+    async (role) => {
+      withRole(role);
+
+      await renderLoadedPage();
+
+      expect(
+        await screen.findByRole("link", { name: "Ver panel" }),
+      ).toHaveAttribute("href", `/projects/${PROJECT_ID}/dashboard`);
+      expect(mockedGetProjectMembers).toHaveBeenCalledWith(
+        PROJECT_ID,
+        expect.any(AbortSignal),
+      );
+    },
+  );
+
+  test.each(["MEMBER", "VIEWER"] as const)(
+    "como %s no muestra el panel",
+    async (role) => {
+      withRole(role);
+
+      await renderLoadedPage();
+
+      await waitFor(() => expect(mockedGetProjectMembers).toHaveBeenCalled());
+      expect(
+        screen.queryByRole("link", { name: "Ver panel" }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   test("indica cuando el proyecto no tiene descripción", async () => {
     mockedGetProject.mockResolvedValue({ ...project, description: null });

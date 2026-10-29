@@ -48,6 +48,12 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Backlog con las tareas sin sprint y movimiento de tareas entre el backlog y los sprints.
 - Cantidad de tareas y puntos por sprint, y aviso cuando hay más de un sprint activo.
 
+**Panel del proyecto** (`/projects/:id/dashboard`) — ver [Panel del proyecto](#panel-del-proyecto)
+
+- Solo para el dueño y los jefes de proyecto.
+- Avance del proyecto, del sprint activo y de cada épica.
+- Carga pendiente por integrante y tareas vencidas con su responsable.
+
 ## Integrantes
 
 | Nombre        | Rol en el Equipo      | Rol USM | GitHub |
@@ -208,6 +214,17 @@ La interfaz pide iniciar sesión con un [usuario de prueba](#usuarios-de-prueba)
 - **Autoría:** `createdBy` de proyectos, tareas y épicas es el usuario conectado.
 - **Limitación:** `POST /api/auth/login` no entrega un token, así que la sesión controla la navegación, pero la API sigue abierta. Una sesión segura con token sería una historia de backend aparte.
 
+## Panel del proyecto
+
+Resumen para quien dirige el proyecto, al que se llega con *Ver panel* desde el detalle.
+
+- **Quién lo ve:** el dueño (*OWNER*) y los jefes de proyecto (*ADMIN*) según `project_members`. Quien creó el proyecto es su dueño aunque no esté en esa tabla. A los demás, el detalle no les muestra *Ver panel* y la página les indica que es solo para la jefatura. Es un control de la interfaz: la API no tiene permisos (ver [Inicio de sesión](#inicio-de-sesión)).
+- **Avance del proyecto:** la misma barra del tablero (por puntos o, sin estimaciones, por cantidad).
+- **Sprint activo:** sus fechas, los días que quedan (o el atraso si ya pasó su fecha de término) y su avance. Si no hay ninguno se indica; si hay varios, se muestran todos.
+- **Épicas:** cada una con su avance, que cuenta sus hijos directos (ver [Épicas](#épicas)), y un enlace al tablero filtrado por ella.
+- **Carga por integrante:** tareas y puntos pendientes (ni terminados ni archivados) de cada miembro, incluidos los que no tienen tareas, de la mayor a la menor carga, más la fila *Sin asignar*. Cada fila abre el tablero filtrado por ese responsable.
+- **Tareas vencidas:** las no terminadas con fecha límite anterior a hoy, de la más atrasada, con su responsable. Cada una abre su ficha en el tablero.
+
 ## Mis tareas
 
 Página con las tareas asignadas al usuario conectado, a la que se llega desde *Mis tareas* en la barra lateral.
@@ -224,9 +241,9 @@ Página con las tareas asignadas al usuario conectado, a la que se llega desde *
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 265 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 177 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 30 | `npm run test:e2e` |
+| Componentes y utilidades web | Vitest + React Testing Library | 296 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 182 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 33 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -286,11 +303,12 @@ npx playwright show-report                                         # informe de 
 | `layout/RequireAuth.test.tsx` | Redirección al login de las páginas internas |
 | `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea (también desde `?task=`) y épica de cada tarea |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
+| `pages/DashboardPage.test.tsx` | Panel del proyecto: acceso por rol, avances, carga por integrante y vencidas |
 | `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
 | `pages/LoginPage.test.tsx` | Inicio de sesión: validación, errores de la API y vuelta a la página pedida |
 | `pages/MyTasksPage.test.tsx` | Mis tareas: agrupación, orden, vencidas, terminadas, estados vacíos y error |
 | `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
-| `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
+| `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos, y *Ver panel* según el rol |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
 
 Además hay pruebas de utilidades en `utils/*.test.ts`, de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
@@ -323,6 +341,7 @@ Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 | PATCH | `/projects/:id/work-items/:itemId/sprint` | Asignar sprint: `{ "sprintId": "..." }` (`null` la devuelve al backlog) |
 | GET / POST | `/projects/:id/sprints` | Listar / crear sprints |
 | GET / PUT / DELETE | `/projects/:id/sprints/:sprintId` | Detalle / editar / eliminar sprint |
+| GET | `/projects/:id/members` | Integrantes activos con su rol (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`); quien creó el proyecto es `OWNER` |
 
 Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que no es UUID), `409` proyecto archivado o acción no permitida en el estado actual.
 
