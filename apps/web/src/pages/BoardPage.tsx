@@ -34,6 +34,7 @@ import { useCurrentUser } from "../context/authContext";
 
 import { hasActiveFilters, matchesFilters } from "../utils/boardFilters";
 import type { BoardFilters } from "../utils/boardFilters";
+import { getEpicId, getParentStory, indexItems } from "../utils/hierarchy";
 
 import "./BoardPage.css";
 
@@ -178,12 +179,30 @@ function BoardPage() {
   }
 
   const allItems = state.board.columns.flatMap((column) => column.items);
-  const epicTitles = Object.fromEntries(
-    state.epics.map((epic) => [epic.id, epic.title]),
-  );
+  const itemsById = indexItems(state.board);
+  const titlesById = new Map(state.epics.map((epic) => [epic.id, epic.title]));
+  // Las tarjetas buscan su épica por parent_id: cada historia se registra con
+  // el título de su épica, así sus tareas muestran la épica heredada
+  const epicTitles: Record<string, string> = {};
+
+  for (const [id, title] of titlesById) {
+    epicTitles[id] = title;
+  }
+
+  for (const item of itemsById.values()) {
+    const title = item.parent_id ? titlesById.get(item.parent_id) : undefined;
+
+    if (title) {
+      epicTitles[item.id] = title;
+    }
+  }
+
+  const isVisible = (item: BoardItem) =>
+    matchesFilters(item, filters, getEpicId(item, itemsById));
   const shownCount = isFiltering
-    ? allItems.filter((item) => matchesFilters(item, filters)).length
+    ? allItems.filter(isVisible).length
     : allItems.length;
+  const openItem = openItemId ? itemsById.get(openItemId) : undefined;
 
   // Aplica un cambio al tablero ya cargado, sin volver a pedirlo
   function updateBoard(change: (board: Board) => Board) {
@@ -452,7 +471,7 @@ function BoardPage() {
         epicTitles={epicTitles}
         wipLimits={state.board.wip_limits}
         isFiltering={isFiltering}
-        isVisible={(item) => matchesFilters(item, filters)}
+        isVisible={isVisible}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
         onOpenItem={(item) => setOpenItemId(item.id)}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
@@ -513,6 +532,7 @@ function BoardPage() {
           itemId={openItemId}
           members={state.board.members}
           epics={state.epics}
+          story={openItem ? getParentStory(openItem, itemsById) : null}
           readOnly={project.is_archived}
           onClose={() => setOpenItemId(null)}
           onUpdated={handleItemUpdated}

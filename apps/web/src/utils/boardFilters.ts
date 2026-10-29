@@ -26,8 +26,13 @@ export function hasActiveFilters(filters: BoardFilters): boolean {
   return Object.values(filters).some((value) => value.trim() !== "");
 }
 
-// Busca por título o por identificador (#12 o 12)
-export function matchesFilters(item: BoardItem, filters: BoardFilters) {
+// Busca por título o por identificador (#12 o 12). La épica se recibe aparte
+// porque una tarea puede heredarla de su historia (ver utils/hierarchy)
+export function matchesFilters(
+  item: BoardItem,
+  filters: BoardFilters,
+  epicId: string | null = item.parent_id,
+) {
   const query = normalizeText(filters.query).replace(/^#/, "");
 
   if (query) {
@@ -48,10 +53,10 @@ export function matchesFilters(item: BoardItem, filters: BoardFilters) {
   }
 
   if (filters.epic === NO_EPIC) {
-    if (item.parent_id !== null) {
+    if (epicId !== null) {
       return false;
     }
-  } else if (filters.epic && item.parent_id !== filters.epic) {
+  } else if (filters.epic && epicId !== filters.epic) {
     return false;
   }
 

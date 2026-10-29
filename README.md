@@ -181,6 +181,7 @@ Una épica agrupa tareas relacionadas. Se guarda en `work_items` con `type = 'EP
 - **Asignar tareas:** desde la ficha de la tarea, con el campo *Épica* (o *Sin épica* para quitarla). Si falla el cambio de épica, los demás cambios de la ficha ya quedaron guardados y se avisa.
 - **Archivar:** la épica sale de la lista, pero sus tareas siguen en el tablero y conservan la referencia (la ficha la muestra como *Épica archivada*). No se le pueden asignar tareas nuevas.
 - **Tablero:** cada tarjeta muestra el nombre de su épica, y el filtro *Épica* permite ver una épica concreta o las tareas sin épica. *Ver en el tablero* abre el tablero ya filtrado (`?epic=`).
+- **Tareas de una historia:** `parent_id` también puede apuntar a una historia (épica → historia → tarea). Esas tareas heredan la épica de su historia en la tarjeta, la ficha y el filtro; su épica no se cambia desde la ficha, para no romper el vínculo con la historia. El avance de la épica cuenta solo sus hijos directos, para no sumar dos veces los puntos de una historia y de sus tareas.
 - **Proyectos archivados:** sus épicas son de solo lectura.
 
 ## Sprints
@@ -223,7 +224,7 @@ Página con las tareas asignadas al usuario conectado, a la que se llega desde *
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 255 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 265 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 177 | `npm run test:integration` |
 | E2E | Playwright (Chromium) | 30 | `npm run test:e2e` |
 

@@ -36,3 +36,16 @@
 .task-form-row-two {
   grid-template-columns: 1fr 1fr;
 }
+
+.task-form .field select:disabled {
+  background: #f7f8f9;
+  color: #626f86;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  margin: 0;
+  color: #626f86;
+  font-size: 12px;
+  line-height: 16px;
+}
