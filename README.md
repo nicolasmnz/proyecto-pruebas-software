@@ -16,6 +16,12 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - La barra lateral muestra al usuario conectado y el botón *Cerrar sesión*.
 - Los proyectos, tareas y épicas se crean a nombre del usuario conectado.
 
+**Mis tareas** (`/my-tasks`) — ver [Mis tareas](#mis-tareas)
+
+- Las tareas asignadas al usuario conectado en todos sus proyectos, agrupadas por proyecto y ordenadas por fecha límite.
+- Marca las vencidas y permite mostrar u ocultar las terminadas.
+- Cada tarea abre su ficha en el tablero de su proyecto.
+
 **Proyectos**
 
 - Listar, buscar y ver el detalle de proyectos.
@@ -159,6 +165,7 @@ Reglas de comportamiento que conviene conocer:
 - **Identificador:** `#N`, único dentro del proyecto y asignado al crear la tarea.
 - **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
 - **Responsable:** se elige entre los miembros del proyecto y quien lo creó. Se puede conservar el responsable actual aunque ya no sea miembro.
+- **Enlace a una tarea:** `?task=<id>` abre la ficha de esa tarea al cargar el tablero; al abrir o cerrar una ficha la URL se actualiza sin perder los filtros.
 - **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
 - **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`, `epic`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
@@ -200,15 +207,25 @@ La interfaz pide iniciar sesión con un [usuario de prueba](#usuarios-de-prueba)
 - **Autoría:** `createdBy` de proyectos, tareas y épicas es el usuario conectado.
 - **Limitación:** `POST /api/auth/login` no entrega un token, así que la sesión controla la navegación, pero la API sigue abierta. Una sesión segura con token sería una historia de backend aparte.
 
+## Mis tareas
+
+Página con las tareas asignadas al usuario conectado, a la que se llega desde *Mis tareas* en la barra lateral.
+
+- **Qué se muestra:** tareas, historias y errores asignados en todos los proyectos activos. No incluye épicas, tareas archivadas ni proyectos archivados.
+- **Orden:** los proyectos aparecen según su tarea más urgente, y dentro de cada uno las tareas van de la fecha límite más cercana a la más lejana; las que no tienen fecha van al final.
+- **Vencidas:** una tarea no terminada cuya fecha límite es anterior a hoy se marca *Vencida*.
+- **Terminadas:** se ocultan por defecto; *Mostrar terminadas* las incluye y queda en la URL (`?done=1`).
+- **Abrir una tarea:** lleva al tablero de su proyecto con la ficha abierta (`/projects/:id/board?task=<id>`).
+
 ## Pruebas
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 235 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 169 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 28 | `npm run test:e2e` |
+| Componentes y utilidades web | Vitest + React Testing Library | 255 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 177 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 30 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -266,10 +283,11 @@ npx playwright show-report                                         # informe de 
 | `context/authContext.test.tsx` | Usuario de la sesión en las páginas internas |
 | `layout/Layout.test.tsx` | Layout, barra lateral, usuario conectado y cierre de sesión |
 | `layout/RequireAuth.test.tsx` | Redirección al login de las páginas internas |
-| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea y épica de cada tarea |
+| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea (también desde `?task=`) y épica de cada tarea |
 | `pages/CreateProjectPage.test.tsx` | Crear proyecto |
 | `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
 | `pages/LoginPage.test.tsx` | Inicio de sesión: validación, errores de la API y vuelta a la página pedida |
+| `pages/MyTasksPage.test.tsx` | Mis tareas: agrupación, orden, vencidas, terminadas, estados vacíos y error |
 | `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
 | `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
 | `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
@@ -286,6 +304,7 @@ Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 | POST | `/auth/login` | Inicio de sesión |
 | GET / POST | `/users` | Listar / crear usuarios |
 | GET / PUT / DELETE | `/users/:id` | Detalle / editar / desactivar usuario |
+| GET | `/users/:id/work-items` | Tareas asignadas al usuario en los proyectos activos (sin épicas ni archivadas), por fecha límite |
 | GET / POST | `/projects` | Listar (`?archived=true` para archivados) / crear proyectos |
 | GET / PUT / DELETE | `/projects/:id` | Detalle / editar / archivar proyecto |
 | PATCH | `/projects/:id/restore` | Restaurar proyecto archivado |
