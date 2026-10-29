@@ -4,11 +4,13 @@ import { isValidDate } from '../utils/date.js';
 import { isUuid } from '../utils/uuid.js';
 
 import { findProjectById } from '../repositories/project.repository.js';
+import { findUserById } from '../repositories/user.repository.js';
 import {
     archiveDoneItems,
     createWorkItem,
     deleteWorkItem,
     findArchivedItems,
+    findAssignedItems,
     findBoardItem,
     findBoardItems,
     findProjectMembers,
@@ -161,6 +163,28 @@ export async function getBoard(
 
     } catch (error) {
         return serverError(res, error, 'Error obteniendo tablero');
+    }
+}
+
+
+// Lo asignado a un usuario en todos sus proyectos (vista «Mis tareas»)
+export async function getAssignedWorkItems(
+    req: Request<IdParams>,
+    res: Response
+) {
+    try {
+        const user = isUuid(req.params.id)
+            ? await findUserById(req.params.id)
+            : undefined;
+
+        if (!user) {
+            return respond(res, new Failure(404, 'Usuario no encontrado'));
+        }
+
+        return res.status(200).json(await findAssignedItems(user.id));
+
+    } catch (error) {
+        return serverError(res, error, 'Error obteniendo las tareas asignadas');
     }
 }
 
