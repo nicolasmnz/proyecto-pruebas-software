@@ -131,19 +131,23 @@ export async function findAssignedItems(userId: string) {
     return result.rows;
 }
 
-// Usuarios activos que participan del proyecto: sus miembros y quien lo creó
+// Usuarios activos a los que se les pueden asignar tareas: los miembros del
+// proyecto y quien lo creó, salvo los de solo lectura (VIEWER). El creador es
+// dueño aunque no esté en project_members; si está, manda el rol de la tabla
 export async function findProjectMembers(projectId: string) {
     const result = await pool.query(
         `
         SELECT u.id, u.name
         FROM users u
+        LEFT JOIN project_members pm
+            ON pm.user_id = u.id
+           AND pm.project_id = $1
         WHERE u.is_active
           AND (
-              u.id IN (
-                  SELECT user_id FROM project_members WHERE project_id = $1
-              )
+              pm.id IS NOT NULL
               OR u.id = (SELECT created_by FROM projects WHERE id = $1)
           )
+          AND COALESCE(pm.role, 'OWNER') <> 'VIEWER'
         ORDER BY u.name ASC, u.id ASC
         `,
         [projectId]
