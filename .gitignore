@@ -15,7 +15,8 @@ build/
 coverage/
 playwright-report/
 test-results/
-playwright/.auth/
+reports/
+.jenkins/
 
 # Logs
 *.log

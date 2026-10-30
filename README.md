@@ -4,7 +4,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 > **Enlaces**
 >
-> - 🎥 Video Entrega 1: _pendiente_
+> - 🎥 Video Entrega 1: [Link a video](https://drive.google.com/drive/folders/1k-okz9jdoSsn6UtHb03K5-L44_l2OKJ_?usp=drive_link)
 > - 📚 [Wiki del proyecto](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki)
 > - 🏷️ Release Entrega 1: `v1.0-entrega1` _(pendiente)_
 
@@ -62,21 +62,21 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 ## Integrantes
 
-| Nombre        | Rol en el Equipo      | Rol USM | GitHub |
-| ------        | ---                   | ------  | ---  |
-| Nicolas Muñoz | Testing y Ambiente    | 202104641-0| [nicolasmnz](https://github.com/nicolasmnz)|
-| Sergio Rojas  | Desarrollador FrontEnd| 202273619-4| [Mochytk](https://github.com/Mochytk)|
-| Hans Toledo   | Desarrollador BackEnd | 201704591-4| [HanstoC](https://github.com/HanstoC)|
+| Nombre        | Rol en el Equipo       | Rol USM     | GitHub                                      |
+| ------------- | ---------------------- | ----------- | ------------------------------------------- |
+| Nicolas Muñoz | Testing y Ambiente     | 202104641-0 | [nicolasmnz](https://github.com/nicolasmnz) |
+| Sergio Rojas  | Desarrollador FrontEnd | 202273619-4 | [Mochytk](https://github.com/Mochytk)       |
+| Hans Toledo   | Desarrollador BackEnd  | 201704591-4 | [HanstoC](https://github.com/HanstoC)       |
 
 ## Stack
 
-| Capa | Tecnología | Pruebas |
-| ---- | ---------- | ------- |
-| Frontend | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library |
-| Backend | Node 24, Express 5, TypeScript | Jest (unitarias) + Supertest (integración) |
-| Base de datos | PostgreSQL 18 | Base de pruebas aislada (`compose.test.yml`) |
-| E2E | — | Playwright |
-| CI | GitHub Actions | lint, typecheck, unitarias, integración, E2E |
+| Capa          | Tecnología                               | Pruebas                                      |
+| ------------- | ---------------------------------------- | -------------------------------------------- |
+| Frontend      | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library               |
+| Backend       | Node 24, Express 5, TypeScript           | Jest (unitarias) + Supertest (integración)   |
+| Base de datos | PostgreSQL 18                            | Base de pruebas aislada (`compose.test.yml`) |
+| E2E           | —                                        | Playwright                                   |
+| CI            | GitHub Actions + Jenkins                 | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
 
@@ -131,13 +131,13 @@ npm run db:reset
 
 Todos los usuarios del seed usan la contraseña `123456` (almacenada con hash scrypt).
 
-| Correo | Estado |
-| ------ | ------ |
-| ana@pruebas.cl | activo |
-| carlos@pruebas.cl | activo |
-| maria@pruebas.cl | activo |
-| diego@pruebas.cl | activo |
-| sofia@pruebas.cl | desactivado |
+| Correo            | Estado      |
+| ----------------- | ----------- |
+| ana@pruebas.cl    | activo      |
+| carlos@pruebas.cl | activo      |
+| maria@pruebas.cl  | activo      |
+| diego@pruebas.cl  | activo      |
+| sofia@pruebas.cl  | desactivado |
 
 ## Base de datos
 
@@ -154,7 +154,7 @@ El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql
 
 ### Migraciones
 
-Una base **nueva** (o tras `npm run db:reset`) ya incluye todo. Si tienes una base creada con un esquema anterior y no quieres perder sus datos, aplica en orden los scripts de `apps/api/bd/migrations/` (son idempotentes):
+Una base **nueva** (o tras `npm run db:reset`) ya incluye todo. Se tiene una base creada con un esquema anterior y no quieres perder sus datos, aplica en orden los scripts de `apps/api/bd/migrations/` (son idempotentes):
 
 ```bash
 docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/bd/migrations/001-work-item-number.sql
@@ -162,17 +162,17 @@ docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/b
 docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/bd/migrations/003-project-wip-limits.sql
 ```
 
-| Script | Agrega |
-| ------ | ------ |
-| `001-work-item-number.sql` | Identificador `#N` correlativo por proyecto (trigger con bloqueo) |
-| `002-work-item-archive.sql` | Archivado de tareas (`work_items.is_archived`) |
-| `003-project-wip-limits.sql` | Límite de trabajo en curso por columna (`projects.wip_limits`) |
+| Script                       | Agrega                                                            |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `001-work-item-number.sql`   | Identificador `#N` correlativo por proyecto (trigger con bloqueo) |
+| `002-work-item-archive.sql`  | Archivado de tareas (`work_items.is_archived`)                    |
+| `003-project-wip-limits.sql` | Límite de trabajo en curso por columna (`projects.wip_limits`)    |
 
 ## Tablero Kanban
 
 Reglas de comportamiento que conviene conocer:
 
-- **Qué se muestra:** todas las tareas del proyecto que no son épicas. Las archivadas salen de las columnas y se ven en la sección plegable *Archivadas*.
+- **Qué se muestra:** todas las tareas del proyecto que no son épicas. Las archivadas salen de las columnas y se ven en la sección plegable _Archivadas_.
 - **Orden:** dentro de cada columna se ordena por `position` y, si coincide, por número de tarea. Al mover o reordenar, la columna de destino se renumera de forma consecutiva.
 - **Identificador:** `#N`, único dentro del proyecto y asignado al crear la tarea.
 - **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
@@ -276,7 +276,7 @@ npm run build
 
 ### Integración
 
-Usan una base de datos PostgreSQL **aislada** (`proyecto_pruebas_test`, puerto 5434) que se vacía entre pruebas; nunca toca la base de desarrollo.
+Se usa una base de datos PostgreSQL **aislada** (`proyecto_pruebas_test`, puerto 5434) que se vacía entre pruebas; nunca toca la base de desarrollo.
 
 ```bash
 npm run db:test:up
@@ -289,6 +289,25 @@ npm run test:integration
 > docker compose -f compose.test.yml down -v
 > npm run db:test:up
 > ```
+
+---
+
+## Resumen de Ejecucion
+
+En resumen, para ejecutar todas las pruebas necesarias, se debe de:
+
+```bash
+docker compose -f compose.test.yml down -v
+npm run db:test:up
+
+npm run lint
+npm run typecheck
+
+npm run test:unit
+npm run test:integration
+```
+
+`npm run test:unit` y `npm run test:integration` ejecuta las pruebas unitarias y de integracion
 
 ### E2E
 
@@ -309,7 +328,84 @@ npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el nave
 npx playwright show-report                                         # informe de la última ejecución
 ```
 
-`npm run test:all` ejecuta unitarias + E2E (no incluye integración).
+`npm run test:all` ejecuta unitarias + integración + E2E.
+
+### Jenkins
+
+El [Jenkinsfile](Jenkinsfile) ejecuta calidad, unitarias de API, componentes y
+utilidades web, build, integración con PostgreSQL y E2E con Chromium. Usa
+[compose.jenkins.yml](compose.jenkins.yml) con bases y puertos aislados, publica
+reportes y elimina los recursos al terminar. GitHub Actions continúa funcionando;
+si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
+
+Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
+en la [guía de Jenkins](docs/jenkins.md).
+
+**No es necesario levantar la aplicación previamente.** Jenkins crea una base
+PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
+y el frontend, ejecuta las pruebas y elimina los contenedores y volúmenes de ese
+build al terminar. El entorno está aislado y usa puertos dinámicos, por lo que
+puede funcionar aunque la aplicación de desarrollo ya esté levantada.
+
+#### Pasos para ejecutar Jenkins
+
+En Windows, ejecutar desde **Ubuntu/WSL**, con **Docker Desktop abierto** y su
+integración con WSL habilitada. Para la verificación local se necesitan Git,
+Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
+
+1. Entrar al repositorio:
+
+   ```bash
+   cd /home/dr_nickname/proyecto-pruebas-software
+   ```
+
+2. Levantar Jenkins, su agente y el motor Docker dedicado:
+
+   ```bash
+   bash scripts/jenkins.sh up
+   ```
+
+   La primera ejecución puede tardar varios minutos por la descarga y construcción
+   de imágenes; las siguientes reutilizan la caché.
+
+3. Abrir [Jenkins local](http://localhost:8080) e iniciar sesión con el usuario
+   `admin`. Consultar la contraseña localmente en la terminal:
+
+   ```bash
+   cat .jenkins/secrets/admin_password
+   ```
+
+4. Ejecutar las pruebas con los archivos actuales del repositorio, incluidos los
+   cambios sin commit:
+
+   ```bash
+   make jenkins-verify
+   # Alternativa sin Make: python3 scripts/jenkins-verify.py
+   ```
+
+   Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
+   seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
+   **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
+   unitarias, de frontend, integración y E2E (actualmente 280 pruebas). El resultado
+   esperado es **SUCCESS**.
+
+El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
+automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
+automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
+descrito en la [guía de Jenkins](docs/jenkins.md). El webhook no es necesario para
+las ejecuciones manuales ni para `jenkins-verify`.
+
+#### Administrar Jenkins
+
+```bash
+bash scripts/jenkins.sh status  # Ver el estado de los servicios
+bash scripts/jenkins.sh logs    # Ver logs; Ctrl+C para salir de la vista
+bash scripts/jenkins.sh down    # Detener conservando datos, historial y reportes
+```
+
+Para volver a iniciarlo, ejecutar `bash scripts/jenkins.sh up`. La limpieza del
+pipeline solo elimina los recursos de las pruebas; Jenkins y su agente siguen
+levantados hasta detener el stack.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 
@@ -369,13 +465,13 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 
 ## Solución de problemas
 
-| Síntoma | Causa y solución |
-| ------- | ---------------- |
-| `Cannot GET /api/projects/:id/board` | La API en ejecución es anterior al cambio: reiníciala (`npm run dev:api`). |
-| Errores de columna inexistente (`item_number`, `is_archived`, `wip_limits`) | La base tiene un esquema anterior: aplica las migraciones o ejecuta `npm run db:reset`. |
-| Casi todas las pruebas de integración fallan | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
-| Un E2E del tablero falla esperando datos de ejemplo | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`. |
-| Playwright indica que falta el navegador | `npx playwright install chromium`. |
+| Síntoma                                                                     | Causa y solución                                                                                                     |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `Cannot GET /api/projects/:id/board`                                        | La API en ejecución es anterior al cambio: reiníciala (`npm run dev:api`).                                           |
+| Errores de columna inexistente (`item_number`, `is_archived`, `wip_limits`) | La base tiene un esquema anterior: aplica las migraciones o ejecuta `npm run db:reset`.                              |
+| Casi todas las pruebas de integración fallan                                | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
+| Un E2E del tablero falla esperando datos de ejemplo                         | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`.                    |
+| Playwright indica que falta el navegador                                    | `npx playwright install chromium`.                                                                                   |
 
 ## Alcance actual
 

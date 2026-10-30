@@ -1,0 +1,79 @@
+# Solo CI: sin puertos fijos, nombres globales ni datos de desarrollo.
+services:
+  db-test:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: proyecto_pruebas_test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+    ports:
+      - "127.0.0.1::5432"
+    volumes:
+      - integration_data:/var/lib/postgresql
+      - ./apps/api/bd/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d proyecto_pruebas_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-e2e:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: proyecto_pruebas_e2e
+      POSTGRES_USER: e2e_user
+      POSTGRES_PASSWORD: e2e_password
+    volumes:
+      - e2e_data:/var/lib/postgresql
+      - ./apps/api/bd/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./apps/api/bd/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U e2e_user -d proyecto_pruebas_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: test
+      PORT: 3000
+      DB_HOST: db-e2e
+      DB_PORT: 5432
+      DB_NAME: proyecto_pruebas_e2e
+      DB_USER: e2e_user
+      DB_PASSWORD: e2e_password
+      CORS_ORIGIN: "*"
+    ports:
+      - "127.0.0.1::3000"
+    depends_on:
+      db-e2e:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      VITE_API_URL: ${E2E_API_URL:-http://127.0.0.1:3000/api}
+    ports:
+      - "127.0.0.1::5173"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  integration_data:
+  e2e_data:

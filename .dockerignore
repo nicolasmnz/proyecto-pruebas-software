@@ -12,6 +12,8 @@ test-results
 
 .git
 .github
+.jenkins
+reports
 
 .env
 .env.*
