@@ -1,0 +1,107 @@
+.roulette {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+.roulette-hint {
+  margin: 0 0 12px;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.roulette-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+}
+
+.roulette-wheel {
+  position: relative;
+  flex-shrink: 0;
+  width: 160px;
+  height: 160px;
+}
+
+.roulette-wheel svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--color-border);
+}
+
+/* Indicador fijo arriba: marca el sector ganador */
+.roulette-pointer {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  z-index: 1;
+  width: 0;
+  height: 0;
+  border-right: 9px solid transparent;
+  border-left: 9px solid transparent;
+  border-top: 16px solid var(--color-text);
+  transform: translateX(-50%);
+}
+
+.roulette-legend {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.roulette-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.roulette-legend li.is-winner {
+  background: var(--color-accent-subtle);
+  font-weight: 600;
+}
+
+.roulette-swatch {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.roulette-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.roulette-percentage {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+
+.roulette-result {
+  min-height: 20px;
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* En pantallas angostas los botones pasan a otra fila sin cortar su texto */
+.roulette .actions {
+  flex-wrap: wrap;
+}
+
+.roulette .actions button {
+  white-space: nowrap;
+}

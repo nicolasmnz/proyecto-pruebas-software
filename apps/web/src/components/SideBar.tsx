@@ -25,9 +25,11 @@ type SideBarItem = SideBarLink | SideBarGroup;
 interface SideBarProps {
   items: SideBarItem[];
   children?: ReactNode;
+  // Contenido al pie de la barra (usuario conectado y cierre de sesión)
+  footer?: ReactNode;
 }
 
-function SideBar({ items, children }: SideBarProps) {
+function SideBar({ items, children, footer }: SideBarProps) {
   return (
     <aside className="sidebar">
       {children && <div className="sidebar-action">{children}</div>}
@@ -55,6 +57,7 @@ function SideBar({ items, children }: SideBarProps) {
           )}
         </ul>
       </nav>
+      {footer && <div className="sidebar-footer">{footer}</div>}
     </aside>
   );
 }

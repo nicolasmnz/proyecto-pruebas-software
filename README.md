@@ -10,6 +10,18 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 ## Funcionalidades
 
+**Sesión** (`/login`) — ver [Inicio de sesión](#inicio-de-sesión)
+
+- Iniciar sesión con correo y contraseña; las páginas internas piden sesión y, al entrar, se vuelve a la página pedida.
+- La barra lateral muestra al usuario conectado y el botón *Cerrar sesión*.
+- Los proyectos, tareas y épicas se crean a nombre del usuario conectado.
+
+**Mis tareas** (`/my-tasks`) — ver [Mis tareas](#mis-tareas)
+
+- Las tareas asignadas al usuario conectado en todos sus proyectos, agrupadas por proyecto y ordenadas por fecha límite.
+- Marca las vencidas y permite mostrar u ocultar las terminadas.
+- Cada tarea abre su ficha en el tablero de su proyecto.
+
 **Proyectos**
 
 - Listar, buscar y ver el detalle de proyectos.
@@ -22,7 +34,31 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 - Mover tareas entre columnas y reordenarlas (arrastrando o con botones accesibles por teclado).
 - Archivar tareas terminadas, una a una o todas las de Hecho, y restaurarlas.
 - Barra de progreso (por puntos y por tareas), puntos por columna y límite de trabajo en curso configurable.
-- Búsqueda por título o `#número` y filtros por tipo, prioridad y responsable.
+- Búsqueda por título o `#número` y filtros por tipo, prioridad, responsable y épica.
+- Ruleta de asignación: elige al azar a quién asignar una tarea sin responsable, con más probabilidad para quien tiene menos carga.
+
+**Épicas** (`/projects/:id/epics`) — ver [Épicas](#épicas)
+
+- Crear, editar (incluido el estado) y archivar épicas, con su barra de avance.
+- Asignar o quitar la épica de una tarea desde su ficha; cada tarjeta del tablero muestra su épica.
+- Resumen de las épicas más recientes en el detalle del proyecto y acceso al tablero filtrado por cada épica.
+
+**Sprints** (`/projects/:id/sprints`) — ver [Sprints](#sprints)
+
+- Crear, editar (incluido el estado) y eliminar sprints con nombre, objetivo y fechas.
+- Backlog con las tareas sin sprint y movimiento de tareas entre el backlog y los sprints.
+- Cantidad de tareas y puntos por sprint, y aviso cuando hay más de un sprint activo.
+
+**Panel del proyecto** (`/projects/:id/dashboard`) — ver [Panel del proyecto](#panel-del-proyecto)
+
+- Solo para el dueño y los jefes de proyecto.
+- Avance del proyecto, del sprint activo y de cada épica.
+- Carga pendiente por integrante y tareas vencidas con su responsable.
+
+**Configuración** (`/settings`) — ver [Temas](#temas)
+
+- Tema claro, oscuro o según el sistema, alto contraste (claro u oscuro) y cuatro colores de acento.
+- La elección se aplica al instante en toda la aplicación, incluido el login, y se recuerda en el navegador.
 
 ## Integrantes
 
@@ -107,13 +143,14 @@ Todos los usuarios del seed usan la contraseña `123456` (almacenada con hash sc
 
 El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql`; ambos se cargan solos al crear el volumen de PostgreSQL.
 
-| Tabla                                  | Uso                                                                                      |
-| -------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `users`                                | Usuarios (contraseña con hash scrypt)                                                    |
-| `projects`                             | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB)                     |
-| `project_members`                      | Miembros de cada proyecto y su rol                                                       |
-| `work_items`                           | Épicas, historias, tareas y errores; `status`, `position`, `item_number` e `is_archived` |
-| `sprints`, `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación                          |
+| Tabla | Uso |
+| ----- | --- |
+| `users` | Usuarios (contraseña con hash scrypt) |
+| `projects` | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB) |
+| `project_members` | Miembros de cada proyecto y su rol |
+| `work_items` | Épicas, historias, tareas y errores; `status`, `position`, `item_number`, `is_archived` y `parent_id` (épica de la tarea) |
+| `sprints` | Iteraciones del proyecto con `status` y fechas; las tareas los referencian con `work_items.sprint_id` (`NULL` = backlog) |
+| `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación |
 
 ### Migraciones
 
@@ -138,22 +175,95 @@ Reglas de comportamiento que conviene conocer:
 - **Qué se muestra:** todas las tareas del proyecto que no son épicas. Las archivadas salen de las columnas y se ven en la sección plegable _Archivadas_.
 - **Orden:** dentro de cada columna se ordena por `position` y, si coincide, por número de tarea. Al mover o reordenar, la columna de destino se renumera de forma consecutiva.
 - **Identificador:** `#N`, único dentro del proyecto y asignado al crear la tarea.
-- **Archivar:** solo se pueden archivar tareas en _Hecho_; una tarea archivada no se puede mover. Al restaurarla vuelve al final de _Hecho_. _Archivar todas_ no está disponible mientras haya filtros activos.
-- **Responsable:** se elige entre los miembros del proyecto y quien lo creó. Se puede conservar el responsable actual aunque ya no sea miembro.
-- **Límite de trabajo en curso:** configurable por proyecto para _Por hacer_ y _En progreso_ (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
+- **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
+- **Responsable:** se elige entre los miembros del proyecto y quien lo creó, salvo los de solo lectura (*VIEWER*). Se puede conservar el responsable actual aunque ya no sea miembro o le hayan bajado el rol.
+- **Enlace a una tarea:** `?task=<id>` abre la ficha de esa tarea al cargar el tablero; al abrir o cerrar una ficha la URL se actualiza sin perder los filtros.
+- **Ruleta de asignación:** en la ficha de una tarea sin responsable (no archivada, en un proyecto activo), *Girar ruleta* muestra a quienes pueden recibirla y su probabilidad. El peso de cada uno es `1 / (1 + puntos pendientes)`; una tarea pendiente sin estimar cuenta como 1 punto. La ruleta solo propone: la tarea se asigna al confirmar *Asignar a…*, y *Volver a girar* o *Cancelar* no asignan nada. Con la reducción de movimiento del sistema el resultado aparece sin animación, y siempre se anuncia por escrito.
+- **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
-- **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
+- **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`, `epic`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
 - **Proyectos archivados:** su tablero es de solo lectura.
+
+## Épicas
+
+Una épica agrupa tareas relacionadas. Se guarda en `work_items` con `type = 'EPIC'` y sus tareas la referencian con `parent_id`.
+
+- **Dónde se gestionan:** en la página de épicas del proyecto, a la que se llega con *Ver épicas* desde el detalle. El detalle muestra además las tres épicas más recientes con su avance y un enlace para crear una nueva (`/epics?nueva` abre el formulario).
+- **Estado:** toda épica nueva empieza en *Por hacer*. Su estado se cambia a mano al editarla y no depende de sus tareas.
+- **Avance:** usa la misma regla que la barra del tablero, aplicada solo a las tareas de la épica (las archivadas cuentan como hechas).
+- **Asignar tareas:** desde la ficha de la tarea, con el campo *Épica* (o *Sin épica* para quitarla). Si falla el cambio de épica, los demás cambios de la ficha ya quedaron guardados y se avisa.
+- **Archivar:** la épica sale de la lista, pero sus tareas siguen en el tablero y conservan la referencia (la ficha la muestra como *Épica archivada*). No se le pueden asignar tareas nuevas.
+- **Tablero:** cada tarjeta muestra el nombre de su épica, y el filtro *Épica* permite ver una épica concreta o las tareas sin épica. *Ver en el tablero* abre el tablero ya filtrado (`?epic=`).
+- **Tareas de una historia:** `parent_id` también puede apuntar a una historia (épica → historia → tarea). Esas tareas heredan la épica de su historia en la tarjeta, la ficha y el filtro; su épica no se cambia desde la ficha, para no romper el vínculo con la historia. El avance de la épica cuenta solo sus hijos directos, para no sumar dos veces los puntos de una historia y de sus tareas.
+- **Proyectos archivados:** sus épicas son de solo lectura.
+
+## Sprints
+
+Un sprint es una iteración del proyecto. Las tareas sin sprint forman el *Backlog*.
+
+- **Dónde se gestionan:** en la página de sprints del proyecto, a la que se llega con *Ver sprints* desde el detalle.
+- **Orden:** primero el sprint activo, luego los planificados (por fecha de inicio) y al final los completados y cancelados.
+- **Estado:** todo sprint nuevo empieza *Planificado*; se cambia a mano al editarlo (*Activo*, *Completado* o *Cancelado*). La fecha de término no puede ser anterior a la de inicio.
+- **Varios sprints activos:** se permite, pero la página muestra un aviso porque lo habitual es trabajar en uno a la vez.
+- **Mover tareas:** cada tarea tiene un selector *Mover a* que solo ofrece el *Backlog* y los sprints *Planificados* o *Activos*. Las tareas archivadas no se replanifican, pero siguen contando en su sprint.
+- **Carga:** cada sprint y el backlog muestran su cantidad de tareas y la suma de sus puntos.
+- **Eliminar:** pide confirmación; las tareas del sprint vuelven al backlog.
+- **Épicas:** no se asignan a sprints, porque agrupan trabajo de varias iteraciones.
+- **Proyectos archivados:** sus sprints son de solo lectura.
+
+## Inicio de sesión
+
+La interfaz pide iniciar sesión con un [usuario de prueba](#usuarios-de-prueba) (por ejemplo, `ana@pruebas.cl` / `123456`).
+
+- **Validación:** los campos vacíos se indican sin llamar a la API. Con credenciales incorrectas se muestra *Correo o contraseña incorrectos*, y con una cuenta desactivada, *Usuario desactivado*.
+- **Páginas internas:** sin sesión redirigen a `/login?redirect=…` y, al entrar, se vuelve a esa página. Solo se aceptan rutas internas como destino.
+- **Sesión:** se guarda en `localStorage` (`mira.session`), así que sigue al recargar o cerrar el navegador. *Cerrar sesión* la borra y vuelve al login.
+- **Autoría:** `createdBy` de proyectos, tareas y épicas es el usuario conectado.
+- **Limitación:** `POST /api/auth/login` no entrega un token, así que la sesión controla la navegación, pero la API sigue abierta. Una sesión segura con token sería una historia de backend aparte.
+
+## Panel del proyecto
+
+Resumen para quien dirige el proyecto, al que se llega con *Ver panel* desde el detalle.
+
+- **Quién lo ve:** el dueño (*OWNER*) y los jefes de proyecto (*ADMIN*) según `project_members`. Quien creó el proyecto es su dueño aunque no esté en esa tabla. A los demás, el detalle no les muestra *Ver panel* y la página les indica que es solo para la jefatura. Es un control de la interfaz: la API no tiene permisos (ver [Inicio de sesión](#inicio-de-sesión)).
+- **Avance del proyecto:** la misma barra del tablero (por puntos o, sin estimaciones, por cantidad).
+- **Sprint activo:** sus fechas, los días que quedan (o el atraso si ya pasó su fecha de término) y su avance. Si no hay ninguno se indica; si hay varios, se muestran todos.
+- **Épicas:** cada una con su avance, que cuenta sus hijos directos (ver [Épicas](#épicas)), y un enlace al tablero filtrado por ella.
+- **Carga por integrante:** tareas y puntos pendientes (ni terminados ni archivados) de cada integrante que puede recibir tareas (no los *VIEWER*), incluidos los que no tienen tareas, de la mayor a la menor carga, más la fila *Sin asignar*. Cada fila abre el tablero filtrado por ese responsable.
+- **Tareas vencidas:** las no terminadas con fecha límite anterior a hoy, de la más atrasada, con su responsable. Cada una abre su ficha en el tablero.
+
+## Mis tareas
+
+Página con las tareas asignadas al usuario conectado, a la que se llega desde *Mis tareas* en la barra lateral.
+
+- **Qué se muestra:** tareas, historias y errores asignados en todos los proyectos activos. No incluye épicas, tareas archivadas ni proyectos archivados.
+- **Orden:** los proyectos aparecen según su tarea más urgente, y dentro de cada uno las tareas van de la fecha límite más cercana a la más lejana; las que no tienen fecha van al final.
+- **Vencidas:** una tarea no terminada cuya fecha límite es anterior a hoy se marca *Vencida*.
+- **Terminadas:** se ocultan por defecto; *Mostrar terminadas* las incluye y queda en la URL (`?done=1`).
+- **Abrir una tarea:** lleva al tablero de su proyecto con la ficha abierta (`/projects/:id/board?task=<id>`).
+
+## Temas
+
+La página *Configuración* (`/settings`, en la barra lateral) cambia la apariencia de la aplicación.
+
+- **Tema:** *Según el sistema* (por defecto) sigue la preferencia clara u oscura del sistema operativo y cambia sola cuando esta cambia; *Claro* y *Oscuro* la fijan.
+- **Alto contraste:** casilla que se aplica sobre el tema: negro sobre blanco en claro y blanco sobre negro en oscuro. Con *Según el sistema* pasa solo al alto contraste oscuro de noche, sin que haya que volver a elegir.
+- **Color de acento:** azul (por defecto), verde, morado o naranja; colorea botones principales, enlaces y selecciones. El alto contraste usa su propio acento, así que la elección se deshabilita mientras está activo y se conserva para cuando se quite.
+- **Dónde se guarda:** en el `localStorage` del navegador (`mira.theme`), por lo que es propia de cada navegador y no de la cuenta. Se mantiene al cerrar sesión.
+- **Sin parpadeo:** un script en `apps/web/index.html` aplica el tema guardado antes de cargar la aplicación. `themeScript.test.ts` comprueba que da el mismo resultado que `applyTheme` (`utils/theme.ts`).
+- **Contraste:** los textos cumplen WCAG AA (4,5:1) en los temas claro y oscuro con cualquier acento, y AAA (7:1) en los dos altos contrastes. Lo verifica `themes.test.ts` leyendo los colores de `themes.css`.
+
+Los colores están definidos como variables en `apps/web/src/themes.css`: `:root` tiene el tema claro y `[data-theme]` / `[data-accent]` en `<html>` los sobrescriben. Los CSS de los componentes solo usan `var(--color-…)`. Para añadir un color nuevo, defínelo en el tema claro, en `dark`, `contrast` y `contrast-dark` (`themes.test.ts` falla si falta en alguno) y, si es un par de texto y fondo, agrégalo a `TEXT_PAIRS` en ese test.
 
 ## Pruebas
 
-| Nivel                        | Herramienta                    | Cantidad | Comando                              |
-| ---------------------------- | ------------------------------ | -------- | ------------------------------------ |
-| Calidad                      | ESLint + TypeScript            | —        | `npm run lint` · `npm run typecheck` |
-| Unitarias API                | Jest                           | 20       | `npm run test:unit`                  |
-| Componentes y utilidades web | Vitest + React Testing Library | 133      | `npm run test:unit`                  |
-| Integración API              | Jest + Supertest + PostgreSQL  | 109      | `npm run test:integration`           |
-| E2E                          | Playwright (Chromium)          | 18       | `npm run test:e2e`                   |
+| Nivel | Herramienta | Cantidad | Comando |
+| ----- | ----------- | -------- | ------- |
+| Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
+| Unitarias API | Jest | 34 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
+| Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
+| E2E | Playwright (Chromium) | 38 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -210,6 +320,8 @@ npm run dev:api            # terminal 1
 npm run dev:web            # terminal 2
 npm run test:e2e           # terminal 3
 ```
+
+Antes de los specs, `tests/e2e/auth.setup.ts` inicia sesión con `ana@pruebas.cl` y guarda la sesión en `playwright/.auth/user.json` (ignorado por git); los demás specs la reutilizan. `login.spec.ts` parte sin sesión.
 
 ```bash
 npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el navegador
@@ -297,38 +409,57 @@ levantados hasta detener el stack.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 
-| Archivo                             | Cubre                                                                                |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| `components/BoardProgress.test.tsx` | Barra de progreso del tablero                                                        |
-| `layout/Layout.test.tsx`            | Layout y barra lateral                                                               |
-| `pages/BoardPage.test.tsx`          | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites y ficha de tarea |
-| `pages/CreateProjectPage.test.tsx`  | Crear proyecto                                                                       |
-| `pages/ProjectDetailPage.test.tsx`  | Detalle, edición, archivado y restauración de proyectos                              |
-| `pages/ProjectsPage.test.tsx`       | Listado y búsqueda de proyectos                                                      |
+| Archivo | Cubre |
+| ------- | ----- |
+| `components/BoardProgress.test.tsx` | Barra de progreso del tablero |
+| `components/RoulettePanel.test.tsx` | Ruleta de asignación: porcentajes, giro, volver a girar, cancelar y animación |
+| `components/EpicsSummary.test.tsx` | Resumen de épicas en el detalle del proyecto |
+| `context/AuthProvider.test.tsx` | Sesión: iniciar, recuperar al recargar y cerrar |
+| `context/authContext.test.tsx` | Usuario de la sesión en las páginas internas |
+| `layout/Layout.test.tsx` | Layout, barra lateral, usuario conectado y cierre de sesión |
+| `layout/RequireAuth.test.tsx` | Redirección al login de las páginas internas |
+| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites, ficha de tarea (también desde `?task=`), épica de cada tarea y ruleta de asignación |
+| `pages/CreateProjectPage.test.tsx` | Crear proyecto |
+| `pages/DashboardPage.test.tsx` | Panel del proyecto: acceso por rol, avances, carga por integrante y vencidas |
+| `pages/EpicsPage.test.tsx` | Épicas: listado, avance, crear, editar y archivar |
+| `pages/LoginPage.test.tsx` | Inicio de sesión: validación, errores de la API y vuelta a la página pedida |
+| `pages/MyTasksPage.test.tsx` | Mis tareas: agrupación, orden, vencidas, terminadas, estados vacíos y error |
+| `pages/SprintsPage.test.tsx` | Sprints: listado, backlog, crear, editar, mover tareas, eliminar y aviso de varios activos |
+| `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos, y *Ver panel* según el rol |
+| `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
+| `pages/SettingsPage.test.tsx` | Configuración: tema, acento, seguir al sistema, alto contraste claro y oscuro, y preferencia guardada |
 
-Además hay pruebas de utilidades en `utils/*.test.ts`, de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
+Además hay pruebas de utilidades en `utils/*.test.ts`, de los temas en `themes.test.ts` (contraste y variables completas) y `themeScript.test.ts` (script de `index.html`), de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
 
 ## API
 
 Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 
-| Método             | Ruta                                       | Descripción                                                 |
-| ------------------ | ------------------------------------------ | ----------------------------------------------------------- |
-| GET                | `/health`                                  | Estado de la API                                            |
-| POST               | `/auth/login`                              | Inicio de sesión                                            |
-| GET / POST         | `/users`                                   | Listar / crear usuarios                                     |
-| GET / PUT / DELETE | `/users/:id`                               | Detalle / editar / desactivar usuario                       |
-| GET / POST         | `/projects`                                | Listar (`?archived=true` para archivados) / crear proyectos |
-| GET / PUT / DELETE | `/projects/:id`                            | Detalle / editar / archivar proyecto                        |
-| PATCH              | `/projects/:id/restore`                    | Restaurar proyecto archivado                                |
-| GET                | `/projects/:id/board`                      | Tablero: proyecto, columnas, archivadas, miembros y límites |
-| PUT                | `/projects/:id/wip-limits`                 | Definir límites de trabajo en curso (`TODO`, `IN_PROGRESS`) |
-| POST               | `/projects/:id/work-items`                 | Crear tarea                                                 |
-| GET / PUT / DELETE | `/projects/:id/work-items/:itemId`         | Detalle / editar / eliminar tarea                           |
-| PATCH              | `/projects/:id/work-items/:itemId`         | Mover: `{ "status": "...", "index": 0 }` (`index` opcional) |
-| PATCH              | `/projects/:id/work-items/:itemId/archive` | Archivar tarea (solo en Hecho)                              |
-| PATCH              | `/projects/:id/work-items/:itemId/restore` | Restaurar tarea archivada                                   |
-| PATCH              | `/projects/:id/work-items/archive-done`    | Archivar todas las tareas de Hecho                          |
+| Método | Ruta | Descripción |
+| ------ | ---- | ----------- |
+| GET | `/health` | Estado de la API |
+| POST | `/auth/login` | Inicio de sesión |
+| GET / POST | `/users` | Listar / crear usuarios |
+| GET / PUT / DELETE | `/users/:id` | Detalle / editar / desactivar usuario |
+| GET | `/users/:id/work-items` | Tareas asignadas al usuario en los proyectos activos (sin épicas ni archivadas), por fecha límite |
+| GET / POST | `/projects` | Listar (`?archived=true` para archivados) / crear proyectos |
+| GET / PUT / DELETE | `/projects/:id` | Detalle / editar / archivar proyecto |
+| PATCH | `/projects/:id/restore` | Restaurar proyecto archivado |
+| GET | `/projects/:id/board` | Tablero: proyecto, columnas, archivadas, miembros y límites |
+| PUT | `/projects/:id/wip-limits` | Definir límites de trabajo en curso (`TODO`, `IN_PROGRESS`) |
+| POST | `/projects/:id/work-items` | Crear tarea |
+| GET / PUT / DELETE | `/projects/:id/work-items/:itemId` | Detalle / editar / eliminar tarea |
+| PATCH | `/projects/:id/work-items/:itemId` | Mover: `{ "status": "...", "index": 0 }` (`index` opcional) |
+| PATCH | `/projects/:id/work-items/:itemId/archive` | Archivar tarea (solo en Hecho) |
+| PATCH | `/projects/:id/work-items/:itemId/restore` | Restaurar tarea archivada |
+| PATCH | `/projects/:id/work-items/archive-done` | Archivar todas las tareas de Hecho |
+| PATCH | `/projects/:id/work-items/:itemId/epic` | Asignar épica: `{ "epicId": "..." }` (`null` la quita) |
+| GET / POST | `/projects/:id/epics` | Listar épicas activas / crear épica |
+| GET / PUT / DELETE | `/projects/:id/epics/:epicId` | Detalle / editar / archivar épica |
+| PATCH | `/projects/:id/work-items/:itemId/sprint` | Asignar sprint: `{ "sprintId": "..." }` (`null` la devuelve al backlog) |
+| GET / POST | `/projects/:id/sprints` | Listar / crear sprints |
+| GET / PUT / DELETE | `/projects/:id/sprints/:sprintId` | Detalle / editar / eliminar sprint |
+| GET | `/projects/:id/members` | Integrantes activos con su rol (`OWNER`, `ADMIN`, `MEMBER`, `VIEWER`); quien creó el proyecto es `OWNER` |
 
 Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que no es UUID), `409` proyecto archivado o acción no permitida en el estado actual.
 
@@ -344,7 +475,7 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 
 ## Alcance actual
 
-Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto, sprints y autenticación real en la interfaz (las altas usan un usuario de ejemplo fijo).
+Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentarios, gestión de miembros del proyecto y protección de la API con token (la sesión de la interfaz solo controla la navegación).
 
 ## Flujo de trabajo
 

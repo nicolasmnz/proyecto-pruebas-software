@@ -26,7 +26,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@types/jest": "^30.0.0",
+    "@types/mocha": "^10.0.10",
     "@types/pg": "^8.23.1"
-  },
-  "dependencies": {}
+  }
 }

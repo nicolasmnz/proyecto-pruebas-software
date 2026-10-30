@@ -1,6 +1,6 @@
 .wip-limits-hint {
   margin: 0 0 16px;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   line-height: 20px;
 }

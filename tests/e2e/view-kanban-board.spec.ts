@@ -255,9 +255,8 @@ test.describe("ficha de la tarea", () => {
     ).toBeVisible();
     await expect(dialog.getByText("Sin asignar")).toHaveCount(0);
 
-    // Los cambios persisten al recargar
+    // Los cambios persisten al recargar, y la ficha sigue abierta (?task=)
     await page.reload();
-    await card(page, "Tarea editada").click();
 
     await page
       .getByRole("dialog", { name: "Tarea editada" })

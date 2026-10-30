@@ -19,11 +19,18 @@ export default defineConfig({
   },
 
   projects: [
+    // Inicia sesión una vez; los demás specs reutilizan esa sesión
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
     {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        storageState: "playwright/.auth/user.json",
       },
+      dependencies: ["setup"],
     },
   ],
 });

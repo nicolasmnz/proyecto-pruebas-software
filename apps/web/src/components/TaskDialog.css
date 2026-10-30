@@ -10,7 +10,7 @@
 
 .task-dialog-status {
   margin: 0;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 
@@ -32,7 +32,7 @@
   align-items: center;
   gap: 8px;
   margin: 0 0 4px;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -45,16 +45,16 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: #44546f;
+  color: var(--color-text-secondary);
   cursor: pointer;
 }
 
 .task-dialog-close:hover {
-  background: #f1f2f4;
+  background: var(--color-neutral);
 }
 
 .task-dialog-close:focus-visible {
-  outline: 2px solid #0c66e4;
+  outline: 2px solid var(--color-accent);
   outline-offset: 1px;
 }
 
@@ -66,7 +66,7 @@
 }
 
 .task-dialog-meta dt {
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -79,9 +79,17 @@
   overflow-wrap: anywhere;
 }
 
+/* Épica heredada: de qué historia viene */
+.task-dialog-story {
+  display: block;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .task-dialog-section {
   margin: 0 0 4px;
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 12px;
   font-weight: 600;
   line-height: 16px;
@@ -96,7 +104,7 @@
 }
 
 .task-dialog-description.is-empty {
-  color: #626f86;
+  color: var(--color-text-subtle);
 }
 
 .task-dialog-actions {

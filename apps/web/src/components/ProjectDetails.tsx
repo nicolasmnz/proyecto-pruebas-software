@@ -3,16 +3,22 @@ import { Link } from "react-router-dom";
 import {
   Archive,
   ArchiveRestore,
+  CalendarRange,
   ChevronRight,
+  Gauge,
   KanbanSquare,
+  Layers,
   Pencil,
 } from "lucide-react";
 
+import { canManageProject } from "../api/members";
 import { archiveProject, restoreProject, updateProject } from "../api/projects";
 import type { Project } from "../api/projects";
 import { useProjects } from "../context/projectsContext";
+import { useProjectRole } from "../hooks/useProjectRole";
 import { formatDate } from "../utils/format";
 import ConfirmDialog from "./ConfirmDialog";
+import EpicsSummary from "./EpicsSummary";
 import ProjectAvatar from "./ProjectAvatar";
 import ProjectForm from "./ProjectForm";
 import type { ProjectFormValues } from "./ProjectForm";
@@ -30,6 +36,8 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
   const { reload } = useProjects();
+  // El panel es solo para el dueño y los jefes de proyecto
+  const canSeeDashboard = canManageProject(useProjectRole(project.id));
 
   const [isEditing, setIsEditing] = useState(false);
   const [isArchiveDialogOpen, setIsArchiveDialogOpen] = useState(false);
@@ -156,6 +164,29 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
               <KanbanSquare size={16} aria-hidden="true" />
               Ver tablero
             </Link>
+            <Link
+              to={`/projects/${project.id}/epics`}
+              className="btn-secondary"
+            >
+              <Layers size={16} aria-hidden="true" />
+              Ver épicas
+            </Link>
+            <Link
+              to={`/projects/${project.id}/sprints`}
+              className="btn-secondary"
+            >
+              <CalendarRange size={16} aria-hidden="true" />
+              Ver sprints
+            </Link>
+            {canSeeDashboard && (
+              <Link
+                to={`/projects/${project.id}/dashboard`}
+                className="btn-secondary"
+              >
+                <Gauge size={16} aria-hidden="true" />
+                Ver panel
+              </Link>
+            )}
             <button
               ref={editButtonRef}
               type="button"
@@ -196,18 +227,25 @@ function ProjectDetails({ project, onProjectChange }: ProjectDetailsProps) {
         </section>
       ) : (
         <div className="project-detail-layout">
-          <section aria-labelledby="description-title" className="panel">
-            <h2 id="description-title">Descripción</h2>
-            {project.description ? (
-              <p className="project-detail-description">
-                {project.description}
-              </p>
-            ) : (
-              <p className="project-detail-description is-empty">
-                Este proyecto no tiene descripción.
-              </p>
-            )}
-          </section>
+          <div className="project-detail-main">
+            <section aria-labelledby="description-title" className="panel">
+              <h2 id="description-title">Descripción</h2>
+              {project.description ? (
+                <p className="project-detail-description">
+                  {project.description}
+                </p>
+              ) : (
+                <p className="project-detail-description is-empty">
+                  Este proyecto no tiene descripción.
+                </p>
+              )}
+            </section>
+
+            <EpicsSummary
+              projectId={project.id}
+              readOnly={project.is_archived}
+            />
+          </div>
 
           <aside aria-labelledby="details-title" className="panel">
             <h2 id="details-title">Detalles</h2>

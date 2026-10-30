@@ -1,9 +1,13 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import ProjectDetailPage from "./ProjectDetailPage";
+import { getBoard } from "../api/board";
+import { getEpics } from "../api/epics";
+import { getProjectMembers } from "../api/members";
+import type { ProjectRole } from "../api/members";
 import {
   ApiError,
   archiveProject,
@@ -13,6 +17,7 @@ import {
 } from "../api/projects";
 import type { Project } from "../api/projects";
 import { ProjectsContext } from "../context/projectsContext";
+import { TEST_USER, withSession } from "../test/session";
 
 vi.mock("../api/projects", async (importOriginal) => ({
   // Se mantiene ApiError real para que funcione instanceof
@@ -23,6 +28,26 @@ vi.mock("../api/projects", async (importOriginal) => ({
   restoreProject: vi.fn(),
 }));
 
+// El resumen de épicas pide el tablero y las épicas del proyecto
+vi.mock("../api/board", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/board")>()),
+  getBoard: vi.fn(),
+}));
+
+vi.mock("../api/epics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/epics")>()),
+  getEpics: vi.fn(),
+}));
+
+// El botón «Ver panel» depende del rol del usuario conectado
+vi.mock("../api/members", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/members")>()),
+  getProjectMembers: vi.fn(),
+}));
+
+const mockedGetProjectMembers = vi.mocked(getProjectMembers);
+const mockedGetBoard = vi.mocked(getBoard);
+const mockedGetEpics = vi.mocked(getEpics);
 const mockedGetProject = vi.mocked(getProject);
 const mockedUpdateProject = vi.mocked(updateProject);
 const mockedArchiveProject = vi.mocked(archiveProject);
@@ -44,24 +69,32 @@ const project: Project = {
 
 function renderPage() {
   render(
-    <ProjectsContext.Provider
-      value={{
-        projects: [],
-        archivedProjects: [],
-        isLoading: false,
-        error: null,
-        reload: reloadProjects,
-      }}
-    >
-      <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}`]}>
-        <Routes>
-          <Route path="/projects" element={<h1>Listado</h1>} />
-          <Route path="/projects/archived" element={<h1>Archivados</h1>} />
-          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    </ProjectsContext.Provider>,
+    withSession(
+      <ProjectsContext.Provider
+        value={{
+          projects: [],
+          archivedProjects: [],
+          isLoading: false,
+          error: null,
+          reload: reloadProjects,
+        }}
+      >
+        <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}`]}>
+          <Routes>
+            <Route path="/projects" element={<h1>Listado</h1>} />
+            <Route path="/projects/archived" element={<h1>Archivados</h1>} />
+            <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectsContext.Provider>,
+    ),
   );
+}
+
+function withRole(role: ProjectRole) {
+  mockedGetProjectMembers.mockResolvedValue([
+    { id: TEST_USER.id, name: TEST_USER.name, email: TEST_USER.email, role },
+  ]);
 }
 
 async function renderLoadedPage(initialProject: Project = project) {
@@ -75,6 +108,15 @@ async function renderLoadedPage(initialProject: Project = project) {
 describe("ProjectDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetBoard.mockResolvedValue({
+      project,
+      columns: [],
+      archived: [],
+      members: [],
+      wip_limits: {},
+    });
+    mockedGetEpics.mockResolvedValue([]);
+    mockedGetProjectMembers.mockResolvedValue([]);
   });
 
   test("muestra un indicador de carga", () => {
@@ -106,6 +148,54 @@ describe("ProjectDetailPage", () => {
     expect(screen.getByText("Creado").nextSibling).toHaveTextContent("2026");
     expect(screen.queryByText("Archivado")).not.toBeInTheDocument();
   });
+
+  test("enlaza al tablero, a las épicas y a los sprints del proyecto", async () => {
+    await renderLoadedPage();
+
+    expect(screen.getByRole("link", { name: "Ver tablero" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/board`,
+    );
+    expect(screen.getByRole("link", { name: "Ver épicas" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/epics`,
+    );
+    expect(screen.getByRole("link", { name: "Ver sprints" })).toHaveAttribute(
+      "href",
+      `/projects/${PROJECT_ID}/sprints`,
+    );
+  });
+
+  test.each(["OWNER", "ADMIN"] as const)(
+    "como %s enlaza al panel del proyecto",
+    async (role) => {
+      withRole(role);
+
+      await renderLoadedPage();
+
+      expect(
+        await screen.findByRole("link", { name: "Ver panel" }),
+      ).toHaveAttribute("href", `/projects/${PROJECT_ID}/dashboard`);
+      expect(mockedGetProjectMembers).toHaveBeenCalledWith(
+        PROJECT_ID,
+        expect.any(AbortSignal),
+      );
+    },
+  );
+
+  test.each(["MEMBER", "VIEWER"] as const)(
+    "como %s no muestra el panel",
+    async (role) => {
+      withRole(role);
+
+      await renderLoadedPage();
+
+      await waitFor(() => expect(mockedGetProjectMembers).toHaveBeenCalled());
+      expect(
+        screen.queryByRole("link", { name: "Ver panel" }),
+      ).not.toBeInTheDocument();
+    },
+  );
 
   test("indica cuando el proyecto no tiene descripción", async () => {
     mockedGetProject.mockResolvedValue({ ...project, description: null });
@@ -235,7 +325,7 @@ describe("ProjectDetailPage", () => {
       expect(screen.getByRole("status")).toHaveTextContent(
         "Proyecto actualizado.",
       );
-      expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Editar" })).toHaveFocus());
       expect(reloadProjects).toHaveBeenCalledTimes(1);
     });
 
@@ -307,15 +397,17 @@ describe("ProjectDetailPage", () => {
       });
 
       // El foco empieza en la opción segura
-      expect(
-        within(dialog).getByRole("button", { name: "Cancelar" }),
-      ).toHaveFocus();
+      await waitFor(() =>
+        expect(
+          within(dialog).getByRole("button", { name: "Cancelar" }),
+        ).toHaveFocus(),
+      );
 
       await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
 
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
       expect(mockedArchiveProject).not.toHaveBeenCalled();
-      expect(screen.getByRole("button", { name: "Archivar" })).toHaveFocus();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Archivar" })).toHaveFocus());
     });
 
     test("Escape cierra el diálogo", async () => {

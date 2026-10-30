@@ -3,20 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { createProject } from "../api/projects";
 import ProjectForm from "../components/ProjectForm";
 import type { ProjectFormValues } from "../components/ProjectForm";
+import { useCurrentUser } from "../context/authContext";
 import { useProjects } from "../context/projectsContext";
 
 import "./CreateProjectPage.css";
 
-const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
-
 function CreateProjectPage() {
   const navigate = useNavigate();
   const { reload } = useProjects();
+  const currentUser = useCurrentUser();
 
   async function handleSubmit(values: ProjectFormValues) {
     const project = await createProject({
       ...values,
-      createdBy: TEMP_USER_ID,
+      createdBy: currentUser.id,
     });
 
     // Actualiza la lista y la barra lateral con el proyecto nuevo
