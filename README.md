@@ -40,7 +40,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 | Backend | Node 24, Express 5, TypeScript | Jest (unitarias) + Supertest (integración) |
 | Base de datos | PostgreSQL 18 | Base de pruebas aislada (`compose.test.yml`) |
 | E2E | — | Playwright |
-| CI | GitHub Actions | lint, typecheck, unitarias, integración, E2E |
+| CI | GitHub Actions + Jenkins | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
 
@@ -212,7 +212,89 @@ npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el nave
 npx playwright show-report                                         # informe de la última ejecución
 ```
 
-`npm run test:all` ejecuta unitarias + E2E (no incluye integración).
+`npm run test:all` ejecuta unitarias + integración + E2E.
+
+### Jenkins
+
+El [Jenkinsfile](Jenkinsfile) ejecuta calidad, unitarias de API, componentes y
+utilidades web, build, integración con PostgreSQL y E2E con Chromium. Usa
+[compose.jenkins.yml](compose.jenkins.yml) con bases y puertos aislados, publica
+reportes y elimina los recursos al terminar. GitHub Actions continúa funcionando;
+si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
+
+Los requisitos del agente, la configuración del job para
+`PPDS-18-integracion-con-jenkins`, los disparadores y el detalle de reportes están
+en la [guía de Jenkins](docs/jenkins.md).
+
+**No es necesario levantar la aplicación previamente.** Jenkins crea una base
+PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
+y el frontend, ejecuta las pruebas y elimina los contenedores y volúmenes de ese
+build al terminar. El entorno está aislado y usa puertos dinámicos, por lo que
+puede funcionar aunque la aplicación de desarrollo ya esté levantada.
+
+#### Pasos para ejecutar Jenkins
+
+En Windows, ejecutar desde **Ubuntu/WSL**, con **Docker Desktop abierto** y su
+integración con WSL habilitada. Para la verificación local se necesitan Git,
+Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
+
+1. Entrar al repositorio:
+
+   ```bash
+   cd /home/dr_nickname/proyecto-pruebas-software
+   ```
+
+2. Levantar Jenkins, su agente y el motor Docker dedicado:
+
+   ```bash
+   bash scripts/jenkins.sh up
+   ```
+
+   La primera ejecución puede tardar varios minutos por la descarga y construcción
+   de imágenes; las siguientes reutilizan la caché.
+
+3. Abrir [Jenkins local](http://localhost:8080) e iniciar sesión con el usuario
+   `admin`. Consultar la contraseña localmente en la terminal:
+
+   ```bash
+   cat .jenkins/secrets/admin_password
+   ```
+
+4. Ejecutar las pruebas con los archivos actuales del repositorio, incluidos los
+   cambios sin commit:
+
+   ```bash
+   make jenkins-verify
+   # Alternativa sin Make: python3 scripts/jenkins-verify.py
+   ```
+
+   Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
+   seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
+   **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
+   unitarias, de frontend, integración y E2E (actualmente 280 pruebas). El resultado
+   esperado es **SUCCESS**.
+
+5. Para ejecutar el código publicado en GitHub, abrir **mira-ci → Build Now**.
+   Primero hacer commit y push de los archivos de integración a la rama
+   `PPDS-18-integracion-con-jenkins`, configurada en `jenkins/server.env`.
+
+El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
+automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
+automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
+descrito en la [guía de Jenkins](docs/jenkins.md). El webhook no es necesario para
+las ejecuciones manuales ni para `jenkins-verify`.
+
+#### Administrar Jenkins
+
+```bash
+bash scripts/jenkins.sh status  # Ver el estado de los servicios
+bash scripts/jenkins.sh logs    # Ver logs; Ctrl+C para salir de la vista
+bash scripts/jenkins.sh down    # Detener conservando datos, historial y reportes
+```
+
+Para volver a iniciarlo, ejecutar `bash scripts/jenkins.sh up`. La limpieza del
+pipeline solo elimina los recursos de las pruebas; Jenkins y su agente siguen
+levantados hasta detener el stack.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 

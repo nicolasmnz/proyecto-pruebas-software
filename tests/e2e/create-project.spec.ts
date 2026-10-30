@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:3000/api";
 
 test("usuario puede crear un proyecto", async ({ page, request }) => {
   const projectName = `Proyecto E2E ${Date.now()}`;
