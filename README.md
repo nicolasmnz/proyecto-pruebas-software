@@ -26,21 +26,21 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 ## Integrantes
 
-| Nombre        | Rol en el Equipo      | Rol USM | GitHub |
-| ------        | ---                   | ------  | ---  |
-| Nicolas Muñoz | Testing y Ambiente    | 202104641-0| [nicolasmnz](https://github.com/nicolasmnz)|
-| Sergio Rojas  | Desarrollador FrontEnd| 202273619-4| [Mochytk](https://github.com/Mochytk)|
-| Hans Toledo   | Desarrollador BackEnd | 201704591-4| [HanstoC](https://github.com/HanstoC)|
+| Nombre        | Rol en el Equipo       | Rol USM     | GitHub                                      |
+| ------------- | ---------------------- | ----------- | ------------------------------------------- |
+| Nicolas Muñoz | Testing y Ambiente     | 202104641-0 | [nicolasmnz](https://github.com/nicolasmnz) |
+| Sergio Rojas  | Desarrollador FrontEnd | 202273619-4 | [Mochytk](https://github.com/Mochytk)       |
+| Hans Toledo   | Desarrollador BackEnd  | 201704591-4 | [HanstoC](https://github.com/HanstoC)       |
 
 ## Stack
 
-| Capa | Tecnología | Pruebas |
-| ---- | ---------- | ------- |
-| Frontend | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library |
-| Backend | Node 24, Express 5, TypeScript | Jest (unitarias) + Supertest (integración) |
-| Base de datos | PostgreSQL 18 | Base de pruebas aislada (`compose.test.yml`) |
-| E2E | — | Playwright |
-| CI | GitHub Actions + Jenkins | lint, typecheck, unitarias, integración, E2E |
+| Capa          | Tecnología                               | Pruebas                                      |
+| ------------- | ---------------------------------------- | -------------------------------------------- |
+| Frontend      | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library               |
+| Backend       | Node 24, Express 5, TypeScript           | Jest (unitarias) + Supertest (integración)   |
+| Base de datos | PostgreSQL 18                            | Base de pruebas aislada (`compose.test.yml`) |
+| E2E           | —                                        | Playwright                                   |
+| CI            | GitHub Actions + Jenkins                 | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
 
@@ -95,25 +95,25 @@ npm run db:reset
 
 Todos los usuarios del seed usan la contraseña `123456` (almacenada con hash scrypt).
 
-| Correo | Estado |
-| ------ | ------ |
-| ana@pruebas.cl | activo |
-| carlos@pruebas.cl | activo |
-| maria@pruebas.cl | activo |
-| diego@pruebas.cl | activo |
-| sofia@pruebas.cl | desactivado |
+| Correo            | Estado      |
+| ----------------- | ----------- |
+| ana@pruebas.cl    | activo      |
+| carlos@pruebas.cl | activo      |
+| maria@pruebas.cl  | activo      |
+| diego@pruebas.cl  | activo      |
+| sofia@pruebas.cl  | desactivado |
 
 ## Base de datos
 
 El esquema está en `apps/api/bd/schema.sql` y los datos de ejemplo en `seed.sql`; ambos se cargan solos al crear el volumen de PostgreSQL.
 
-| Tabla | Uso |
-| ----- | --- |
-| `users` | Usuarios (contraseña con hash scrypt) |
-| `projects` | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB) |
-| `project_members` | Miembros de cada proyecto y su rol |
-| `work_items` | Épicas, historias, tareas y errores; `status`, `position`, `item_number` e `is_archived` |
-| `sprints`, `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación |
+| Tabla                                  | Uso                                                                                      |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `users`                                | Usuarios (contraseña con hash scrypt)                                                    |
+| `projects`                             | Proyectos; `is_archived` y `wip_limits` (límites del tablero, JSONB)                     |
+| `project_members`                      | Miembros de cada proyecto y su rol                                                       |
+| `work_items`                           | Épicas, historias, tareas y errores; `status`, `position`, `item_number` e `is_archived` |
+| `sprints`, `comments`, `activity_logs` | Definidas en el esquema; aún sin funcionalidad en la aplicación                          |
 
 ### Migraciones
 
@@ -125,35 +125,35 @@ docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/b
 docker compose exec -T db psql -U proyecto_user -d proyecto_pruebas < apps/api/bd/migrations/003-project-wip-limits.sql
 ```
 
-| Script | Agrega |
-| ------ | ------ |
-| `001-work-item-number.sql` | Identificador `#N` correlativo por proyecto (trigger con bloqueo) |
-| `002-work-item-archive.sql` | Archivado de tareas (`work_items.is_archived`) |
-| `003-project-wip-limits.sql` | Límite de trabajo en curso por columna (`projects.wip_limits`) |
+| Script                       | Agrega                                                            |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `001-work-item-number.sql`   | Identificador `#N` correlativo por proyecto (trigger con bloqueo) |
+| `002-work-item-archive.sql`  | Archivado de tareas (`work_items.is_archived`)                    |
+| `003-project-wip-limits.sql` | Límite de trabajo en curso por columna (`projects.wip_limits`)    |
 
 ## Tablero Kanban
 
 Reglas de comportamiento que conviene conocer:
 
-- **Qué se muestra:** todas las tareas del proyecto que no son épicas. Las archivadas salen de las columnas y se ven en la sección plegable *Archivadas*.
+- **Qué se muestra:** todas las tareas del proyecto que no son épicas. Las archivadas salen de las columnas y se ven en la sección plegable _Archivadas_.
 - **Orden:** dentro de cada columna se ordena por `position` y, si coincide, por número de tarea. Al mover o reordenar, la columna de destino se renumera de forma consecutiva.
 - **Identificador:** `#N`, único dentro del proyecto y asignado al crear la tarea.
-- **Archivar:** solo se pueden archivar tareas en *Hecho*; una tarea archivada no se puede mover. Al restaurarla vuelve al final de *Hecho*. *Archivar todas* no está disponible mientras haya filtros activos.
+- **Archivar:** solo se pueden archivar tareas en _Hecho_; una tarea archivada no se puede mover. Al restaurarla vuelve al final de _Hecho_. _Archivar todas_ no está disponible mientras haya filtros activos.
 - **Responsable:** se elige entre los miembros del proyecto y quien lo creó. Se puede conservar el responsable actual aunque ya no sea miembro.
-- **Límite de trabajo en curso:** configurable por proyecto para *Por hacer* y *En progreso* (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
+- **Límite de trabajo en curso:** configurable por proyecto para _Por hacer_ y _En progreso_ (vacío = sin límite). Es orientativo: la columna se marca en rojo al superarlo, pero no se bloquea nada.
 - **Progreso:** la barra pesa por puntos (SP). Las tareas archivadas cuentan como hechas y las tareas sin estimar valen 0 puntos; si ninguna tarea tiene puntos, se calcula por cantidad de tareas.
 - **Filtros:** viven en la URL (`?q=`, `type`, `priority`, `assignee`), por lo que se pueden compartir. Los contadores y límites de columna no dependen del filtro, y con filtros activos no se puede reordenar.
 - **Proyectos archivados:** su tablero es de solo lectura.
 
 ## Pruebas
 
-| Nivel | Herramienta | Cantidad | Comando |
-| ----- | ----------- | -------- | ------- |
-| Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
-| Unitarias API | Jest | 20 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 133 | `npm run test:unit` |
-| Integración API | Jest + Supertest + PostgreSQL | 109 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 18 | `npm run test:e2e` |
+| Nivel                        | Herramienta                    | Cantidad | Comando                              |
+| ---------------------------- | ------------------------------ | -------- | ------------------------------------ |
+| Calidad                      | ESLint + TypeScript            | —        | `npm run lint` · `npm run typecheck` |
+| Unitarias API                | Jest                           | 20       | `npm run test:unit`                  |
+| Componentes y utilidades web | Vitest + React Testing Library | 133      | `npm run test:unit`                  |
+| Integración API              | Jest + Supertest + PostgreSQL  | 109      | `npm run test:integration`           |
+| E2E                          | Playwright (Chromium)          | 18       | `npm run test:e2e`                   |
 
 ### Unitarias, calidad y build
 
@@ -179,8 +179,11 @@ npm run test:integration
 > docker compose -f compose.test.yml down -v
 > npm run db:test:up
 > ```
- ---
+
+---
+
 ## Resumen de Ejecucion
+
 En resumen, para ejecutar todas las pruebas necesarias, se debe de:
 
 ```bash
@@ -193,6 +196,7 @@ npm run typecheck
 npm run test:unit
 npm run test:integration
 ```
+
 `npm run test:unit` y `npm run test:integration` ejecuta las pruebas unitarias y de integracion
 
 ### E2E
@@ -222,8 +226,7 @@ utilidades web, build, integración con PostgreSQL y E2E con Chromium. Usa
 reportes y elimina los recursos al terminar. GitHub Actions continúa funcionando;
 si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
 
-Los requisitos del agente, la configuración del job para
-`PPDS-18-integracion-con-jenkins`, los disparadores y el detalle de reportes están
+Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
 en la [guía de Jenkins](docs/jenkins.md).
 
 **No es necesario levantar la aplicación previamente.** Jenkins crea una base
@@ -274,10 +277,6 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    unitarias, de frontend, integración y E2E (actualmente 280 pruebas). El resultado
    esperado es **SUCCESS**.
 
-5. Para ejecutar el código publicado en GitHub, abrir **mira-ci → Build Now**.
-   Primero hacer commit y push de los archivos de integración a la rama
-   `PPDS-18-integracion-con-jenkins`, configurada en `jenkins/server.env`.
-
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
 automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
 automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
@@ -298,14 +297,14 @@ levantados hasta detener el stack.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 
-| Archivo | Cubre |
-| ------- | ----- |
-| `components/BoardProgress.test.tsx` | Barra de progreso del tablero |
-| `layout/Layout.test.tsx` | Layout y barra lateral |
-| `pages/BoardPage.test.tsx` | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites y ficha de tarea |
-| `pages/CreateProjectPage.test.tsx` | Crear proyecto |
-| `pages/ProjectDetailPage.test.tsx` | Detalle, edición, archivado y restauración de proyectos |
-| `pages/ProjectsPage.test.tsx` | Listado y búsqueda de proyectos |
+| Archivo                             | Cubre                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `components/BoardProgress.test.tsx` | Barra de progreso del tablero                                                        |
+| `layout/Layout.test.tsx`            | Layout y barra lateral                                                               |
+| `pages/BoardPage.test.tsx`          | Tablero Kanban: crear, mover, reordenar, archivar, filtros, límites y ficha de tarea |
+| `pages/CreateProjectPage.test.tsx`  | Crear proyecto                                                                       |
+| `pages/ProjectDetailPage.test.tsx`  | Detalle, edición, archivado y restauración de proyectos                              |
+| `pages/ProjectsPage.test.tsx`       | Listado y búsqueda de proyectos                                                      |
 
 Además hay pruebas de utilidades en `utils/*.test.ts`, de la API en `apps/api/tests/` y de extremo a extremo en `tests/e2e/`.
 
@@ -313,35 +312,35 @@ Además hay pruebas de utilidades en `utils/*.test.ts`, de la API en `apps/api/t
 
 Prefijo `/api`. Los errores devuelven `{ "message": "..." }`.
 
-| Método | Ruta | Descripción |
-| ------ | ---- | ----------- |
-| GET | `/health` | Estado de la API |
-| POST | `/auth/login` | Inicio de sesión |
-| GET / POST | `/users` | Listar / crear usuarios |
-| GET / PUT / DELETE | `/users/:id` | Detalle / editar / desactivar usuario |
-| GET / POST | `/projects` | Listar (`?archived=true` para archivados) / crear proyectos |
-| GET / PUT / DELETE | `/projects/:id` | Detalle / editar / archivar proyecto |
-| PATCH | `/projects/:id/restore` | Restaurar proyecto archivado |
-| GET | `/projects/:id/board` | Tablero: proyecto, columnas, archivadas, miembros y límites |
-| PUT | `/projects/:id/wip-limits` | Definir límites de trabajo en curso (`TODO`, `IN_PROGRESS`) |
-| POST | `/projects/:id/work-items` | Crear tarea |
-| GET / PUT / DELETE | `/projects/:id/work-items/:itemId` | Detalle / editar / eliminar tarea |
-| PATCH | `/projects/:id/work-items/:itemId` | Mover: `{ "status": "...", "index": 0 }` (`index` opcional) |
-| PATCH | `/projects/:id/work-items/:itemId/archive` | Archivar tarea (solo en Hecho) |
-| PATCH | `/projects/:id/work-items/:itemId/restore` | Restaurar tarea archivada |
-| PATCH | `/projects/:id/work-items/archive-done` | Archivar todas las tareas de Hecho |
+| Método             | Ruta                                       | Descripción                                                 |
+| ------------------ | ------------------------------------------ | ----------------------------------------------------------- |
+| GET                | `/health`                                  | Estado de la API                                            |
+| POST               | `/auth/login`                              | Inicio de sesión                                            |
+| GET / POST         | `/users`                                   | Listar / crear usuarios                                     |
+| GET / PUT / DELETE | `/users/:id`                               | Detalle / editar / desactivar usuario                       |
+| GET / POST         | `/projects`                                | Listar (`?archived=true` para archivados) / crear proyectos |
+| GET / PUT / DELETE | `/projects/:id`                            | Detalle / editar / archivar proyecto                        |
+| PATCH              | `/projects/:id/restore`                    | Restaurar proyecto archivado                                |
+| GET                | `/projects/:id/board`                      | Tablero: proyecto, columnas, archivadas, miembros y límites |
+| PUT                | `/projects/:id/wip-limits`                 | Definir límites de trabajo en curso (`TODO`, `IN_PROGRESS`) |
+| POST               | `/projects/:id/work-items`                 | Crear tarea                                                 |
+| GET / PUT / DELETE | `/projects/:id/work-items/:itemId`         | Detalle / editar / eliminar tarea                           |
+| PATCH              | `/projects/:id/work-items/:itemId`         | Mover: `{ "status": "...", "index": 0 }` (`index` opcional) |
+| PATCH              | `/projects/:id/work-items/:itemId/archive` | Archivar tarea (solo en Hecho)                              |
+| PATCH              | `/projects/:id/work-items/:itemId/restore` | Restaurar tarea archivada                                   |
+| PATCH              | `/projects/:id/work-items/archive-done`    | Archivar todas las tareas de Hecho                          |
 
 Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que no es UUID), `409` proyecto archivado o acción no permitida en el estado actual.
 
 ## Solución de problemas
 
-| Síntoma | Causa y solución |
-| ------- | ---------------- |
-| `Cannot GET /api/projects/:id/board` | La API en ejecución es anterior al cambio: reiníciala (`npm run dev:api`). |
-| Errores de columna inexistente (`item_number`, `is_archived`, `wip_limits`) | La base tiene un esquema anterior: aplica las migraciones o ejecuta `npm run db:reset`. |
-| Casi todas las pruebas de integración fallan | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
-| Un E2E del tablero falla esperando datos de ejemplo | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`. |
-| Playwright indica que falta el navegador | `npx playwright install chromium`. |
+| Síntoma                                                                     | Causa y solución                                                                                                     |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `Cannot GET /api/projects/:id/board`                                        | La API en ejecución es anterior al cambio: reiníciala (`npm run dev:api`).                                           |
+| Errores de columna inexistente (`item_number`, `is_archived`, `wip_limits`) | La base tiene un esquema anterior: aplica las migraciones o ejecuta `npm run db:reset`.                              |
+| Casi todas las pruebas de integración fallan                                | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
+| Un E2E del tablero falla esperando datos de ejemplo                         | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`.                    |
+| Playwright indica que falta el navegador                                    | `npx playwright install chromium`.                                                                                   |
 
 ## Alcance actual
 
