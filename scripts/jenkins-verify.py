@@ -65,15 +65,18 @@ def main():
                 path = Path(os.fsdecode(raw))
                 if path.is_file() or path.is_symlink():
                     target.add(path, arcname=path.as_posix(), recursive=False)
-    subprocess.run(COMPOSE + ["cp", str(archive), "agent:/tmp/mira-source.tar"], check=True)
+    # El volumen del agente conserva la copia al recrear el contenedor.
+    # Debe quedar fuera del workspace que borra deleteDir().
+    subprocess.run(COMPOSE + ["cp", str(archive), "agent:/home/jenkins/agent/mira-source.tar"], check=True)
 
     # Solo el job de comprobación recibe una etapa de copia; mira-ci sigue usando SCM.
     pipeline = pipeline.replace("options {", "options {\n        skipDefaultCheckout()", 1)
     pipeline = pipeline.replace("stages {", '''stages {
         stage('Checkout local para validacion') {
             steps {
+                sh 'test -r /home/jenkins/agent/mira-source.tar || { echo "Falta la copia local del codigo. Ejecuta make jenkins-verify desde WSL en el repositorio." >&2; exit 1; }'
                 deleteDir()
-                sh 'tar --no-same-owner -xf /tmp/mira-source.tar -C "$WORKSPACE"'
+                sh 'tar --no-same-owner -xf /home/jenkins/agent/mira-source.tar -C "$WORKSPACE"'
             }
         }
     ''', 1)

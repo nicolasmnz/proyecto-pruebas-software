@@ -94,6 +94,17 @@ de los archivos actuales, incluidos los cambios sin commit, respetando
 consola en `reports/jenkins-validation.json` y `reports/jenkins-console.log`.
 Ejecutar una sola verificación local a la vez.
 
+La instantánea se guarda en `/home/jenkins/agent/mira-source.tar`, dentro del
+volumen persistente `agent_workspace` y fuera del workspace que limpia el job.
+**Build Now** en `mira-ci-local` reutiliza esa instantánea; para incluir cambios
+nuevos hay que ejecutar `make jenkins-verify` desde WSL.
+
+Si un job antiguo falla con `tar: /tmp/mira-source.tar: Cannot open`, ejecutar
+`make jenkins-verify`: regenera la copia, actualiza el job con la ruta persistente
+y lanza un build. La ruta anterior en `/tmp` podía perderse al recrear el agente.
+El aviso de que no hay reportes JUnit es consecuencia de que el checkout falló
+antes de ejecutar las pruebas.
+
 Si el repositorio es privado, añadir una credencial de lectura en Jenkins y
 asignarla en **mira-ci → Configure → Pipeline → SCM → Credentials**. El ID de
 `jenkins/server.env` solo selecciona una credencial existente; no contiene tokens.
