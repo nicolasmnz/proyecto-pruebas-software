@@ -21,3 +21,6 @@ reports
 !.env.example
 
 *.log
+
+# Sesion generada por Playwright
+playwright/.auth/
