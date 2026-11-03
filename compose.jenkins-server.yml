@@ -1,0 +1,73 @@
+name: mira-jenkins
+
+services:
+  jenkins:
+    build:
+      context: ./jenkins/controller
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${JENKINS_PORT:-8080}:8080"
+    environment:
+      JAVA_OPTS: -Djenkins.install.runSetupWizard=false
+      JENKINS_PUBLIC_URL: ${JENKINS_PUBLIC_URL:-http://localhost:8080/}
+      JENKINS_REPOSITORY_URL: ${JENKINS_REPOSITORY_URL:-https://github.com/nicolasmnz/proyecto-pruebas-software.git}
+      JENKINS_BRANCH: ${JENKINS_BRANCH:-PPDS-18-integracion-con-jenkins}
+      JENKINS_SCM_CREDENTIALS_ID: ${JENKINS_SCM_CREDENTIALS_ID:-}
+    secrets:
+      - jenkins_admin_password
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - agent_secret:/var/jenkins_agent
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:8080/login > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 30
+
+  docker:
+    image: docker:29.1.3-dind
+    privileged: true
+    restart: unless-stopped
+    environment:
+      DOCKER_TLS_CERTDIR: ""
+    # El puerto del daemon solo escucha dentro del namespace compartido con el agente.
+    command: ["dockerd", "--host=unix:///var/run/docker.sock", "--host=tcp://127.0.0.1:2375", "--tls=false"]
+    volumes:
+      - docker_data:/var/lib/docker
+      - agent_workspace:/home/jenkins/agent
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  agent:
+    build:
+      context: .
+      dockerfile: jenkins/agent/Dockerfile
+    restart: unless-stopped
+    init: true
+    # Los puertos dinámicos que publica el Docker dedicado son localhost del agente.
+    network_mode: service:docker
+    environment:
+      DOCKER_HOST: tcp://127.0.0.1:2375
+      JENKINS_URL: http://jenkins:8080/
+    volumes:
+      - agent_workspace:/home/jenkins/agent
+      - agent_secret:/var/jenkins_agent:ro
+    depends_on:
+      jenkins:
+        condition: service_healthy
+      docker:
+        condition: service_healthy
+
+secrets:
+  jenkins_admin_password:
+    file: ./.jenkins/secrets/admin_password
+
+volumes:
+  jenkins_home:
+  agent_workspace:
+  agent_secret:
+  docker_data:

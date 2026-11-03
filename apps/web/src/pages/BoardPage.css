@@ -1,5 +1,5 @@
 .board-page {
-  color: #292a2e;
+  color: var(--color-text);
 }
 
 .board-title {
@@ -10,7 +10,7 @@
 }
 
 .board-status {
-  color: #626f86;
+  color: var(--color-text-subtle);
   font-size: 14px;
 }
 
@@ -21,14 +21,14 @@
   gap: 8px;
   max-width: 480px;
   margin: 48px auto;
-  color: #44546f;
+  color: var(--color-text-secondary);
   font-size: 14px;
   text-align: center;
 }
 
 .board-message h1 {
   margin: 0;
-  color: #292a2e;
+  color: var(--color-text);
   font-size: 20px;
   font-weight: 600;
 }
@@ -41,8 +41,8 @@
   margin: 0 0 16px;
   padding: 8px 12px;
   border-radius: 6px;
-  background: #f1f2f4;
-  color: #44546f;
+  background: var(--color-neutral);
+  color: var(--color-text-secondary);
   font-size: 14px;
 }
 

@@ -3,6 +3,7 @@ import type { KeyboardEvent, SubmitEvent } from "react";
 
 import { MAX_WORK_ITEM_TITLE_LENGTH } from "../api/board";
 import type { BoardMember, UpdateWorkItemData } from "../api/board";
+import type { Epic } from "../api/epics";
 
 import "./TaskForm.css";
 
@@ -10,12 +11,19 @@ export type TaskFormValues = Omit<
   UpdateWorkItemData,
   "assigneeId" | "dueDate"
 > &
-  Partial<Pick<UpdateWorkItemData, "assigneeId" | "dueDate">>;
+  Partial<Pick<UpdateWorkItemData, "assigneeId" | "dueDate">> & {
+    // Ausente = sin épica; la épica se guarda con su propia llamada
+    epicId?: string;
+  };
 
 interface TaskFormProps {
   initialValues?: TaskFormValues;
   // Con miembros el formulario incluye responsable y fecha límite
   members?: BoardMember[];
+  // Con épicas el formulario permite elegir la épica de la tarea
+  epics?: Pick<Epic, "id" | "title">[];
+  // Si se indica, la épica se muestra pero no se puede cambiar
+  epicHint?: string;
   submitLabel?: string;
   submittingLabel?: string;
   onSubmit: (values: TaskFormValues) => Promise<void>;
@@ -25,6 +33,8 @@ interface TaskFormProps {
 function TaskForm({
   initialValues,
   members,
+  epics,
+  epicHint,
   submitLabel = "Crear",
   submittingLabel = "Creando...",
   onSubmit,
@@ -36,6 +46,7 @@ function TaskForm({
   const estimateId = useId();
   const assigneeId = useId();
   const dueDateId = useId();
+  const epicId = useId();
   const descriptionId = useId();
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -72,6 +83,10 @@ function TaskForm({
     if (members) {
       values.assigneeId = String(formData.get("assignee") ?? "") || undefined;
       values.dueDate = String(formData.get("dueDate") ?? "") || undefined;
+    }
+
+    if (epics) {
+      values.epicId = String(formData.get("epic") ?? "") || undefined;
     }
 
     try {
@@ -188,6 +203,31 @@ function TaskForm({
               defaultValue={initialValues?.dueDate}
             />
           </div>
+        </div>
+      )}
+
+      {epics && (
+        <div className="field">
+          <label htmlFor={epicId}>Épica</label>
+          <select
+            id={epicId}
+            name="epic"
+            defaultValue={initialValues?.epicId ?? ""}
+            disabled={Boolean(epicHint)}
+            aria-describedby={epicHint ? `${epicId}-hint` : undefined}
+          >
+            <option value="">Sin épica</option>
+            {epics.map((epic) => (
+              <option key={epic.id} value={epic.id}>
+                {epic.title}
+              </option>
+            ))}
+          </select>
+          {epicHint && (
+            <p id={`${epicId}-hint`} className="field-hint">
+              {epicHint}
+            </p>
+          )}
         </div>
       )}
 

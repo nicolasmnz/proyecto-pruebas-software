@@ -7,6 +7,7 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
+  Layers,
 } from "lucide-react";
 
 import { STATUS_LABELS } from "../api/board";
@@ -30,6 +31,8 @@ function TypeIcon({ type }: { type: WorkItemType }) {
 
 interface KanbanCardProps {
   item: BoardItem;
+  // Título de la épica a la que pertenece, si tiene
+  epicTitle?: string;
   // Sin esta función la tarjeta es de solo lectura
   onMove?: (item: BoardItem, status: WorkItemStatus) => void;
   // Sube o baja la tarea dentro de su columna (alternativa al arrastre)
@@ -49,6 +52,7 @@ interface KanbanCardProps {
 
 function KanbanCard({
   item,
+  epicTitle,
   onOpen,
   onMove,
   onReorder,
@@ -90,6 +94,14 @@ function KanbanCard({
           item.title
         )}
       </h3>
+
+      {epicTitle && (
+        <p className="kanban-card-epic" title={epicTitle}>
+          <Layers size={12} aria-hidden="true" />
+          <span className="sr-only">Épica: </span>
+          <span className="kanban-card-epic-title">{epicTitle}</span>
+        </p>
+      )}
 
       <div className="kanban-card-meta">
         <span className={`kanban-type kanban-type-${item.type.toLowerCase()}`}>

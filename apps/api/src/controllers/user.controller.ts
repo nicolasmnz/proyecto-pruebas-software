@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 
 import { IdParams } from "../types/request.js";
+import { normalizeEmail } from "../utils/email.js";
+import { isUuid } from "../utils/uuid.js";
 
 import {
     findAllUsers,
@@ -10,6 +12,14 @@ import {
     updateUser,
     deactivateUser
 } from "../repositories/user.repository.js";
+
+
+// Un id que no es UUID no puede existir: PostgreSQL lo rechazaría con un error
+function userNotFound(res: Response) {
+    return res.status(404).json({
+        message: "Usuario no encontrado"
+    });
+}
 
 
 export async function getUsers(
@@ -36,6 +46,10 @@ export async function getUser(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return userNotFound(res);
+        }
+
         const user = await findUserById(
             req.params.id
         );
@@ -69,15 +83,22 @@ export async function postUser(
             password
         } = req.body;
 
-        if (!name || !email || !password) {
+        if (
+            !name ||
+            typeof email !== "string" ||
+            !email.trim() ||
+            !password
+        ) {
             return res.status(400).json({
                 message:
                     "name, email y password son obligatorios"
             });
         }
 
+        const normalizedEmail = normalizeEmail(email);
+
         const existingUser =
-            await findUserByEmail(email);
+            await findUserByEmail(normalizedEmail);
 
         if (existingUser) {
             return res.status(409).json({
@@ -88,7 +109,7 @@ export async function postUser(
 
         const user = await createUser(
             name,
-            email,
+            normalizedEmail,
             password
         );
 
@@ -109,22 +130,42 @@ export async function putUser(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return userNotFound(res);
+        }
+
         const {
             name,
             email
         } = req.body;
 
-        if (!name || !email) {
+        if (
+            !name ||
+            typeof email !== "string" ||
+            !email.trim()
+        ) {
             return res.status(400).json({
                 message:
                     "name y email son obligatorios"
             });
         }
 
+        const normalizedEmail = normalizeEmail(email);
+
+        const existingUser =
+            await findUserByEmail(normalizedEmail);
+
+        if (existingUser && existingUser.id !== req.params.id) {
+            return res.status(409).json({
+                message:
+                    "El correo ya está registrado"
+            });
+        }
+
         const user = await updateUser(
             req.params.id,
             name,
-            email
+            normalizedEmail
         );
 
         if (!user) {
@@ -152,6 +193,10 @@ export async function deleteUser(
     res: Response
 ) {
     try {
+        if (!isUuid(req.params.id)) {
+            return userNotFound(res);
+        }
+
         const user = await deactivateUser(
             req.params.id
         );

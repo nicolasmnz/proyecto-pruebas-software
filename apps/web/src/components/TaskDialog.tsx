@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Dices, Pencil, Trash2, X } from "lucide-react";
 
 import {
   STATUS_LABELS,
@@ -8,10 +8,14 @@ import {
   getWorkItem,
   updateWorkItem,
 } from "../api/board";
-import type { BoardMember, WorkItemDetail } from "../api/board";
+import type { BoardItem, BoardMember, WorkItemDetail } from "../api/board";
+import { assignWorkItemToEpic } from "../api/epics";
+import type { Epic } from "../api/epics";
 import { trapTab } from "../utils/focusTrap";
 import { formatDate, formatDueDate } from "../utils/format";
+import type { RouletteSlice } from "../utils/roulette";
 import ConfirmDialog from "./ConfirmDialog";
+import RoulettePanel from "./RoulettePanel";
 import TaskForm from "./TaskForm";
 import type { TaskFormValues } from "./TaskForm";
 import { PRIORITY_LABELS, TYPE_LABELS } from "./taskLabels";
@@ -22,6 +26,13 @@ interface TaskDialogProps {
   projectId: string;
   itemId: string;
   members: BoardMember[];
+  // Épicas activas del proyecto, para mostrar y cambiar la de la tarea
+  epics: Epic[];
+  // Historia de la que cuelga la tarea (épica → historia → tarea): la épica
+  // es la de la historia y no se cambia desde aquí, para no romper el vínculo
+  story?: Pick<BoardItem, "item_number" | "title" | "parent_id"> | null;
+  // Probabilidad de cada integrante en la ruleta; sin integrantes no se ofrece
+  roulette?: RouletteSlice[];
   // En proyectos archivados la ficha solo se puede leer
   readOnly: boolean;
   onClose: () => void;
@@ -41,6 +52,9 @@ function TaskDialog({
   projectId,
   itemId,
   members,
+  epics,
+  story = null,
+  roulette = [],
   readOnly,
   onClose,
   onUpdated,
@@ -55,6 +69,7 @@ function TaskDialog({
   );
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isRouletteOpen, setIsRouletteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -104,12 +119,60 @@ function TaskDialog({
   }
 
   async function handleSave(item: WorkItemDetail, values: TaskFormValues) {
+    const { epicId, ...fields } = values;
+
     // PUT reemplaza la ficha: lo que queda vacío en el formulario se borra
-    const updated = await updateWorkItem(projectId, item.id, values);
+    let updated = await updateWorkItem(projectId, item.id, fields);
+
+    // La épica no viaja en el PUT: se cambia solo si cambió. Si la tarea
+    // cuelga de una historia, su parent_id es la historia y no se toca
+    const parentId = epicId ?? null;
+
+    if (!story && parentId !== item.parent_id) {
+      try {
+        const assigned = await assignWorkItemToEpic(
+          projectId,
+          item.id,
+          parentId,
+        );
+
+        updated = { ...updated, parent_id: assigned.parent_id };
+      } catch (error) {
+        // Los demás cambios ya se guardaron: el tablero los refleja y el
+        // formulario sigue abierto para reintentar
+        onUpdated(updated);
+
+        throw new Error(
+          `Se guardaron los demás cambios, pero no la épica: ${getErrorMessage(
+            error,
+            "no fue posible cambiarla",
+          )}`,
+          { cause: error },
+        );
+      }
+    }
 
     setResult({ key: requestKey, state: { status: "success", item: updated } });
     setIsEditing(false);
     onUpdated(updated);
+  }
+
+  // La ruleta solo cambia el responsable: el resto de la ficha se reenvía tal cual
+  async function handleRouletteAssign(item: WorkItemDetail, memberId: string) {
+    const updated = await updateWorkItem(projectId, item.id, {
+      title: item.title,
+      description: item.description ?? undefined,
+      type: item.type as TaskFormValues["type"],
+      priority: item.priority,
+      estimate: item.estimate ?? undefined,
+      assigneeId: memberId,
+      dueDate: item.due_date ?? undefined,
+    });
+
+    setResult({ key: requestKey, state: { status: "success", item: updated } });
+    setIsRouletteOpen(false);
+    onUpdated(updated);
+    dialogRef.current?.focus();
   }
 
   async function handleDelete(item: WorkItemDetail) {
@@ -138,6 +201,15 @@ function TaskDialog({
           { id: item.assignee_id, name: item.assignee_name ?? "Responsable" },
         ]
       : members;
+
+  // La épica actual siempre se puede conservar, aunque esté archivada
+  const epicId = story ? story.parent_id : (item?.parent_id ?? null);
+  const currentEpic = epics.find(({ id }) => id === epicId);
+  const selectableEpics =
+    epicId && !currentEpic
+      ? [...epics, { id: epicId, title: "Épica archivada" }]
+      : epics;
+  const storyLabel = story ? `#${story.item_number} ${story.title}` : null;
 
   return (
     <>
@@ -213,8 +285,15 @@ function TaskDialog({
                     estimate: item.estimate ?? undefined,
                     assigneeId: item.assignee_id ?? undefined,
                     dueDate: item.due_date ?? undefined,
+                    epicId: epicId ?? undefined,
                   }}
                   members={assignableMembers}
+                  epics={selectableEpics}
+                  epicHint={
+                    storyLabel
+                      ? `La épica viene de su historia ${storyLabel}.`
+                      : undefined
+                  }
                   submitLabel="Guardar cambios"
                   submittingLabel="Guardando..."
                   onSubmit={(values) => handleSave(item, values)}
@@ -238,6 +317,18 @@ function TaskDialog({
                     <div>
                       <dt>Puntos</dt>
                       <dd>{item.estimate ?? "Sin estimar"}</dd>
+                    </div>
+                    <div>
+                      <dt>Épica</dt>
+                      <dd>
+                        {currentEpic?.title ??
+                          (epicId ? "Épica archivada" : "Sin épica")}
+                        {storyLabel && (
+                          <span className="task-dialog-story">
+                            Por su historia {storyLabel}
+                          </span>
+                        )}
+                      </dd>
                     </div>
                     <div>
                       <dt>Responsable</dt>
@@ -286,8 +377,31 @@ function TaskDialog({
                     )}
                   </section>
 
-                  {!readOnly && (
+                  {isRouletteOpen && (
+                    <RoulettePanel
+                      slices={roulette}
+                      onAssign={(memberId) =>
+                        handleRouletteAssign(item, memberId)
+                      }
+                      onCancel={() => setIsRouletteOpen(false)}
+                    />
+                  )}
+
+                  {!readOnly && !isRouletteOpen && (
                     <div className="actions task-dialog-actions">
+                      {/* Solo para tareas sin responsable que aún se trabajan */}
+                      {!item.assignee_id &&
+                        !item.is_archived &&
+                        roulette.length > 0 && (
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={() => setIsRouletteOpen(true)}
+                          >
+                            <Dices size={16} aria-hidden="true" />
+                            Girar ruleta
+                          </button>
+                        )}
                       <button
                         type="button"
                         className="btn-secondary"

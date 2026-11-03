@@ -13,6 +13,8 @@ function item(
     id: String(id),
     item_number: id,
     is_archived: false,
+    parent_id: null,
+    sprint_id: null,
     type: "TASK",
     title: `Tarea ${id}`,
     status,

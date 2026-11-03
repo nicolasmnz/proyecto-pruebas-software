@@ -1,0 +1,144 @@
+.settings-page {
+  max-width: 720px;
+  margin: 0 auto;
+  color: var(--color-text);
+}
+
+.settings-page h1 {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+.settings-section {
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+}
+
+.settings-section h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.settings-hint {
+  margin: 4px 0 16px;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.settings-group {
+  margin: 0 0 20px;
+  padding: 0;
+  border: none;
+}
+
+.settings-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-group legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.settings-group:disabled .settings-accents {
+  opacity: 0.6;
+}
+
+.settings-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.settings-option + .settings-option {
+  margin-top: 8px;
+}
+
+/* El alto contraste se combina con el tema: va separado de sus opciones */
+.settings-option.settings-contrast {
+  margin-top: 16px;
+}
+
+.settings-option:has(input:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+/* Sobre el fondo del acento, el texto tenue no alcanza el contraste AA */
+.settings-option:has(input:checked) .settings-option-description {
+  color: var(--color-text-secondary);
+}
+
+.settings-option input,
+.settings-accent input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent);
+}
+
+.settings-option-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.settings-option-description {
+  display: block;
+  color: var(--color-text-subtle);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.settings-accents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.settings-accent:has(input:checked) {
+  border-color: var(--color-accent);
+  background: var(--color-accent-subtle);
+}
+
+.settings-group:disabled .settings-accent {
+  cursor: not-allowed;
+}
+
+.settings-accent input {
+  margin: 0;
+}
+
+.settings-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}

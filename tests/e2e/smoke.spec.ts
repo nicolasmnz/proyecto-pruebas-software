@@ -7,7 +7,8 @@ test("frontend está disponible", async ({ page }) => {
 });
 
 test("API está disponible", async ({ request }) => {
-  const response = await request.get("http://localhost:3000/api/health");
+  const apiURL = process.env.E2E_API_URL ?? "http://localhost:3000/api";
+  const response = await request.get(`${apiURL}/health`);
 
   expect(response.ok()).toBeTruthy();
 });

@@ -1,12 +1,14 @@
 .sidebar {
+  display: flex;
+  flex-direction: column;
   position: sticky;
   top: 0;
   height: 100vh;
   overflow-y: auto;
   box-sizing: border-box;
   padding: 12px 8px;
-  background: #fff;
-  border-right: 1px solid #dfe1e6;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
 }
 
 .sidebar-action {
@@ -28,7 +30,7 @@
   gap: 8px; /* espacio entre ícono y texto */
   padding: 6px 8px;
   border-radius: 6px;
-  color: #292a2e;
+  color: var(--color-text);
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
@@ -41,12 +43,12 @@
 }
 
 .sidebar a:hover {
-  background: #f1f2f4;
+  background: var(--color-neutral);
 }
 
 .sidebar a.active {
-  background: #e9f2ff;
-  color: #0c66e4;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent);
 }
 
 .sidebar-dropdown-trigger {
@@ -58,7 +60,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #292a2e;
+  color: var(--color-text);
   font: inherit;
   font-size: 14px;
   font-weight: 500;
@@ -72,7 +74,7 @@
 }
 
 .sidebar-dropdown-trigger:hover {
-  background: #f1f2f4;
+  background: var(--color-neutral);
 }
 
 .sidebar-submenu {
@@ -81,15 +83,53 @@
 
 /* El color azul queda reservado para el enlace activo (.active) */
 .sidebar a.view-all {
-  color: #44546f;
+  color: var(--color-text-secondary);
 }
 
 .sidebar a.view-all.active {
-  color: #0c66e4;
+  color: var(--color-accent);
 }
 
 .sidebar-link-label {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis; /* nombres largos de proyecto en una sola línea */
+}
+
+/* Usuario conectado: queda al fondo de la barra */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px 4px 4px;
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar-user {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 8px;
+  padding: 0 4px;
+  min-width: 0;
+}
+
+.sidebar-user-name {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-email {
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sidebar-logout {
+  width: 100%;
 }

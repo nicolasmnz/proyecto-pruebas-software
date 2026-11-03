@@ -38,12 +38,16 @@ export async function findUserById(id: string) {
 }
 
 
+// Sin distinguir mayúsculas ni espacios, para que las cuentas guardadas
+// antes de normalizar los correos sigan encontrándose
 export async function findUserByEmail(email: string) {
     const result = await pool.query(
         `
         SELECT *
         FROM users
-        WHERE email = $1
+        WHERE lower(email) = lower(btrim($1))
+        ORDER BY created_at ASC
+        LIMIT 1
         `,
         [email]
     );

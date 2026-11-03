@@ -6,8 +6,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import BoardPage from "./BoardPage";
 import {
@@ -23,7 +23,10 @@ import {
   updateWorkItem,
 } from "../api/board";
 import type { Board, BoardItem, WorkItemDetail } from "../api/board";
+import { assignWorkItemToEpic, getEpics } from "../api/epics";
+import type { Epic } from "../api/epics";
 import { ApiError } from "../api/projects";
+import { TEST_USER, withSession } from "../test/session";
 
 vi.mock("../api/board", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../api/board")>()),
@@ -39,7 +42,15 @@ vi.mock("../api/board", async (importOriginal) => ({
   archiveDoneItems: vi.fn(),
 }));
 
+vi.mock("../api/epics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../api/epics")>()),
+  getEpics: vi.fn(),
+  assignWorkItemToEpic: vi.fn(),
+}));
+
 const mockedGetBoard = vi.mocked(getBoard);
+const mockedGetEpics = vi.mocked(getEpics);
+const mockedAssignWorkItemToEpic = vi.mocked(assignWorkItemToEpic);
 const mockedCreateWorkItem = vi.mocked(createWorkItem);
 const mockedMoveWorkItem = vi.mocked(moveWorkItem);
 const mockedArchiveWorkItem = vi.mocked(archiveWorkItem);
@@ -57,6 +68,8 @@ function buildItem(overrides: Partial<BoardItem>): BoardItem {
     id: "30000000-0000-0000-0000-000000000010",
     item_number: 1,
     is_archived: false,
+    parent_id: null,
+    sprint_id: null,
     type: "TASK",
     title: "Tarea",
     status: "TODO",
@@ -121,21 +134,37 @@ const board: Board = {
   wip_limits: {},
 };
 
+// Muestra la búsqueda de la URL para comprobar qué guarda el tablero en ella
+function SearchProbe() {
+  return <p data-testid="search">{useLocation().search}</p>;
+}
+
 function renderPage(search = "") {
   render(
-    <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board${search}`]}>
-      <Routes>
-        <Route path="/projects" element={<h1>Listado</h1>} />
-        <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
-        <Route path="/projects/:projectId/board" element={<BoardPage />} />
-      </Routes>
-    </MemoryRouter>,
+    withSession(
+      <MemoryRouter initialEntries={[`/projects/${PROJECT_ID}/board${search}`]}>
+        <Routes>
+          <Route path="/projects" element={<h1>Listado</h1>} />
+          <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
+          <Route
+            path="/projects/:projectId/board"
+            element={
+              <>
+                <BoardPage />
+                <SearchProbe />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    ),
   );
 }
 
 describe("BoardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockedGetEpics.mockResolvedValue([]);
   });
 
   test("muestra un estado de carga y luego las tres columnas", async () => {
@@ -262,7 +291,7 @@ describe("BoardPage", () => {
         priority: "HIGH",
         estimate: 5,
         status: "IN_PROGRESS",
-        createdBy: expect.any(String),
+        createdBy: TEST_USER.id,
       });
 
       const items = await within(inProgress).findAllByRole("listitem");
@@ -960,6 +989,293 @@ describe("BoardPage", () => {
       );
     });
 
+    describe("épica de la tarea", () => {
+      const LOGIN_EPIC_ID = "e0000000-0000-0000-0000-000000000001";
+      const REPORTS_EPIC_ID = "e0000000-0000-0000-0000-000000000002";
+
+      function buildEpic(id: string, title: string): Epic {
+        return {
+          id,
+          project_id: PROJECT_ID,
+          item_number: 20,
+          is_archived: false,
+          type: "EPIC",
+          title,
+          description: null,
+          status: "TODO",
+          priority: "MEDIUM",
+          estimate: null,
+          due_date: null,
+          created_by: "u1",
+          created_at: "2026-10-01T12:00:00Z",
+          updated_at: "2026-10-01T12:00:00Z",
+        };
+      }
+
+      async function openEpicDialog(parentId: string | null) {
+        mockedGetEpics.mockResolvedValue([
+          buildEpic(LOGIN_EPIC_ID, "Autenticación"),
+          buildEpic(REPORTS_EPIC_ID, "Reportes"),
+        ]);
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({ ...detail, parent_id: parentId });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        return screen.findByRole("dialog", { name: "Diseñar login" });
+      }
+
+      test("la ficha muestra la épica y permite cambiarla", async () => {
+        const dialog = await openEpicDialog(LOGIN_EPIC_ID);
+
+        expect(within(dialog).getByText("Autenticación")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: LOGIN_EPIC_ID,
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+        mockedAssignWorkItemToEpic.mockResolvedValue({
+          id: "1",
+          parent_id: REPORTS_EPIC_ID,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        const epic = within(dialog).getByLabelText("Épica");
+
+        expect(epic).toHaveValue(LOGIN_EPIC_ID);
+
+        await userEvent.selectOptions(epic, "Reportes");
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        // La épica no viaja en el PUT
+        expect(mockedUpdateWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", {
+          title: "Diseñar login",
+          description: "Pantalla de inicio de sesión.",
+          type: "TASK",
+          priority: "HIGH",
+          estimate: 3,
+          assigneeId: undefined,
+          dueDate: "2026-10-31",
+        });
+        expect(mockedAssignWorkItemToEpic).toHaveBeenCalledWith(
+          PROJECT_ID,
+          "1",
+          REPORTS_EPIC_ID,
+        );
+        expect(await within(dialog).findByText("Reportes")).toBeInTheDocument();
+      });
+
+      // #3 Administrar miembros es una historia de Autenticación y #1 cuelga de ella
+      const storyBoard: Board = {
+        ...board,
+        columns: board.columns.map((column) => ({
+          ...column,
+          items: column.items.map((item) =>
+            item.id === "3"
+              ? { ...item, parent_id: LOGIN_EPIC_ID }
+              : item.id === "1"
+                ? { ...item, parent_id: "3" }
+                : item,
+          ),
+        })),
+      };
+
+      async function openStoryTaskDialog() {
+        mockedGetEpics.mockResolvedValue([
+          buildEpic(LOGIN_EPIC_ID, "Autenticación"),
+          buildEpic(REPORTS_EPIC_ID, "Reportes"),
+        ]);
+        mockedGetBoard.mockResolvedValue(storyBoard);
+        mockedGetWorkItem.mockResolvedValue({ ...detail, parent_id: "3" });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        return screen.findByRole("dialog", { name: "Diseñar login" });
+      }
+
+      test("si la tarea cuelga de una historia, muestra la épica de la historia", async () => {
+        const dialog = await openStoryTaskDialog();
+
+        expect(within(dialog).getByText(/^Autenticación/)).toHaveTextContent(
+          "AutenticaciónPor su historia #3 Administrar miembros",
+        );
+        expect(
+          within(dialog).queryByText("Épica archivada"),
+        ).not.toBeInTheDocument();
+      });
+
+      test("la épica heredada no se puede cambiar y guardar no toca la historia", async () => {
+        const dialog = await openStoryTaskDialog();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: "3",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        const epic = within(dialog).getByLabelText("Épica");
+
+        expect(epic).toBeDisabled();
+        expect(epic).toHaveValue(LOGIN_EPIC_ID);
+        expect(epic).toHaveAccessibleDescription(
+          "La épica viene de su historia #3 Administrar miembros.",
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        await waitFor(() => expect(mockedUpdateWorkItem).toHaveBeenCalled());
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+        expect(
+          await within(dialog).findByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+      });
+
+      test("elegir «Sin épica» la quita enviando null", async () => {
+        const dialog = await openEpicDialog(LOGIN_EPIC_ID);
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: LOGIN_EPIC_ID,
+        });
+        mockedAssignWorkItemToEpic.mockResolvedValue({
+          id: "1",
+          parent_id: null,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.selectOptions(
+          within(dialog).getByLabelText("Épica"),
+          "Sin épica",
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(mockedAssignWorkItemToEpic).toHaveBeenCalledWith(
+          PROJECT_ID,
+          "1",
+          null,
+        );
+        expect(
+          await within(dialog).findByText("Sin épica"),
+        ).toBeInTheDocument();
+      });
+
+      test("si la épica no cambia no se llama a la asignación", async () => {
+        const dialog = await openEpicDialog(null);
+
+        expect(within(dialog).getByText("Sin épica")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          title: "Diseñar login v2",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.type(within(dialog).getByLabelText(/Título/), " v2");
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        await screen.findByRole("dialog", { name: "Diseñar login v2" });
+
+        expect(mockedUpdateWorkItem).toHaveBeenCalled();
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+      });
+
+      test("si falla cambiar la épica avisa que lo demás sí se guardó", async () => {
+        const dialog = await openEpicDialog(null);
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          title: "Diseñar login v2",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+        mockedAssignWorkItemToEpic.mockRejectedValue(
+          new Error("Error asignando épica"),
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+        await userEvent.type(within(dialog).getByLabelText(/Título/), " v2");
+        await userEvent.selectOptions(
+          within(dialog).getByLabelText("Épica"),
+          "Autenticación",
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+          "Se guardaron los demás cambios, pero no la épica: Error asignando épica",
+        );
+        // El formulario sigue abierto con lo elegido para reintentar
+        expect(within(dialog).getByLabelText("Épica")).toHaveValue(
+          LOGIN_EPIC_ID,
+        );
+        // El tablero ya muestra el título guardado
+        expect(
+          within(screen.getByRole("region", { name: "Por hacer" })).getByRole(
+            "button",
+            { name: "Diseñar login v2" },
+          ),
+        ).toBeInTheDocument();
+      });
+
+      test("una tarea de una épica archivada la conserva al editar", async () => {
+        const ARCHIVED_EPIC_ID = "e0000000-0000-0000-0000-000000000009";
+        const dialog = await openEpicDialog(ARCHIVED_EPIC_ID);
+
+        expect(within(dialog).getByText("Épica archivada")).toBeInTheDocument();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          parent_id: ARCHIVED_EPIC_ID,
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        );
+
+        expect(within(dialog).getByLabelText("Épica")).toHaveValue(
+          ARCHIVED_EPIC_ID,
+        );
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Guardar cambios" }),
+        );
+
+        expect(mockedUpdateWorkItem).toHaveBeenCalled();
+        expect(mockedAssignWorkItemToEpic).not.toHaveBeenCalled();
+      });
+    });
+
     test("cancelar la edición vuelve a la ficha sin guardar", async () => {
       const dialog = await openDialog();
 
@@ -1103,6 +1419,189 @@ describe("BoardPage", () => {
       });
 
       expect(within(dialog).getByText("Archivada")).toBeInTheDocument();
+    });
+
+    describe("ruleta de asignación", () => {
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      test("una tarea sin responsable se asigna con la ruleta", async () => {
+        // Ana y Beto no tienen carga: 50 % cada uno; 0 cae en Ana
+        vi.spyOn(Math, "random").mockReturnValue(0);
+
+        const dialog = await openDialog();
+
+        mockedUpdateWorkItem.mockResolvedValue({
+          ...detail,
+          assignee_id: "u1",
+          assignee_name: "Ana Pérez",
+          updated_at: "2026-10-03T12:00:00Z",
+        });
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        );
+
+        const roulette = within(dialog).getByRole("region", {
+          name: "Ruleta de asignación",
+        });
+
+        expect(roulette).toHaveTextContent("Ana Pérez50 %");
+        expect(roulette).toHaveTextContent("Beto Soto50 %");
+
+        await userEvent.click(
+          within(roulette).getByRole("button", { name: "Girar" }),
+        );
+        await userEvent.click(
+          within(roulette).getByRole("button", { name: "Asignar a Ana Pérez" }),
+        );
+
+        // Solo cambia el responsable: lo demás se reenvía tal cual
+        expect(mockedUpdateWorkItem).toHaveBeenCalledWith(PROJECT_ID, "1", {
+          title: "Diseñar login",
+          description: "Pantalla de inicio de sesión.",
+          type: "TASK",
+          priority: "HIGH",
+          estimate: 3,
+          assigneeId: "u1",
+          dueDate: "2026-10-31",
+        });
+        await waitFor(() =>
+          expect(
+            within(dialog).getByText("Responsable").nextSibling,
+          ).toHaveTextContent("Ana Pérez"),
+        );
+        expect(
+          within(dialog).queryByRole("region", {
+            name: "Ruleta de asignación",
+          }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("cancelar la ruleta vuelve a la ficha sin asignar", async () => {
+        const dialog = await openDialog();
+
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        );
+        await userEvent.click(
+          within(dialog).getByRole("button", { name: "Cancelar" }),
+        );
+
+        expect(mockedUpdateWorkItem).not.toHaveBeenCalled();
+        expect(
+          within(dialog).getByRole("button", { name: "Girar ruleta" }),
+        ).toBeInTheDocument();
+      });
+
+      test("no se ofrece si la tarea ya tiene responsable", async () => {
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({
+          ...detail,
+          assignee_id: "u2",
+          assignee_name: "Beto Soto",
+        });
+
+        renderPage();
+
+        await userEvent.click(
+          await screen.findByRole("button", { name: "Diseñar login" }),
+        );
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("no se ofrece en un proyecto archivado", async () => {
+        mockedGetBoard.mockResolvedValue({
+          ...board,
+          project: { ...board.project, is_archived: true },
+        });
+        mockedGetWorkItem.mockResolvedValue(detail);
+
+        renderPage("?task=1");
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+
+      test("no se ofrece en una tarea archivada", async () => {
+        mockedGetBoard.mockResolvedValue(board);
+        mockedGetWorkItem.mockResolvedValue({
+          ...detail,
+          is_archived: true,
+          status: "DONE",
+        });
+
+        renderPage("?task=1");
+
+        const dialog = await screen.findByRole("dialog", {
+          name: "Diseñar login",
+        });
+
+        expect(
+          within(dialog).getByRole("button", { name: "Editar" }),
+        ).toBeInTheDocument();
+        expect(
+          within(dialog).queryByRole("button", { name: "Girar ruleta" }),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    test("con ?task= en la URL abre esa ficha al cargar el tablero", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage("?task=1");
+
+      expect(
+        await screen.findByRole("dialog", { name: "Diseñar login" }),
+      ).toBeInTheDocument();
+      expect(mockedGetWorkItem).toHaveBeenCalledWith(
+        PROJECT_ID,
+        "1",
+        expect.anything(),
+      );
+    });
+
+    test("abrir la ficha la guarda en la URL y cerrarla la quita, sin perder los filtros", async () => {
+      mockedGetBoard.mockResolvedValue(board);
+      mockedGetWorkItem.mockResolvedValue(detail);
+
+      renderPage("?q=login");
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Diseñar login" }),
+      );
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Diseñar login",
+      });
+
+      expect(screen.getByTestId("search")).toHaveTextContent("?q=login&task=1");
+
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Cerrar" }),
+      );
+
+      expect(screen.getByTestId("search")).toHaveTextContent(/^\?q=login$/);
     });
   });
 
@@ -1270,6 +1769,125 @@ describe("BoardPage", () => {
       expect(screen.getByRole("searchbox")).toHaveValue("menu");
       expect(screen.getByLabelText("Prioridad")).toHaveValue("MEDIUM");
       expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+    });
+
+    describe("por épica", () => {
+      const EPIC_ID = "e0000000-0000-0000-0000-000000000001";
+      // #1 Diseñar login pertenece a la épica Autenticación
+      const epicBoard: Board = {
+        ...filterBoard,
+        columns: filterBoard.columns.map((column) => ({
+          ...column,
+          items: column.items.map((item) =>
+            item.id === "1" ? { ...item, parent_id: EPIC_ID } : item,
+          ),
+        })),
+      };
+
+      beforeEach(() => {
+        mockedGetBoard.mockResolvedValue(epicBoard);
+        mockedGetEpics.mockResolvedValue([
+          {
+            id: EPIC_ID,
+            project_id: PROJECT_ID,
+            item_number: 20,
+            is_archived: false,
+            type: "EPIC",
+            title: "Autenticación",
+            description: null,
+            status: "TODO",
+            priority: "MEDIUM",
+            estimate: null,
+            due_date: null,
+            created_by: "u1",
+            created_at: "2026-10-01T12:00:00Z",
+            updated_at: "2026-10-01T12:00:00Z",
+          },
+        ]);
+      });
+
+      test("las tarjetas muestran la épica a la que pertenecen", async () => {
+        renderPage();
+
+        const todo = await screen.findByRole("region", { name: "Por hacer" });
+        const [login, menu] = within(todo).getAllByRole("article");
+
+        expect(login).toHaveTextContent("Épica: Autenticación");
+        expect(menu).not.toHaveTextContent("Épica:");
+      });
+
+      test("filtra por una épica o por las tareas sin épica", async () => {
+        renderPage();
+
+        const epic = await screen.findByLabelText("Épica");
+
+        await userEvent.selectOptions(epic, "Autenticación");
+
+        expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+        expect(titlesIn("En progreso")).toEqual([]);
+
+        await userEvent.selectOptions(epic, "Sin épica");
+
+        expect(titlesIn("Por hacer")).toEqual(["Corregir menú"]);
+        expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+
+        await userEvent.click(
+          screen.getByRole("button", { name: "Limpiar filtros" }),
+        );
+
+        expect(epic).toHaveValue("");
+        expect(titlesIn("Por hacer")).toEqual([
+          "Diseñar login",
+          "Corregir menú",
+        ]);
+      });
+
+      test("las tareas de una historia heredan su épica en la tarjeta y en el filtro", async () => {
+        // #3 (historia) es de Autenticación y #2 cuelga de ella
+        mockedGetBoard.mockResolvedValue({
+          ...epicBoard,
+          columns: epicBoard.columns.map((column) => ({
+            ...column,
+            items: column.items.map((item) =>
+              item.id === "3"
+                ? { ...item, parent_id: EPIC_ID }
+                : item.id === "2"
+                  ? { ...item, parent_id: "3" }
+                  : item,
+            ),
+          })),
+        });
+
+        renderPage();
+
+        const todo = await screen.findByRole("region", { name: "Por hacer" });
+        const [, menu] = within(todo).getAllByRole("article");
+
+        expect(menu).toHaveTextContent("Épica: Autenticación");
+
+        const epic = screen.getByLabelText("Épica");
+
+        await userEvent.selectOptions(epic, "Autenticación");
+
+        expect(titlesIn("Por hacer")).toEqual([
+          "Diseñar login",
+          "Corregir menú",
+        ]);
+        expect(titlesIn("En progreso")).toEqual(["Administrar miembros"]);
+
+        await userEvent.selectOptions(epic, "Sin épica");
+
+        expect(titlesIn("Por hacer")).toEqual([]);
+        expect(titlesIn("En progreso")).toEqual([]);
+      });
+
+      test("la épica se lee de la URL", async () => {
+        renderPage(`?epic=${EPIC_ID}`);
+
+        expect(await screen.findByLabelText("Épica")).toHaveValue(EPIC_ID);
+        expect(titlesIn("Por hacer")).toEqual(["Diseñar login"]);
+        expect(screen.getByText("Mostrando 1 de 3 tareas")).toBeInTheDocument();
+      });
     });
 
     test("con filtros activos no se muestran los botones de reordenar", async () => {

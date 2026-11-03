@@ -2,7 +2,13 @@ import { useId } from "react";
 import { Gauge, Search, X } from "lucide-react";
 
 import type { BoardMember } from "../api/board";
-import { NO_ASSIGNEE, hasActiveFilters } from "../utils/boardFilters";
+import type { Epic } from "../api/epics";
+import {
+  EMPTY_FILTERS,
+  NO_ASSIGNEE,
+  NO_EPIC,
+  hasActiveFilters,
+} from "../utils/boardFilters";
 import type { BoardFilters } from "../utils/boardFilters";
 
 import "./BoardToolbar.css";
@@ -11,6 +17,7 @@ interface BoardToolbarProps {
   filters: BoardFilters;
   onChange: (filters: BoardFilters) => void;
   members: BoardMember[];
+  epics: Pick<Epic, "id" | "title">[];
   // Tareas visibles y totales en las columnas
   shown: number;
   total: number;
@@ -22,6 +29,7 @@ function BoardToolbar({
   filters,
   onChange,
   members,
+  epics,
   shown,
   total,
   onEditLimits,
@@ -30,6 +38,7 @@ function BoardToolbar({
   const typeId = useId();
   const priorityId = useId();
   const assigneeId = useId();
+  const epicId = useId();
   const isFiltering = hasActiveFilters(filters);
 
   function set(change: Partial<BoardFilters>) {
@@ -98,13 +107,28 @@ function BoardToolbar({
         </select>
       </div>
 
+      <div className="board-toolbar-field">
+        <label htmlFor={epicId}>Épica</label>
+        <select
+          id={epicId}
+          value={filters.epic}
+          onChange={(event) => set({ epic: event.target.value })}
+        >
+          <option value="">Todas</option>
+          <option value={NO_EPIC}>Sin épica</option>
+          {epics.map((epic) => (
+            <option key={epic.id} value={epic.id}>
+              {epic.title}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {isFiltering && (
         <button
           type="button"
           className="btn-secondary"
-          onClick={() =>
-            onChange({ query: "", type: "", priority: "", assignee: "" })
-          }
+          onClick={() => onChange(EMPTY_FILTERS)}
         >
           <X size={16} aria-hidden="true" />
           Limpiar filtros

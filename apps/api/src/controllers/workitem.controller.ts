@@ -1,13 +1,16 @@
 import { Request, Response } from 'express';
 import { IdParams } from '../types/request.js';
+import { isValidDate } from '../utils/date.js';
 import { isUuid } from '../utils/uuid.js';
 
 import { findProjectById } from '../repositories/project.repository.js';
+import { findUserById } from '../repositories/user.repository.js';
 import {
     archiveDoneItems,
     createWorkItem,
     deleteWorkItem,
     findArchivedItems,
+    findAssignedItems,
     findBoardItem,
     findBoardItems,
     findProjectMembers,
@@ -25,7 +28,6 @@ const MAX_TITLE_LENGTH = 200;
 const EDITABLE_TYPES = ['TASK', 'STORY', 'BUG'];
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 const MAX_WIP_LIMIT = 999;
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Orden de las columnas del tablero
 export const BOARD_STATUSES = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
@@ -62,17 +64,6 @@ function assertEditable(project: Project, action: string): Failure | null {
     return project.is_archived
         ? new Failure(409, `El proyecto está archivado. Restáuralo para ${action}`)
         : null;
-}
-
-function isValidDate(value: string): boolean {
-    if (!DATE_PATTERN.test(value)) {
-        return false;
-    }
-
-    const date = new Date(`${value}T00:00:00Z`);
-
-    return !Number.isNaN(date.getTime())
-        && date.toISOString().startsWith(value);
 }
 
 function normalizeText(value: unknown): string | null {
@@ -172,6 +163,28 @@ export async function getBoard(
 
     } catch (error) {
         return serverError(res, error, 'Error obteniendo tablero');
+    }
+}
+
+
+// Lo asignado a un usuario en todos sus proyectos (vista «Mis tareas»)
+export async function getAssignedWorkItems(
+    req: Request<IdParams>,
+    res: Response
+) {
+    try {
+        const user = isUuid(req.params.id)
+            ? await findUserById(req.params.id)
+            : undefined;
+
+        if (!user) {
+            return respond(res, new Failure(404, 'Usuario no encontrado'));
+        }
+
+        return res.status(200).json(await findAssignedItems(user.id));
+
+    } catch (error) {
+        return serverError(res, error, 'Error obteniendo las tareas asignadas');
     }
 }
 

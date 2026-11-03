@@ -18,6 +18,8 @@ interface KanbanBoardProps {
   // Todas las tareas de cada columna: los contadores y límites no dependen
   // del filtro
   columns: BoardColumn[];
+  // Título de cada épica activa por id, para mostrarla en sus tarjetas
+  epicTitles?: Record<string, string>;
   wipLimits?: WipLimits;
   // Tareas que se muestran; sin esta función se muestran todas
   isVisible?: (item: BoardItem) => boolean;
@@ -44,6 +46,7 @@ interface KanbanBoardProps {
 
 function KanbanBoard({
   columns,
+  epicTitles = {},
   wipLimits = {},
   isVisible = () => true,
   isFiltering = false,
@@ -222,6 +225,11 @@ function KanbanBoard({
                     >
                       <KanbanCard
                         item={item}
+                        epicTitle={
+                          item.parent_id
+                            ? epicTitles[item.parent_id]
+                            : undefined
+                        }
                         onOpen={onOpenItem}
                         onMove={onMoveItem}
                         onReorder={canReorder ? reorder : undefined}

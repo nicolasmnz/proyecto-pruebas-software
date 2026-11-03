@@ -3,10 +3,10 @@
   align-items: center;
   gap: 12px;
   padding: 16px 24px 16px 18px;
-  border: 1px solid #1f1f1f;
+  border: 1px solid var(--color-text-strong);
   border-radius: 16px;
-  background: #fff;
-  color: #1f1f1f;
+  background: var(--color-surface);
+  color: var(--color-text-strong);
   font: inherit;
   font-size: 15px;
   font-weight: 500;
@@ -17,14 +17,14 @@
 }
 
 .btn-new:hover {
-  background: #f8fafd;
+  background: var(--color-hover-soft);
 }
 
 .btn-new:active {
-  background: #eef2f9;
+  background: var(--color-pressed-soft);
 }
 
 .btn-new:focus-visible {
-  outline: 2px solid #0c66e4;
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }

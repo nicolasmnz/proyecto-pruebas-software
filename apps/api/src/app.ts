@@ -5,6 +5,9 @@ import projectRoutes from './routes/project.routes.js';
 import workItemRoutes from './routes/workitem.routes.js';
 import userRoutes from './routes/user.routes.js'
 import authRoutes from './routes/auth.routes.js'
+import sprintRoutes from './routes/sprint.routes.js'
+import epicRoutes from './routes/epic.routes.js'
+import memberRoutes from './routes/member.routes.js'
 
 const app = express();
 
@@ -24,5 +27,8 @@ app.use("/api/auth", authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/projects', workItemRoutes);
 app.use("/api/users",userRoutes);
+app.use("/api/projects/:id/sprints", sprintRoutes);
+app.use("/api/projects/:id/epics", epicRoutes)
+app.use("/api/projects", memberRoutes);
 
 export default app;

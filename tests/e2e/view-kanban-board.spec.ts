@@ -8,7 +8,7 @@ function card(scope: Page | Locator, title: string) {
   return scope.getByRole("button", { name: title, exact: true });
 }
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:3000/api";
 const SEED_USER_ID = "11111111-1111-1111-1111-111111111111";
 const SEED_PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 
@@ -255,9 +255,8 @@ test.describe("ficha de la tarea", () => {
     ).toBeVisible();
     await expect(dialog.getByText("Sin asignar")).toHaveCount(0);
 
-    // Los cambios persisten al recargar
+    // Los cambios persisten al recargar, y la ficha sigue abierta (?task=)
     await page.reload();
-    await card(page, "Tarea editada").click();
 
     await page
       .getByRole("dialog", { name: "Tarea editada" })

@@ -20,6 +20,8 @@ import type {
   WorkItemDetail,
   WorkItemStatus,
 } from "../api/board";
+import { getEpics } from "../api/epics";
+import type { Epic } from "../api/epics";
 import ArchivedItems from "../components/ArchivedItems";
 import ConfirmDialog from "../components/ConfirmDialog";
 import BoardToolbar from "../components/BoardToolbar";
@@ -28,33 +30,36 @@ import KanbanBoard from "../components/KanbanBoard";
 import TaskDialog from "../components/TaskDialog";
 import WipLimitsDialog from "../components/WipLimitsDialog";
 import type { TaskFormValues } from "../components/TaskForm";
+import { useCurrentUser } from "../context/authContext";
 
 import { hasActiveFilters, matchesFilters } from "../utils/boardFilters";
 import type { BoardFilters } from "../utils/boardFilters";
+import { getEpicId, getParentStory, indexItems } from "../utils/hierarchy";
+import { getRouletteOdds } from "../utils/roulette";
 
 import "./BoardPage.css";
 
 type Result =
-  | { status: "success"; board: Board }
+  | { status: "success"; board: Board; epics: Epic[] }
   | { status: "not-found" }
   | { status: "error"; message: string };
 
-const TEMP_USER_ID = "11111111-1111-1111-1111-111111111111";
-
 function BoardPage() {
   const { projectId = "" } = useParams();
+  const currentUser = useCurrentUser();
   const [attempt, setAttempt] = useState(0);
   // Mensaje para lectores de pantalla tras crear una tarea
   const [announcement, setAnnouncement] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
-  // Tarea cuya ficha está abierta
-  const [openItemId, setOpenItemId] = useState<string | null>(null);
   const [isLimitsOpen, setIsLimitsOpen] = useState(false);
   const [isArchiveAllOpen, setIsArchiveAllOpen] = useState(false);
   const [isArchivingAll, setIsArchivingAll] = useState(false);
   const [archiveAllError, setArchiveAllError] = useState<string | null>(null);
   // Los filtros viven en la URL para poder compartir o recargar la vista
   const [searchParams, setSearchParams] = useSearchParams();
+  // Tarea cuya ficha está abierta (?task=): permite enlazar una tarea, por
+  // ejemplo desde «Mis tareas»
+  const openItemId = searchParams.get("task");
   const [result, setResult] = useState<{ key: string; result: Result } | null>(
     null,
   );
@@ -68,8 +73,11 @@ function BoardPage() {
     const setState = (value: Result) =>
       setResult({ key: requestKey, result: value });
 
-    getBoard(projectId, controller.signal)
-      .then((board) => setState({ status: "success", board }))
+    Promise.all([
+      getBoard(projectId, controller.signal),
+      getEpics(projectId, controller.signal),
+    ])
+      .then(([board, epics]) => setState({ status: "success", board, epics }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) {
           return;
@@ -135,6 +143,7 @@ function BoardPage() {
     type: searchParams.get("type") ?? "",
     priority: searchParams.get("priority") ?? "",
     assignee: searchParams.get("assignee") ?? "",
+    epic: searchParams.get("epic") ?? "",
   };
   const isFiltering = hasActiveFilters(filters);
 
@@ -145,15 +154,56 @@ function BoardPage() {
     if (next.type) params.set("type", next.type);
     if (next.priority) params.set("priority", next.priority);
     if (next.assignee) params.set("assignee", next.assignee);
+    if (next.epic) params.set("epic", next.epic);
+    if (openItemId) params.set("task", openItemId);
 
     // Escribir en el buscador no llena el historial del navegador
     setSearchParams(params, { replace: true });
   }
 
+  // Abrir o cerrar la ficha no llena el historial del navegador
+  function setOpenItemId(itemId: string | null) {
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+
+        if (itemId) {
+          params.set("task", itemId);
+        } else {
+          params.delete("task");
+        }
+
+        return params;
+      },
+      { replace: true },
+    );
+  }
+
   const allItems = state.board.columns.flatMap((column) => column.items);
+  const itemsById = indexItems(state.board);
+  const titlesById = new Map(state.epics.map((epic) => [epic.id, epic.title]));
+  // Las tarjetas buscan su épica por parent_id: cada historia se registra con
+  // el título de su épica, así sus tareas muestran la épica heredada
+  const epicTitles: Record<string, string> = {};
+
+  for (const [id, title] of titlesById) {
+    epicTitles[id] = title;
+  }
+
+  for (const item of itemsById.values()) {
+    const title = item.parent_id ? titlesById.get(item.parent_id) : undefined;
+
+    if (title) {
+      epicTitles[item.id] = title;
+    }
+  }
+
+  const isVisible = (item: BoardItem) =>
+    matchesFilters(item, filters, getEpicId(item, itemsById));
   const shownCount = isFiltering
-    ? allItems.filter((item) => matchesFilters(item, filters)).length
+    ? allItems.filter(isVisible).length
     : allItems.length;
+  const openItem = openItemId ? itemsById.get(openItemId) : undefined;
 
   // Aplica un cambio al tablero ya cargado, sin volver a pedirlo
   function updateBoard(change: (board: Board) => Board) {
@@ -164,7 +214,7 @@ function BoardPage() {
 
       return {
         key: requestKey,
-        result: { status: "success", board: change(current.result.board) },
+        result: { ...current.result, board: change(current.result.board) },
       };
     });
   }
@@ -176,7 +226,7 @@ function BoardPage() {
     const item = await createWorkItem(project.id, {
       ...values,
       status,
-      createdBy: TEMP_USER_ID,
+      createdBy: currentUser.id,
     });
 
     // La tarea nueva queda al final de su columna, sin recargar el tablero
@@ -409,6 +459,7 @@ function BoardPage() {
         filters={filters}
         onChange={handleFiltersChange}
         members={state.board.members}
+        epics={state.epics}
         shown={shownCount}
         total={allItems.length}
         onEditLimits={
@@ -418,9 +469,10 @@ function BoardPage() {
 
       <KanbanBoard
         columns={state.board.columns}
+        epicTitles={epicTitles}
         wipLimits={state.board.wip_limits}
         isFiltering={isFiltering}
-        isVisible={(item) => matchesFilters(item, filters)}
+        isVisible={isVisible}
         onCreateItem={project.is_archived ? undefined : handleCreateItem}
         onOpenItem={(item) => setOpenItemId(item.id)}
         onMoveItem={project.is_archived ? undefined : handleMoveItem}
@@ -438,6 +490,7 @@ function BoardPage() {
 
       <ArchivedItems
         items={state.board.archived}
+        epicTitles={epicTitles}
         onOpen={(item) => setOpenItemId(item.id)}
         onRestore={project.is_archived ? undefined : handleRestoreItem}
       />
@@ -479,6 +532,11 @@ function BoardPage() {
           projectId={project.id}
           itemId={openItemId}
           members={state.board.members}
+          epics={state.epics}
+          story={openItem ? getParentStory(openItem, itemsById) : null}
+          roulette={getRouletteOdds(state.board.members, [
+            ...itemsById.values(),
+          ])}
           readOnly={project.is_archived}
           onClose={() => setOpenItemId(null)}
           onUpdated={handleItemUpdated}

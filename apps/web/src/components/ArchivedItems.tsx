@@ -8,13 +8,20 @@ import "./ArchivedItems.css";
 
 interface ArchivedItemsProps {
   items: BoardItem[];
+  // Título de cada épica activa por id, para mostrarla en sus tarjetas
+  epicTitles?: Record<string, string>;
   // Abre la ficha de una tarea archivada
   onOpen?: (item: BoardItem) => void;
   // Sin esta función las tareas archivadas no se pueden restaurar
   onRestore?: (item: BoardItem) => void;
 }
 
-function ArchivedItems({ items, onOpen, onRestore }: ArchivedItemsProps) {
+function ArchivedItems({
+  items,
+  epicTitles = {},
+  onOpen,
+  onRestore,
+}: ArchivedItemsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const listId = useId();
 
@@ -42,7 +49,14 @@ function ArchivedItems({ items, onOpen, onRestore }: ArchivedItemsProps) {
           <ul className="archived-items-list">
             {items.map((item) => (
               <li key={item.id}>
-                <KanbanCard item={item} onOpen={onOpen} onRestore={onRestore} />
+                <KanbanCard
+                  item={item}
+                  epicTitle={
+                    item.parent_id ? epicTitles[item.parent_id] : undefined
+                  }
+                  onOpen={onOpen}
+                  onRestore={onRestore}
+                />
               </li>
             ))}
           </ul>

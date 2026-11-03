@@ -4,7 +4,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  color: #fff;
+  background: var(--color-avatar-override, var(--avatar-color));
+  color: var(--color-on-solid);
   font-weight: 600;
   letter-spacing: 0;
 }

@@ -7,6 +7,7 @@ const BOARD_ITEM_COLUMNS = `
     w.is_archived,
     w.project_id,
     w.sprint_id,
+    w.parent_id,
     w.type,
     w.title,
     w.status,
@@ -81,6 +82,7 @@ export async function createWorkItem(data: CreateWorkItemData) {
             is_archived,
             project_id,
             sprint_id,
+            parent_id,
             type,
             title,
             status,
@@ -106,19 +108,46 @@ export async function createWorkItem(data: CreateWorkItemData) {
     return result.rows[0];
 }
 
-// Usuarios activos que participan del proyecto: sus miembros y quien lo creó
+// Tareas asignadas a un usuario en todos los proyectos activos, de la fecha
+// límite más cercana a la más lejana; las que no tienen fecha van al final.
+// Se excluyen las épicas, las tareas archivadas y los proyectos archivados
+export async function findAssignedItems(userId: string) {
+    const result = await pool.query(
+        `
+        SELECT
+            ${BOARD_ITEM_COLUMNS},
+            p.name AS project_name
+        ${BOARD_ITEM_FROM}
+        JOIN projects p ON p.id = w.project_id
+        WHERE w.assignee_id = $1
+          AND w.type <> 'EPIC'
+          AND NOT w.is_archived
+          AND NOT p.is_archived
+        ORDER BY w.due_date ASC NULLS LAST, p.name ASC, w.item_number ASC
+        `,
+        [userId]
+    );
+
+    return result.rows;
+}
+
+// Usuarios activos a los que se les pueden asignar tareas: los miembros del
+// proyecto y quien lo creó, salvo los de solo lectura (VIEWER). El creador es
+// dueño aunque no esté en project_members; si está, manda el rol de la tabla
 export async function findProjectMembers(projectId: string) {
     const result = await pool.query(
         `
         SELECT u.id, u.name
         FROM users u
+        LEFT JOIN project_members pm
+            ON pm.user_id = u.id
+           AND pm.project_id = $1
         WHERE u.is_active
           AND (
-              u.id IN (
-                  SELECT user_id FROM project_members WHERE project_id = $1
-              )
+              pm.id IS NOT NULL
               OR u.id = (SELECT created_by FROM projects WHERE id = $1)
           )
+          AND COALESCE(pm.role, 'OWNER') <> 'VIEWER'
         ORDER BY u.name ASC, u.id ASC
         `,
         [projectId]

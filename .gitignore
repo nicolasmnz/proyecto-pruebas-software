@@ -15,6 +15,8 @@ build/
 coverage/
 playwright-report/
 test-results/
+reports/
+.jenkins/
 
 # Logs
 *.log
@@ -25,3 +27,6 @@ npm-debug.log*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Sesion generada por Playwright
+playwright/.auth/

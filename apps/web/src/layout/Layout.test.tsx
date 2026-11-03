@@ -1,11 +1,22 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import Layout from "./Layout";
+import type { User } from "../api/auth";
+import { AuthContext } from "../context/authContext";
 import { ProjectsContext } from "../context/projectsContext";
 import type { Project } from "../api/projects";
+
+const ana: User = {
+  id: "22222222-2222-2222-2222-222222222222",
+  name: "Ana Pérez",
+  email: "ana@pruebas.cl",
+  is_active: true,
+};
+
+const logout = vi.fn();
 
 function buildProject(id: string, name: string): Project {
   return {
@@ -30,26 +41,31 @@ const projects = [
 
 function renderLayout(initialEntry = "/projects") {
   render(
-    <ProjectsContext.Provider
-      value={{
-        projects,
-        archivedProjects,
-        isLoading: false,
-        error: null,
-        reload: async () => {},
-      }}
+    <AuthContext.Provider
+      value={{ user: ana, login: async () => ana, logout }}
     >
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/projects" element={<h1>Listado</h1>} />
-            <Route path="/projects/new" element={<h1>Formulario</h1>} />
-            <Route path="/projects/archived" element={<h1>Archivados</h1>} />
-            <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </ProjectsContext.Provider>,
+      <ProjectsContext.Provider
+        value={{
+          projects,
+          archivedProjects,
+          isLoading: false,
+          error: null,
+          reload: async () => {},
+        }}
+      >
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/projects" element={<h1>Listado</h1>} />
+              <Route path="/projects/new" element={<h1>Formulario</h1>} />
+              <Route path="/projects/archived" element={<h1>Archivados</h1>} />
+              <Route path="/projects/:projectId" element={<h1>Detalle</h1>} />
+            </Route>
+            <Route path="/login" element={<h1>Login</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </ProjectsContext.Provider>
+    </AuthContext.Provider>,
   );
 }
 
@@ -180,5 +196,33 @@ describe("Layout", () => {
     expect(
       screen.getByRole("link", { name: "Ver todos los archivados" }),
     ).toHaveAttribute("aria-current", "page");
+  });
+
+  test("la barra lateral enlaza a Mis tareas", () => {
+    renderLayout();
+
+    expect(screen.getByRole("link", { name: "Mis tareas" })).toHaveAttribute(
+      "href",
+      "/my-tasks",
+    );
+  });
+
+  test("muestra el nombre y el correo del usuario conectado", () => {
+    renderLayout();
+
+    expect(screen.getByText("Ana Pérez")).toBeInTheDocument();
+    expect(screen.getByText("ana@pruebas.cl")).toBeInTheDocument();
+  });
+
+  test("Cerrar sesión termina la sesión y vuelve al login", async () => {
+    const user = userEvent.setup();
+
+    logout.mockClear();
+    renderLayout("/projects/1");
+
+    await user.click(screen.getByRole("button", { name: "Cerrar sesión" }));
+
+    expect(logout).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("heading", { name: "Login" })).toBeInTheDocument();
   });
 });
