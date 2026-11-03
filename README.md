@@ -4,7 +4,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 
 > **Enlaces**
 >
-> - 🎥 Video Entrega 1: [Link a video](https://drive.google.com/drive/folders/1k-okz9jdoSsn6UtHb03K5-L44_l2OKJ_?usp=drive_link)
+> - 🎥 Video Entrega 1: [Link a video](https://youtu.be/ZF97tzQkB-w)
 > - 📚 [Wiki del proyecto](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki)
 > - 🏷️ Release Entrega 1: `v1.0-entrega1` _(pendiente)_
 
@@ -257,6 +257,9 @@ Los colores están definidos como variables en `apps/web/src/themes.css`: `:root
 
 ## Pruebas
 
+La [estrategia de pruebas de la entrega](docs/estrategia-pruebas.md) define el alcance,
+la cobertura por funcionalidad y los criterios de aprobación para GitHub Actions y Jenkins.
+
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
@@ -307,7 +310,7 @@ npm run test:unit
 npm run test:integration
 ```
 
-`npm run test:unit` y `npm run test:integration` ejecuta las pruebas unitarias y de integracion
+`npm run test:unit` y `npm run test:integration` ejecuta las pruebas unitarias y de integración
 
 ### E2E
 
@@ -386,7 +389,8 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
    seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
    **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
-   unitarias, de frontend, integración y E2E (actualmente 280 pruebas). El resultado
+   unitarias, de frontend, integración y E2E (908 casos: 34 de API, 650 de web, 186 de integración y 38 de
+   Playwright, incluido un caso de preparación de sesión). El resultado
    esperado es **SUCCESS**.
 
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea

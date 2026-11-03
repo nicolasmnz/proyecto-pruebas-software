@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const API_URL = "http://localhost:3000/api";
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:3000/api";
 // Proyecto de ejemplo (seed): Ana (OWNER), Carlos (ADMIN), María (MEMBER) y
 // Diego (VIEWER, de solo lectura)
 const SEED_PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
