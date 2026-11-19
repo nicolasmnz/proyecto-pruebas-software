@@ -103,7 +103,9 @@ test.describe("épicas", () => {
       .getByLabel("Épica", { exact: true })
       .selectOption({ label: "Sin épica" });
 
-    await expect(todo.getByText("Sin resultados")).toBeVisible();
+    await expect(todo.getByTestId("board-column-empty")).toHaveText(
+      "Sin resultados",
+    );
   });
 
   test("usuario edita el estado de una épica y la archiva", async ({
