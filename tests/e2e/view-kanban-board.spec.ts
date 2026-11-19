@@ -65,7 +65,9 @@ test.describe("agregar tareas al tablero", () => {
 
     const column = page.getByRole("region", { name: "En progreso" });
 
-    await expect(column.getByText("Sin elementos")).toBeVisible();
+    await expect(column.getByTestId("board-column-empty")).toHaveText(
+      "Sin elementos",
+    );
 
     await column.getByRole("button", { name: /Crear tarea/ }).click();
     await column.getByLabel(/Título/).fill("Preparar la demo");
@@ -125,8 +127,8 @@ test.describe("mover tareas entre columnas", () => {
     await expect(
       page
         .getByRole("region", { name: "Por hacer" })
-        .getByText("Sin elementos"),
-    ).toBeVisible();
+        .getByTestId("board-column-empty"),
+    ).toHaveText("Sin elementos");
 
     await page.reload();
 
@@ -178,7 +180,9 @@ test.describe("archivar tareas terminadas", () => {
       .getByRole("button", { name: "Archivar «Tarea terminada»" })
       .click();
 
-    await expect(done.getByText("Sin elementos")).toBeVisible();
+    await expect(done.getByTestId("board-column-empty")).toHaveText(
+      "Sin elementos",
+    );
 
     // Archivar no cambia el progreso: la tarea sigue contando como hecha
     await expect(
@@ -189,8 +193,10 @@ test.describe("archivar tareas terminadas", () => {
     await page.reload();
 
     await expect(
-      page.getByRole("region", { name: "Hecho" }).getByText("Sin elementos"),
-    ).toBeVisible();
+      page
+        .getByRole("region", { name: "Hecho" })
+        .getByTestId("board-column-empty"),
+    ).toHaveText("Sin elementos");
 
     await page.getByRole("button", { name: "Archivadas (1)" }).click();
     await page
@@ -250,10 +256,13 @@ test.describe("ficha de la tarea", () => {
     await dialog.getByLabel("Responsable").selectOption({ index: 1 });
     await dialog.getByRole("button", { name: "Guardar cambios" }).click();
 
-    await expect(
-      page.getByRole("dialog", { name: "Tarea editada" }),
-    ).toBeVisible();
-    await expect(dialog.getByText("Sin asignar")).toHaveCount(0);
+    // La ficha toma el título nuevo, así que `dialog` ya no la encuentra
+    const edited = page.getByRole("dialog", { name: "Tarea editada" });
+
+    await expect(edited).toBeVisible();
+    await expect(edited.getByTestId("task-dialog-assignee")).not.toHaveText(
+      "Sin asignar",
+    );
 
     // Los cambios persisten al recargar, y la ficha sigue abierta (?task=)
     await page.reload();
@@ -275,8 +284,8 @@ test.describe("ficha de la tarea", () => {
     await expect(
       page
         .getByRole("region", { name: "Por hacer" })
-        .getByText("Sin elementos"),
-    ).toBeVisible();
+        .getByTestId("board-column-empty"),
+    ).toHaveText("Sin elementos");
   });
 });
 
@@ -322,8 +331,10 @@ test.describe("filtros, orden y límite de trabajo", () => {
 
     await search.fill("segunda");
 
-    await expect(todo.getByRole("heading", { level: 3 })).toHaveCount(1);
-    await expect(page.getByText("Mostrando 1 de 3 tareas")).toBeVisible();
+    await expect(todo.getByTestId("task-card")).toHaveCount(1);
+    await expect(page.getByTestId("board-filter-summary")).toHaveText(
+      "Mostrando 1 de 3 tareas",
+    );
     await expect(page).toHaveURL(/q=segunda/);
 
     await search.fill("#3");
@@ -332,7 +343,7 @@ test.describe("filtros, orden y límite de trabajo", () => {
 
     await page.getByRole("button", { name: "Limpiar filtros" }).click();
 
-    await expect(todo.getByRole("heading", { level: 3 })).toHaveCount(3);
+    await expect(todo.getByTestId("task-card")).toHaveCount(3);
   });
 
   test("usuario reordena una tarea dentro de la columna y el orden persiste", async ({
@@ -345,7 +356,7 @@ test.describe("filtros, orden y límite de trabajo", () => {
     const titles = () =>
       page
         .getByRole("region", { name: "Por hacer" })
-        .getByRole("heading", { level: 3 })
+        .getByTestId("task-card-open")
         .allTextContents();
 
     await expect
@@ -377,9 +388,9 @@ test.describe("filtros, orden y límite de trabajo", () => {
 
     const todo = page.getByRole("region", { name: "Por hacer" });
 
-    await expect(
-      todo.getByText("3 elementos, supera el límite de 2"),
-    ).toBeAttached();
+    await expect(todo.getByTestId("board-column-count")).toContainText(
+      "3 elementos, supera el límite de 2",
+    );
 
     // El límite persiste al recargar
     await page.reload();
@@ -387,8 +398,8 @@ test.describe("filtros, orden y límite de trabajo", () => {
     await expect(
       page
         .getByRole("region", { name: "Por hacer" })
-        .getByText("3 elementos, supera el límite de 2"),
-    ).toBeAttached();
+        .getByTestId("board-column-count"),
+    ).toContainText("3 elementos, supera el límite de 2");
   });
 });
 
@@ -430,7 +441,9 @@ test.describe("archivar Hecho y puntos por columna", () => {
 
     const done = page.getByRole("region", { name: "Hecho" });
 
-    await expect(done.getByText("8 puntos")).toBeAttached();
+    await expect(done.getByTestId("board-column-points")).toContainText(
+      "8 puntos",
+    );
 
     await done.getByRole("button", { name: /Archivar todas/ }).click();
     await page
@@ -438,7 +451,9 @@ test.describe("archivar Hecho y puntos por columna", () => {
       .getByRole("button", { name: "Archivar" })
       .click();
 
-    await expect(done.getByText("Sin elementos")).toBeVisible();
+    await expect(done.getByTestId("board-column-empty")).toHaveText(
+      "Sin elementos",
+    );
     await expect(
       page.getByRole("button", { name: "Archivadas (2)" }),
     ).toBeVisible();
@@ -449,8 +464,8 @@ test.describe("archivar Hecho y puntos por columna", () => {
     await expect(
       page.getByRole("button", { name: "Archivadas (2)" }),
     ).toBeVisible();
-    await expect(
-      page.getByText("2 de 2 tareas hechas · 8 de 8 pts · 100 %"),
-    ).toBeVisible();
+    await expect(page.getByTestId("board-progress-summary")).toHaveText(
+      "2 de 2 tareas hechas · 8 de 8 pts · 100 %",
+    );
   });
 });

@@ -76,7 +76,7 @@ test.describe("ruleta de asignación", () => {
       .click();
 
     await expect(roulette).toBeHidden();
-    await expect(dialog.getByText("Responsable").locator("+ dd")).toHaveText(
+    await expect(dialog.getByTestId("task-dialog-assignee")).toHaveText(
       "Ana Torres",
     );
     await expect(

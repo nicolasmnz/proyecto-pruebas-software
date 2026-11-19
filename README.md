@@ -352,7 +352,13 @@ Convención: `kebab-case` con el área como prefijo. Los que dependen del estado
 | Límites de trabajo | `wip-limits-dialog`, `wip-limits-todo`, `wip-limits-in-progress`, `wip-limits-error`, `wip-limits-cancel`, `wip-limits-save` |
 | Proyectos | `projects-search`, `projects-list`, `projects-no-results`, `project-card`, `project-form`, `project-form-name`, `project-form-description`, `project-form-error`, `project-form-submit` |
 
-Al renombrar o quitar uno de estos identificadores, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
+Criterio para elegir el selector en un spec:
+
+- **Rol o etiqueta** (`getByRole`, `getByLabel`) para lo que el usuario identifica por su nombre: botones, campos, columnas, diálogos.
+- **`data-testid`** para textos generados o repetidos (contadores, resúmenes, mensajes de columna vacía) y para valores sin un rol propio, como el responsable en la ficha. Se comprueba el texto con `toHaveText` o `toContainText` sobre ese elemento, no con `getByText` en toda la página o la columna.
+- **Sin** posiciones (`nth`), clases CSS ni recorridos del DOM (`locator("+ dd")`).
+
+`view-kanban-board.spec.ts`, `epics.spec.ts` y `roulette.spec.ts` usan estos identificadores. Al renombrar o quitar uno, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
 
 ### Jenkins
 
