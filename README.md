@@ -487,3 +487,18 @@ Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentari
 - GitFlow: `main` (estable), `develop` (integración) y ramas `feature/PPDS-XX-descripcion`.
 - Cada rama y PR referencia su ítem de Jira.
 - Los PR siguen la plantilla de `.github/PULL_REQUEST_TEMPLATE.md` y deben pasar el CI.
+
+## Uso de IA
+
+El equipo usó **Claude** (Anthropic) como única herramienta de IA del proyecto.
+
+| Área | Uso |
+| ---- | --- |
+| Código | Implementación de funcionalidades y corrección de errores |
+| Pruebas | Generación de pruebas unitarias, de componentes, de integración y E2E |
+| Documentación | README y documentación técnica; en la Wiki se usó poco |
+| Planificación | Redacción del backlog de Jira: historias, tareas, pruebas y criterios de aceptación |
+
+**Backend.** La mayor parte de la base inicial del backend se escribió sin IA. Después se usó Claude para auditarlo y encontrar fallas de seguridad y errores, sobre todo en la interacción entre el frontend y el backend.
+
+**Revisión.** Todo lo generado con IA siguió el mismo flujo que el resto del código: PR hacia `develop`, CI en verde y revisión de otro integrante antes de fusionar. Los commits generados con Claude aparecen en el historial con ese autor.
