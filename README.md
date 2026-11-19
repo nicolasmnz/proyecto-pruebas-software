@@ -258,7 +258,7 @@ Los colores están definidos como variables en `apps/web/src/themes.css`: `:root
 
 ## Pruebas
 
-La [estrategia de pruebas de la entrega](docs/estrategia-pruebas.md) define el alcance,
+La [estrategia de pruebas de la entrega](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Estrategia-de-pruebas) define el alcance,
 la cobertura por funcionalidad y los criterios de aprobación para GitHub Actions y Jenkins.
 
 | Nivel | Herramienta | Cantidad | Comando |
@@ -343,7 +343,7 @@ reportes y elimina los recursos al terminar. GitHub Actions continúa funcionand
 si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
 
 Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
-en la [guía de Jenkins](docs/jenkins.md).
+en la [guía de Jenkins](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Jenkins).
 
 **No es necesario levantar la aplicación previamente.** Jenkins crea una base
 PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
@@ -396,8 +396,8 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
 
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
 automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
-automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
-descrito en la [guía de Jenkins](docs/jenkins.md). El webhook no es necesario para
+automáticos, configurar una URL HTTPS accesible desde GitHub y un webhook de GitHub
+hacia `/github-webhook/` con el evento push. El webhook no es necesario para
 las ejecuciones manuales ni para `jenkins-verify`.
 
 #### Administrar Jenkins
