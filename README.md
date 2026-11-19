@@ -267,7 +267,7 @@ la cobertura por funcionalidad y los criterios de aprobación para GitHub Action
 | Unitarias API | Jest | 34 | `npm run test:unit` |
 | Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 43 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 45 | `npm run test:e2e` |
 
 ### Unitarias, calidad y build
 
@@ -331,6 +331,8 @@ Antes de los specs, `tests/e2e/auth.setup.ts` inicia sesión con `ana@pruebas.cl
 
 `create-project-validation.spec.ts` prueba las validaciones del nombre al crear un proyecto: vacío (lo bloquea el `required` del navegador), solo espacios (lo rechaza el formulario con su mensaje), más de 150 caracteres (el campo no los admite) y más de 150 saltándose el límite del navegador (lo rechaza la API con 400 y el formulario muestra su mensaje). En los casos rechazados comprueba además que no se envió ni se creó el proyecto.
 
+`create-task-validation.spec.ts` hace lo mismo con el título de una tarea en el tablero: vacío (lo bloquea el `required` del navegador) y solo espacios (el formulario muestra «El título es obligatorio.» y devuelve el foco al título). En ambos casos no se envía nada y la columna no cambia; al corregir el título, la tarea se crea en esa columna.
+
 ```bash
 npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el navegador
 npx playwright show-report                                         # informe de la última ejecución
@@ -362,7 +364,7 @@ Criterio para elegir el selector en un spec:
 - **`data-testid`** para textos generados o repetidos (contadores, resúmenes, mensajes de columna vacía) y para valores sin un rol propio, como el responsable en la ficha. Se comprueba el texto con `toHaveText` o `toContainText` sobre ese elemento, no con `getByText` en toda la página o la columna.
 - **Sin** posiciones (`nth`), clases CSS ni recorridos del DOM (`locator("+ dd")`).
 
-`view-kanban-board.spec.ts`, `epics.spec.ts`, `roulette.spec.ts`, `project-lifecycle.spec.ts` y `create-project-validation.spec.ts` usan estos identificadores. Al renombrar o quitar uno, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
+`view-kanban-board.spec.ts`, `epics.spec.ts`, `roulette.spec.ts`, `project-lifecycle.spec.ts`, `create-project-validation.spec.ts` y `create-task-validation.spec.ts` usan estos identificadores. Al renombrar o quitar uno, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
 
 ### Jenkins
 
