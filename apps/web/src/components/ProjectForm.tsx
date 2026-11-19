@@ -61,7 +61,11 @@ function ProjectForm({
   }
 
   return (
-    <form className="project-form" onSubmit={handleSubmit}>
+    <form
+      className="project-form"
+      data-testid="project-form"
+      onSubmit={handleSubmit}
+    >
       <div className="field">
         <label htmlFor={nameId}>
           Nombre{" "}
@@ -73,6 +77,7 @@ function ProjectForm({
         <input
           id={nameId}
           name="name"
+          data-testid="project-form-name"
           type="text"
           required
           maxLength={MAX_PROJECT_NAME_LENGTH}
@@ -86,13 +91,14 @@ function ProjectForm({
         <textarea
           id={descriptionId}
           name="description"
+          data-testid="project-form-description"
           rows={4}
           defaultValue={initialValues?.description}
         />
       </div>
 
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="form-error" data-testid="project-form-error">
           {error}
         </p>
       )}
@@ -101,7 +107,12 @@ function ProjectForm({
         <button type="button" className="btn-secondary" onClick={onCancel}>
           Cancelar
         </button>
-        <button type="submit" className="btn-primary" disabled={isSubmitting}>
+        <button
+          type="submit"
+          className="btn-primary"
+          data-testid="project-form-submit"
+          disabled={isSubmitting}
+        >
           {isSubmitting ? submittingLabel : submitLabel}
         </button>
       </div>

@@ -4,6 +4,7 @@ import type { KeyboardEvent, SubmitEvent } from "react";
 import { MAX_WIP_LIMIT, STATUS_LABELS } from "../api/board";
 import type { WipLimits, WorkItemStatus } from "../api/board";
 import { trapTab } from "../utils/focusTrap";
+import { statusTestId } from "./taskLabels";
 
 import "./WipLimitsDialog.css";
 
@@ -77,6 +78,7 @@ function WipLimitsDialog({ limits, onSave, onClose }: WipLimitsDialogProps) {
         ref={dialogRef}
         className="dialog"
         role="dialog"
+        data-testid="wip-limits-dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
@@ -99,6 +101,7 @@ function WipLimitsDialog({ limits, onSave, onClose }: WipLimitsDialogProps) {
                 ref={index === 0 ? firstInputRef : undefined}
                 id={`${titleId}-${status}`}
                 name={status}
+                data-testid={`wip-limits-${statusTestId(status)}`}
                 type="number"
                 min={1}
                 max={MAX_WIP_LIMIT}
@@ -110,7 +113,11 @@ function WipLimitsDialog({ limits, onSave, onClose }: WipLimitsDialogProps) {
           ))}
 
           {error && (
-            <p role="alert" className="form-error">
+            <p
+              role="alert"
+              className="form-error"
+              data-testid="wip-limits-error"
+            >
               {error}
             </p>
           )}
@@ -119,12 +126,18 @@ function WipLimitsDialog({ limits, onSave, onClose }: WipLimitsDialogProps) {
             <button
               type="button"
               className="btn-secondary"
+              data-testid="wip-limits-cancel"
               onClick={onClose}
               disabled={isSaving}
             >
               Cancelar
             </button>
-            <button type="submit" className="btn-primary" disabled={isSaving}>
+            <button
+              type="submit"
+              className="btn-primary"
+              data-testid="wip-limits-save"
+              disabled={isSaving}
+            >
               {isSaving ? "Guardando..." : "Guardar"}
             </button>
           </div>

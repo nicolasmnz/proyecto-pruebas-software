@@ -18,7 +18,9 @@ function BoardProgress({ columns, archived }: BoardProgressProps) {
       <div className="board-progress-header">
         <h2 id="board-progress-title">Progreso</h2>
 
-        <p>{total === 0 ? "Aún no hay tareas" : summary}</p>
+        <p data-testid="board-progress-summary">
+          {total === 0 ? "Aún no hay tareas" : summary}
+        </p>
       </div>
 
       <div

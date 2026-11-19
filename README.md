@@ -334,6 +334,26 @@ npx playwright show-report                                         # informe de 
 
 `npm run test:all` ejecuta unitarias + integración + E2E.
 
+#### Selectores estables (`data-testid`)
+
+Los elementos críticos de la interfaz tienen un `data-testid` para que las pruebas E2E no dependan de textos, posiciones ni clases CSS. Se usan con `page.getByTestId(...)`; cuando un rol o una etiqueta ya identifican el elemento sin ambigüedad (`getByRole`, `getByLabel`), se prefieren esos.
+
+Convención: `kebab-case` con el área como prefijo. Los que dependen del estado terminan en `todo`, `in-progress` o `done` (`statusTestId` en `components/taskLabels.ts`). Los que se repiten, como `task-card`, se acotan dentro de su columna o se filtran por texto.
+
+| Área | `data-testid` |
+| ---- | ------------- |
+| Columnas del tablero | `board-column-todo`, `board-column-in-progress`, `board-column-done`; dentro de cada una: `board-column-count`, `board-column-points`, `board-column-empty`, `board-add-task` |
+| Controles del tablero | `board-search`, `board-clear-filters`, `board-edit-limits`, `board-filter-summary`, `board-progress-summary`, `board-archive-all`, `board-archived-toggle` |
+| Tarjeta de tarea | `task-card`, `task-card-open`, `task-card-move`, `task-card-move-up`, `task-card-move-down`, `task-card-archive`, `task-card-restore` |
+| Formulario de tarea | `task-form`, `task-form-title`, `task-form-error`, `task-form-cancel`, `task-form-submit` |
+| Ficha de la tarea | `task-dialog`, `task-dialog-close`, `task-dialog-status`, `task-dialog-epic`, `task-dialog-assignee`, `task-dialog-edit`, `task-dialog-delete`, `task-dialog-roulette` |
+| Ruleta | `roulette`, `roulette-result`, `roulette-spin`, `roulette-respin`, `roulette-assign` |
+| Confirmación | `confirm-dialog`, `confirm-dialog-error`, `confirm-dialog-cancel`, `confirm-dialog-confirm` |
+| Límites de trabajo | `wip-limits-dialog`, `wip-limits-todo`, `wip-limits-in-progress`, `wip-limits-error`, `wip-limits-cancel`, `wip-limits-save` |
+| Proyectos | `projects-search`, `projects-list`, `projects-no-results`, `project-card`, `project-form`, `project-form-name`, `project-form-description`, `project-form-error`, `project-form-submit` |
+
+Al renombrar o quitar uno de estos identificadores, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
+
 ### Jenkins
 
 El [Jenkinsfile](Jenkinsfile) ejecuta calidad, unitarias de API, componentes y

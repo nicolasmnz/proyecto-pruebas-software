@@ -11,6 +11,7 @@ import type {
 import TaskForm from "./TaskForm";
 import type { TaskFormValues } from "./TaskForm";
 import KanbanCard from "./KanbanCard";
+import { statusTestId } from "./taskLabels";
 
 import "./KanbanBoard.css";
 
@@ -129,6 +130,7 @@ function KanbanBoard({
           <section
             key={column.status}
             aria-labelledby={titleId}
+            data-testid={`board-column-${statusTestId(column.status)}`}
             className={`kanban-column${dragged && dropTarget === column.status ? " is-drop-target" : ""}`}
             onDragOver={(event) => {
               if (dragged) {
@@ -157,6 +159,7 @@ function KanbanBoard({
             <header className="kanban-column-header">
               <h2 id={titleId}>{STATUS_LABELS[column.status]}</h2>
               <span
+                data-testid="board-column-count"
                 className={`kanban-column-count${isOverLimit ? " is-over-limit" : ""}`}
               >
                 {isOverLimit && <AlertTriangle size={12} aria-hidden="true" />}
@@ -171,7 +174,10 @@ function KanbanBoard({
                       : `${count} de ${limit} elementos`}
                 </span>
               </span>
-              <span className="kanban-column-points">
+              <span
+                className="kanban-column-points"
+                data-testid="board-column-points"
+              >
                 <span aria-hidden="true">{points} pts</span>
                 <span className="sr-only">{points} puntos</span>
               </span>
@@ -180,6 +186,7 @@ function KanbanBoard({
                 <button
                   type="button"
                   className="kanban-column-action"
+                  data-testid="board-archive-all"
                   onClick={onArchiveAllDone}
                 >
                   <Archive size={14} aria-hidden="true" />
@@ -189,7 +196,10 @@ function KanbanBoard({
             </header>
 
             {visibleItems.length === 0 && !isAdding ? (
-              <p className="kanban-column-empty">
+              <p
+                className="kanban-column-empty"
+                data-testid="board-column-empty"
+              >
                 {isFiltering && count > 0 ? "Sin resultados" : "Sin elementos"}
               </p>
             ) : (
@@ -266,6 +276,7 @@ function KanbanBoard({
                   }}
                   type="button"
                   className="kanban-add-button"
+                  data-testid="board-add-task"
                   onClick={() => setAddingTo(column.status)}
                 >
                   <Plus size={16} aria-hidden="true" />

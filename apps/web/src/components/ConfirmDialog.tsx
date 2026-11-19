@@ -72,6 +72,7 @@ function ConfirmDialog({
         ref={dialogRef}
         className="dialog"
         role="alertdialog"
+        data-testid="confirm-dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
@@ -83,7 +84,11 @@ function ConfirmDialog({
         </div>
 
         {error && (
-          <p role="alert" className="form-error">
+          <p
+            role="alert"
+            className="form-error"
+            data-testid="confirm-dialog-error"
+          >
             {error}
           </p>
         )}
@@ -93,6 +98,7 @@ function ConfirmDialog({
             ref={cancelRef}
             type="button"
             className="btn-secondary"
+            data-testid="confirm-dialog-cancel"
             onClick={onCancel}
             disabled={isConfirming}
           >
@@ -101,6 +107,7 @@ function ConfirmDialog({
           <button
             type="button"
             className="btn-danger"
+            data-testid="confirm-dialog-confirm"
             onClick={onConfirm}
             disabled={isConfirming}
           >

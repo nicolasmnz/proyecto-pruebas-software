@@ -69,6 +69,7 @@ function KanbanCard({
   return (
     <article
       className={`kanban-card${isDragging ? " is-dragging" : ""}`}
+      data-testid="task-card"
       draggable={Boolean(onMove)}
       onDragStart={(event) => {
         // Firefox exige datos para iniciar el arrastre
@@ -86,6 +87,7 @@ function KanbanCard({
           <button
             type="button"
             className="kanban-card-open"
+            data-testid="task-card-open"
             onClick={() => onOpen(item)}
           >
             {item.title}
@@ -148,6 +150,7 @@ function KanbanCard({
           </label>
           <select
             id={moveId}
+            data-testid="task-card-move"
             value=""
             onChange={(event) =>
               onMove(item, event.target.value as WorkItemStatus)
@@ -169,6 +172,7 @@ function KanbanCard({
                 type="button"
                 className="kanban-card-reorder"
                 aria-label={`Subir «${item.title}»`}
+                data-testid="task-card-move-up"
                 disabled={!canMoveUp}
                 onClick={() => onReorder(item, -1)}
               >
@@ -178,6 +182,7 @@ function KanbanCard({
                 type="button"
                 className="kanban-card-reorder"
                 aria-label={`Bajar «${item.title}»`}
+                data-testid="task-card-move-down"
                 disabled={!canMoveDown}
                 onClick={() => onReorder(item, 1)}
               >
@@ -193,6 +198,7 @@ function KanbanCard({
           type="button"
           className="kanban-card-action"
           aria-label={`Archivar «${item.title}»`}
+          data-testid="task-card-archive"
           onClick={() => onArchive(item)}
         >
           <Archive size={14} aria-hidden="true" />
@@ -205,6 +211,7 @@ function KanbanCard({
           type="button"
           className="kanban-card-action"
           aria-label={`Restaurar «${item.title}»`}
+          data-testid="task-card-restore"
           onClick={() => onRestore(item)}
         >
           <ArchiveRestore size={14} aria-hidden="true" />

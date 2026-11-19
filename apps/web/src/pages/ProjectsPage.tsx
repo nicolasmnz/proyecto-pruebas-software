@@ -86,7 +86,7 @@ function ProjectsPage({ archived = false }: ProjectsPageProps) {
 
     if (filteredProjects.length === 0) {
       return (
-        <div className="projects-message">
+        <div className="projects-message" data-testid="projects-no-results">
           <p className="projects-message-title">
             No hay proyectos que coincidan con «{query}»
           </p>
@@ -104,6 +104,7 @@ function ProjectsPage({ archived = false }: ProjectsPageProps) {
     return (
       <ul
         className="projects-grid"
+        data-testid="projects-list"
         aria-label={archived ? "Proyectos archivados" : "Proyectos"}
       >
         {filteredProjects.map((project) => (
@@ -144,6 +145,7 @@ function ProjectsPage({ archived = false }: ProjectsPageProps) {
         <Search size={16} aria-hidden="true" className="projects-search-icon" />
         <input
           type="search"
+          data-testid="projects-search"
           aria-label="Buscar proyectos"
           placeholder="Buscar por nombre o descripción"
           value={query}
