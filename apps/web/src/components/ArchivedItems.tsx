@@ -30,6 +30,7 @@ function ArchivedItems({
       <button
         type="button"
         className="archived-items-toggle"
+        data-testid="board-archived-toggle"
         aria-expanded={isOpen}
         aria-controls={listId}
         onClick={() => setIsOpen((value) => !value)}

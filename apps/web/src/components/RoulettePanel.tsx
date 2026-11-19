@@ -119,7 +119,11 @@ function RoulettePanel({
   }
 
   return (
-    <section className="roulette" aria-labelledby={titleId}>
+    <section
+      className="roulette"
+      data-testid="roulette"
+      aria-labelledby={titleId}
+    >
       <h3 id={titleId} className="task-dialog-section">
         Ruleta de asignación
       </h3>
@@ -184,7 +188,11 @@ function RoulettePanel({
         </ul>
       </div>
 
-      <p className="roulette-result" role="status">
+      <p
+        className="roulette-result"
+        data-testid="roulette-result"
+        role="status"
+      >
         {phase === "spinning" && "Girando…"}
         {phase === "result" && winner && (
           <>
@@ -214,6 +222,7 @@ function RoulettePanel({
             <button
               type="button"
               className="btn-secondary"
+              data-testid="roulette-respin"
               onClick={spin}
               disabled={isAssigning}
             >
@@ -223,6 +232,7 @@ function RoulettePanel({
             <button
               type="button"
               className="btn-primary"
+              data-testid="roulette-assign"
               onClick={handleAssign}
               disabled={isAssigning}
             >
@@ -233,6 +243,7 @@ function RoulettePanel({
           <button
             type="button"
             className="btn-primary"
+            data-testid="roulette-spin"
             onClick={spin}
             disabled={phase === "spinning"}
           >
