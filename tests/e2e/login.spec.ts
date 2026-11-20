@@ -121,3 +121,27 @@ test("lo que se crea queda a nombre del usuario conectado", async ({
     await request.delete(`${API_URL}/projects/${created.id}`);
   }
 });
+
+test("contraseña incorrecta muestra error genérico y no crea sesión", async ({
+  page,
+}) => {
+  await page.goto("/login");
+
+  await login(page, "ana@pruebas.cl", "incorrecta");
+
+  await expect(page.getByRole("alert")).toHaveText(
+    "Correo o contraseña incorrectos",
+  );
+
+  await expect(page).toHaveURL("/login");
+
+  const storageState = await page.context().storageState();
+
+  expect(storageState.cookies).toHaveLength(0);
+
+  const localStorageEntries = storageState.origins.flatMap(
+    (origin) => origin.localStorage,
+  );
+
+  expect(localStorageEntries).toHaveLength(0);
+});

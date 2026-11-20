@@ -205,6 +205,36 @@ describe("BoardPage", () => {
     expect(within(inProgress).getByText("#3")).toBeInTheDocument();
   });
 
+  // Las pruebas E2E dependen de estos identificadores
+  test("expone data-testid en columnas, tarjetas y controles", async () => {
+    mockedGetBoard.mockResolvedValue(board);
+
+    renderPage();
+
+    const todo = await screen.findByTestId("board-column-todo");
+
+    expect(todo).toBe(screen.getByRole("region", { name: "Por hacer" }));
+    expect(screen.getByTestId("board-column-in-progress")).toBe(
+      screen.getByRole("region", { name: "En progreso" }),
+    );
+    const done = screen.getByTestId("board-column-done");
+    expect(done).toBe(screen.getByRole("region", { name: "Hecho" }));
+
+    expect(within(todo).getAllByTestId("task-card")).toHaveLength(2);
+    expect(within(todo).getAllByTestId("task-card-open")[0]).toHaveTextContent(
+      "Diseñar login",
+    );
+    expect(within(todo).getByTestId("board-column-count")).toHaveTextContent(
+      "2",
+    );
+    expect(within(done).getByTestId("board-column-empty")).toHaveTextContent(
+      "Sin elementos",
+    );
+    expect(screen.getAllByTestId("board-add-task")).toHaveLength(3);
+    expect(screen.getByTestId("board-search")).toBeInTheDocument();
+    expect(screen.getByTestId("board-progress-summary")).toBeInTheDocument();
+  });
+
   test("el breadcrumb enlaza con el proyecto", async () => {
     mockedGetBoard.mockResolvedValue(board);
 

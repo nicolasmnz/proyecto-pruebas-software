@@ -76,7 +76,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 | Frontend      | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library               |
 | Backend       | Node 24, Express 5, TypeScript           | Jest (unitarias) + Supertest (integración)   |
 | Base de datos | PostgreSQL 18                            | Base de pruebas aislada (`compose.test.yml`) |
-| E2E           | —                                        | Playwright                                   |
+| E2E           | Playwright (Chromium)                    | Flujos de usuario en el navegador            |
 | CI            | GitHub Actions + Jenkins                 | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
@@ -258,16 +258,19 @@ Los colores están definidos como variables en `apps/web/src/themes.css`: `:root
 
 ## Pruebas
 
-La [estrategia de pruebas de la entrega](docs/estrategia-pruebas.md) define el alcance,
+La [estrategia de pruebas de la entrega](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Estrategia-de-pruebas) define el alcance,
 la cobertura por funcionalidad y los criterios de aprobación para GitHub Actions y Jenkins.
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 651 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 38 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 55 | `npm run test:e2e` |
+| **Total** | | **926** | |
+
+Cifras de la ejecución del 20-11-2026 sobre `develop` (commit `6a302cf`), con todas las suites en verde. Los 55 casos E2E son 54 escenarios de usuario más la preparación de sesión (`auth.setup.ts`). Esta tabla es la referencia del total de pruebas: al agregar o quitar pruebas, actualízala aquí.
 
 ### Unitarias, calidad y build
 
@@ -327,12 +330,46 @@ npm run test:e2e           # terminal 3
 
 Antes de los specs, `tests/e2e/auth.setup.ts` inicia sesión con `ana@pruebas.cl` y guarda la sesión en `playwright/.auth/user.json` (ignorado por git); los demás specs la reutilizan. `login.spec.ts` parte sin sesión.
 
+`project-lifecycle.spec.ts` recorre en un solo flujo el CRUD de un proyecto: crear, verlo en el listado, abrir su detalle, editarlo y archivarlo. La interfaz no elimina proyectos; archivar cumple ese papel, porque el proyecto sale del listado de activos y queda en Archivados, desde donde se puede restaurar.
+
+`create-project-validation.spec.ts` prueba las validaciones del nombre al crear un proyecto: vacío (lo bloquea el `required` del navegador), solo espacios (lo rechaza el formulario con su mensaje), más de 150 caracteres (el campo no los admite) y más de 150 saltándose el límite del navegador (lo rechaza la API con 400 y el formulario muestra su mensaje). En los casos rechazados comprueba además que no se envió ni se creó el proyecto.
+
+`create-task-validation.spec.ts` hace lo mismo con el título de una tarea en el tablero: vacío (lo bloquea el `required` del navegador) y solo espacios (el formulario muestra «El título es obligatorio.» y devuelve el foco al título). En ambos casos no se envía nada y la columna no cambia; al corregir el título, la tarea se crea en esa columna.
+
+`view-projects.spec.ts` cubre la búsqueda de proyectos: con coincidencias abre el detalle y, sin coincidencias, muestra «No hay proyectos que coincidan con…», conserva la búsqueda al recargar (vive en la URL como `?q=`) y «Limpiar búsqueda» vuelve a mostrar todos los proyectos.
+
 ```bash
 npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el navegador
 npx playwright show-report                                         # informe de la última ejecución
 ```
 
 `npm run test:all` ejecuta unitarias + integración + E2E.
+
+#### Selectores estables (`data-testid`)
+
+Los elementos críticos de la interfaz tienen un `data-testid` para que las pruebas E2E no dependan de textos, posiciones ni clases CSS. Se usan con `page.getByTestId(...)`; cuando un rol o una etiqueta ya identifican el elemento sin ambigüedad (`getByRole`, `getByLabel`), se prefieren esos.
+
+Convención: `kebab-case` con el área como prefijo. Los que dependen del estado terminan en `todo`, `in-progress` o `done` (`statusTestId` en `components/taskLabels.ts`). Los que se repiten, como `task-card`, se acotan dentro de su columna o se filtran por texto.
+
+| Área | `data-testid` |
+| ---- | ------------- |
+| Columnas del tablero | `board-column-todo`, `board-column-in-progress`, `board-column-done`; dentro de cada una: `board-column-count`, `board-column-points`, `board-column-empty`, `board-add-task` |
+| Controles del tablero | `board-search`, `board-clear-filters`, `board-edit-limits`, `board-filter-summary`, `board-progress-summary`, `board-archive-all`, `board-archived-toggle` |
+| Tarjeta de tarea | `task-card`, `task-card-open`, `task-card-move`, `task-card-move-up`, `task-card-move-down`, `task-card-archive`, `task-card-restore` |
+| Formulario de tarea | `task-form`, `task-form-title`, `task-form-error`, `task-form-cancel`, `task-form-submit` |
+| Ficha de la tarea | `task-dialog`, `task-dialog-close`, `task-dialog-status`, `task-dialog-epic`, `task-dialog-assignee`, `task-dialog-edit`, `task-dialog-delete`, `task-dialog-roulette` |
+| Ruleta | `roulette`, `roulette-result`, `roulette-spin`, `roulette-respin`, `roulette-assign` |
+| Confirmación | `confirm-dialog`, `confirm-dialog-error`, `confirm-dialog-cancel`, `confirm-dialog-confirm` |
+| Límites de trabajo | `wip-limits-dialog`, `wip-limits-todo`, `wip-limits-in-progress`, `wip-limits-error`, `wip-limits-cancel`, `wip-limits-save` |
+| Proyectos | `projects-search`, `projects-list`, `projects-no-results`, `project-card`, `project-form`, `project-form-name`, `project-form-description`, `project-form-error`, `project-form-submit` |
+
+Criterio para elegir el selector en un spec:
+
+- **Rol o etiqueta** (`getByRole`, `getByLabel`) para lo que el usuario identifica por su nombre: botones, campos, columnas, diálogos.
+- **`data-testid`** para textos generados o repetidos (contadores, resúmenes, mensajes de columna vacía) y para valores sin un rol propio, como el responsable en la ficha. Se comprueba el texto con `toHaveText` o `toContainText` sobre ese elemento, no con `getByText` en toda la página o la columna.
+- **Sin** posiciones (`nth`), clases CSS ni recorridos del DOM (`locator("+ dd")`).
+
+`view-kanban-board.spec.ts`, `epics.spec.ts`, `roulette.spec.ts`, `project-lifecycle.spec.ts`, `create-project-validation.spec.ts`, `create-task-validation.spec.ts` y `view-projects.spec.ts` usan estos identificadores. Al renombrar o quitar uno, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
 
 ### Jenkins
 
@@ -343,7 +380,7 @@ reportes y elimina los recursos al terminar. GitHub Actions continúa funcionand
 si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
 
 Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
-en la [guía de Jenkins](docs/jenkins.md).
+en la [guía de Jenkins](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Jenkins).
 
 **No es necesario levantar la aplicación previamente.** Jenkins crea una base
 PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
@@ -390,9 +427,8 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
    seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
    **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
-   unitarias, de frontend, integración y E2E (908 casos: 34 de API, 650 de web, 186 de integración y 38 de
-   Playwright, incluido un caso de preparación de sesión). El resultado
-   esperado es **SUCCESS**.
+   unitarias, de frontend, integración y E2E (las cantidades están en la tabla de
+   [Pruebas](#pruebas)). El resultado esperado es **SUCCESS**.
 
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
 automáticamente el job multibranch `mira-ci` desde GitHub. Este job descubre `main`,
@@ -490,3 +526,18 @@ Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentari
 - GitFlow: `main` (estable), `develop` (integración) y ramas `feature/PPDS-XX-descripcion`.
 - Cada rama y PR referencia su ítem de Jira.
 - Los PR siguen la plantilla de `.github/PULL_REQUEST_TEMPLATE.md` y deben pasar el CI.
+
+## Uso de IA
+
+El equipo usó **Claude** (Anthropic) como única herramienta de IA del proyecto.
+
+| Área | Uso |
+| ---- | --- |
+| Código | Implementación de funcionalidades y corrección de errores |
+| Pruebas | Generación de pruebas unitarias, de componentes, de integración y E2E |
+| Documentación | README y documentación técnica; en la Wiki se usó poco |
+| Planificación | Redacción del backlog de Jira: historias, tareas, pruebas y criterios de aceptación |
+
+**Backend.** La mayor parte de la base inicial del backend se escribió sin IA. Después se usó Claude para auditarlo y encontrar fallas de seguridad y errores, sobre todo en la interacción entre el frontend y el backend.
+
+**Revisión.** Todo lo generado con IA siguió el mismo flujo que el resto del código: PR hacia `develop`, CI en verde y revisión de otro integrante antes de fusionar. Los commits generados con Claude aparecen en el historial con ese autor.

@@ -12,7 +12,7 @@ interface ProjectCardProps {
 
 function ProjectCard({ project }: ProjectCardProps) {
   return (
-    <article className="project-card">
+    <article className="project-card" data-testid="project-card">
       <ProjectAvatar id={project.id} name={project.name} />
 
       <div className="project-card-body">

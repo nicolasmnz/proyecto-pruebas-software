@@ -114,6 +114,7 @@ function TaskForm({
   return (
     <form
       className="task-form"
+      data-testid="task-form"
       onSubmit={handleSubmit}
       onKeyDown={handleKeyDown}
     >
@@ -128,6 +129,7 @@ function TaskForm({
           ref={titleRef}
           id={titleId}
           name="title"
+          data-testid="task-form-title"
           type="text"
           required
           maxLength={MAX_WORK_ITEM_TITLE_LENGTH}
@@ -242,7 +244,7 @@ function TaskForm({
       </div>
 
       {error && (
-        <p role="alert" className="form-error">
+        <p role="alert" className="form-error" data-testid="task-form-error">
           {error}
         </p>
       )}
@@ -251,12 +253,18 @@ function TaskForm({
         <button
           type="button"
           className="btn-secondary"
+          data-testid="task-form-cancel"
           onClick={onCancel}
           disabled={isSubmitting}
         >
           Cancelar
         </button>
-        <button type="submit" className="btn-primary" disabled={isSubmitting}>
+        <button
+          type="submit"
+          className="btn-primary"
+          data-testid="task-form-submit"
+          disabled={isSubmitting}
+        >
           {isSubmitting ? submittingLabel : submitLabel}
         </button>
       </div>
