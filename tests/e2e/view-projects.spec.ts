@@ -58,6 +58,42 @@ test.describe("visualizar proyectos", () => {
     ).toBeVisible();
   });
 
+  test("una búsqueda sin coincidencias muestra el estado vacío y se puede limpiar", async ({
+    page,
+  }) => {
+    const query = `sin coincidencias ${Date.now()}`;
+
+    await page.goto("/projects");
+
+    const list = page.getByTestId("projects-list");
+    const noResults = page.getByTestId("projects-no-results");
+    const search = page.getByTestId("projects-search");
+
+    await expect(list.getByRole("link", { name: project.name })).toBeVisible();
+
+    await search.fill(query);
+
+    await expect(noResults).toContainText(
+      `No hay proyectos que coincidan con «${query}»`,
+    );
+    await expect(list).toHaveCount(0);
+    await expect(page).toHaveURL(/q=/);
+
+    // La búsqueda vive en la URL: al recargar sigue sin resultados
+    await page.reload();
+
+    await expect(search).toHaveValue(query);
+    await expect(noResults).toBeVisible();
+
+    // «Limpiar búsqueda» vuelve a mostrar todos los proyectos
+    await noResults.getByRole("button", { name: "Limpiar búsqueda" }).click();
+
+    await expect(search).toHaveValue("");
+    await expect(noResults).toHaveCount(0);
+    await expect(list.getByRole("link", { name: project.name })).toBeVisible();
+    await expect(page).not.toHaveURL(/q=/);
+  });
+
   test("un proyecto inexistente muestra un mensaje", async ({ page }) => {
     await page.goto("/projects/no-existe");
 
