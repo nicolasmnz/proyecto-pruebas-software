@@ -8,6 +8,46 @@ type NavigationErrors = {
   server: string[];
 };
 
+function monitorErrors(page: Page) {
+  const errors: NavigationErrors = {
+    console: [],
+    javascript: [],
+    server: [],
+  };
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      errors.console.push(message.text());
+    }
+  });
+
+  page.on("pageerror", (error) => {
+    errors.javascript.push(error.message);
+  });
+
+  page.on("response", (response) => {
+    if (response.status() >= 500) {
+      errors.server.push(
+        `${response.status()} ${response.request().method()} ${response.url()}`,
+      );
+    }
+  });
+
+  return errors;
+}
+
+function expectNoCriticalErrors(errors: NavigationErrors) {
+  expect(
+    errors.javascript,
+    `Errores JavaScript no controlados:\n${errors.javascript.join("\n")}`,
+  ).toEqual([]);
+
+  expect(
+    errors.server,
+    `Respuestas HTTP 5xx:\n${errors.server.join("\n")}`,
+  ).toEqual([]);
+}
+
 async function expectHeading(
   page: Page,
   heading: string | RegExp,
@@ -17,121 +57,84 @@ async function expectHeading(
   ).toBeVisible();
 }
 
-test("las vistas principales cargan sin errores de JavaScript ni respuestas 5xx", async ({
-  page,
-}, testInfo) => {
-  const errors: NavigationErrors = {
-    console: [],
-    javascript: [],
-    server: [],
-  };
+test("carga la vista de Proyectos sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-  // Registrar errores de consola
-  page.on("console", (message) => {
-    if (message.type() === "error") {
-      errors.console.push(message.text());
-    }
-  });
+  await page.goto("/projects");
 
-  // Registrar errores JavaScript no controlados
-  page.on("pageerror", (error) => {
-    errors.javascript.push(error.message);
-  });
+  await expectHeading(page, "Proyectos");
 
-  // Registrar respuestas HTTP 5xx
-  page.on("response", (response) => {
-    if (response.status() >= 500) {
-      errors.server.push(
-        `${response.status()} ${response.request().method()} ${response.url()}`,
-      );
-    }
-  });
+  expectNoCriticalErrors(errors);
+});
 
-  await test.step("Proyectos", async () => {
-    await page.goto("/projects");
+test("carga el detalle de un proyecto sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-    await expectHeading(page, "Proyectos");
-  });
+  await page.goto(`/projects/${SEED_PROJECT_ID}`);
 
-  await test.step("Detalle del proyecto", async () => {
-    await page.goto(`/projects/${SEED_PROJECT_ID}`);
+  await expect(
+    page.getByRole("heading").first(),
+  ).toBeVisible();
 
-    await expect(
-      page.getByRole("heading").first(),
-    ).toBeVisible();
-  });
+  expectNoCriticalErrors(errors);
+});
 
-  await test.step("Tablero", async () => {
-    await page
-      .getByRole("link", { name: /tablero/i })
-      .click();
+test("carga el Tablero sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-    await expectHeading(page, /tablero/i);
-  });
+  await page.goto(`/projects/${SEED_PROJECT_ID}/board`);
 
-  await test.step("Épicas", async () => {
-    await page
-      .getByRole("link", { name: /épicas/i })
-      .click();
+  await expectHeading(page, /tablero/i);
 
-    await expectHeading(page, /épicas/i);
-  });
+  expectNoCriticalErrors(errors);
+});
 
-  await test.step("Sprints", async () => {
-    await page
-      .getByRole("link", { name: /sprints/i })
-      .click();
+test("carga la vista de Épicas sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-    await expectHeading(page, /sprints/i);
-  });
+  await page.goto(`/projects/${SEED_PROJECT_ID}/epics`);
 
-  await test.step("Panel del proyecto", async () => {
-    await page
-      .getByRole("link", {
-        name: /panel del proyecto/i,
-      })
-      .click();
+  await expectHeading(page, /épicas/i);
 
-    await expectHeading(
-      page,
-      /panel del proyecto/i,
-    );
-  });
+  expectNoCriticalErrors(errors);
+});
 
-  await test.step("Mis tareas", async () => {
-    await page
-      .getByRole("link", { name: /mis tareas/i })
-      .click();
+test("carga la vista de Sprints sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-    await expectHeading(page, /mis tareas/i);
-  });
+  await page.goto(`/projects/${SEED_PROJECT_ID}/sprints`);
 
-  await test.step("Configuración", async () => {
-    await page
-      .getByRole("link", { name: /configuración/i })
-      .click();
+  await expectHeading(page, /sprints/i);
 
-    await expectHeading(page, /configuración/i);
-  });
+  expectNoCriticalErrors(errors);
+});
 
-  await test.step("Guardar registro de errores", async () => {
-    await testInfo.attach("navigation-errors", {
-      body: JSON.stringify(errors, null, 2),
-      contentType: "application/json",
-    });
-  });
+test("carga el Panel del proyecto sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
 
-  await test.step("Validar que no hubo errores JavaScript", async () => {
-    expect(
-      errors.javascript,
-      `Se detectaron errores JavaScript no controlados:\n${errors.javascript.join("\n")}`,
-    ).toEqual([]);
-  });
+  await page.goto(`/projects/${SEED_PROJECT_ID}/dashboard`);
 
-  await test.step("Validar que no hubo respuestas 5xx", async () => {
-    expect(
-      errors.server,
-      `Se detectaron respuestas HTTP 5xx:\n${errors.server.join("\n")}`,
-    ).toEqual([]);
-  });
+  await expectHeading(page, /panel/i);
+
+  expectNoCriticalErrors(errors);
+});
+
+test("carga Mis tareas sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
+
+  await page.goto("/my-tasks");
+
+  await expectHeading(page, /mis tareas/i);
+
+  expectNoCriticalErrors(errors);
+});
+
+test("carga Configuración sin errores", async ({ page }) => {
+  const errors = monitorErrors(page);
+
+  await page.goto("/settings");
+
+  await expectHeading(page, /configuración/i);
+
+  expectNoCriticalErrors(errors);
 });
