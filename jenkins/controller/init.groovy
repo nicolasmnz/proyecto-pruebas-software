@@ -4,15 +4,17 @@ import hudson.security.FullControlOnceLoggedInAuthorizationStrategy
 import hudson.slaves.DumbSlave
 import hudson.slaves.JNLPLauncher
 import hudson.slaves.RetentionStrategy
-import hudson.plugins.git.BranchSpec
-import hudson.plugins.git.GitSCM
-import hudson.plugins.git.UserRemoteConfig
-import com.cloudbees.jenkins.GitHubPushTrigger
+import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger
+import jenkins.branch.BranchSource
 import jenkins.model.Jenkins
 import jenkins.model.JenkinsLocationConfiguration
-import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition
-import org.jenkinsci.plugins.workflow.job.WorkflowJob
-import org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty
+import org.jenkinsci.plugins.github_branch_source.ApiRateLimitChecker
+import org.jenkinsci.plugins.github_branch_source.BranchDiscoveryTrait
+import org.jenkinsci.plugins.github_branch_source.ForkPullRequestDiscoveryTrait
+import org.jenkinsci.plugins.github_branch_source.GitHubConfiguration
+import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource
+import org.jenkinsci.plugins.github_branch_source.OriginPullRequestDiscoveryTrait
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject
 
 def instance = Jenkins.get()
 instance.setNumExecutors(0)
@@ -46,19 +48,48 @@ secretFile.setReadable(true, true)
 secretFile.setWritable(false, false)
 secretFile.setWritable(true, true)
 
-def jobName = 'mira-ci'
-if (instance.getItem(jobName) == null) {
-    def job = instance.createProject(WorkflowJob, jobName)
-    def remote = new UserRemoteConfig(System.getenv('JENKINS_REPOSITORY_URL'), null, null,
-        System.getenv('JENKINS_SCM_CREDENTIALS_ID') ?: null)
-    def scm = new GitSCM([remote], [new BranchSpec('*/' + System.getenv('JENKINS_BRANCH'))],
-        false, [], null, null, [])
-    def definition = new CpsScmFlowDefinition(scm, 'Jenkinsfile')
-    definition.setLightweight(true)
-    job.setDefinition(definition)
-    job.addProperty(new PipelineTriggersJobProperty([new GitHubPushTrigger()]))
-    job.setDescription('PPDS-18: calidad, unitarias, integración y E2E. Pipeline definido en el repositorio.')
-    job.save()
+// Job multibranch: Jenkins descubre main, develop, ramas de funcionalidades y PRs,
+// y cada build hace checkout de su propio commit (sin rama fija).
+def repositoryUrl = System.getenv('JENKINS_REPOSITORY_URL')
+def repository = repositoryUrl =~ /github\.com[:\/]([^\/]+)\/([^\/]+?)(\.git)?\/?$/
+if (!repository.find()) {
+    throw new IllegalStateException("JENKINS_REPOSITORY_URL debe apuntar a un repositorio de GitHub: ${repositoryUrl}")
 }
+def owner = repository.group(1)
+def repo = repository.group(2)
+
+// Sin credenciales la cuota es de 60 peticiones/hora: solo esperar al agotarla,
+// en vez de repartir las peticiones y pausar escaneos con cuota disponible.
+GitHubConfiguration.get().setApiRateLimitChecker(ApiRateLimitChecker.ThrottleOnOver)
+
+def jobName = 'mira-ci'
+def existing = instance.getItem(jobName)
+if (existing != null && !(existing instanceof WorkflowMultiBranchProject)) {
+    // El job anterior estaba fijado a una rama; se conserva deshabilitado con su historial.
+    existing.makeDisabled(true)
+    existing.renameTo(jobName + '-rama-fija')
+    existing = null
+}
+def job = existing ?: instance.createProject(WorkflowMultiBranchProject, jobName)
+
+def source = new GitHubSCMSource(owner, repo, "https://github.com/${owner}/${repo}", true)
+source.setId('mira-github')
+source.setCredentialsId(System.getenv('JENKINS_SCM_CREDENTIALS_ID') ?: null)
+source.setTraits([
+    // 1: ramas sin PR abierto (las que tienen PR se construyen como PR).
+    new BranchDiscoveryTrait(1),
+    // 1: el PR se construye fusionado con su rama de destino.
+    new OriginPullRequestDiscoveryTrait(1),
+    // PRs desde forks: solo se confía en el Jenkinsfile de colaboradores con permiso de escritura.
+    new ForkPullRequestDiscoveryTrait(1, new ForkPullRequestDiscoveryTrait.TrustPermission()),
+])
+job.setSourcesList([new BranchSource(source)])
+job.getProjectFactory().setScriptPath('Jenkinsfile')
+// Respaldo si no hay webhook; los eventos de GitHub disparan builds de inmediato.
+job.addTrigger(new PeriodicFolderTrigger('1h'))
+job.setDescription('Calidad, unitarias, integración y E2E para ramas y PRs. Pipeline definido en el Jenkinsfile de cada rama.')
+job.save()
+job.scheduleBuild() // Escanea el repositorio al iniciar.
+
 instance.save()
-println('Mira: administrador, agente node24-docker y job mira-ci configurados.')
+println("Mira: administrador, agente node24-docker y job multibranch ${jobName} (${owner}/${repo}) configurados.")

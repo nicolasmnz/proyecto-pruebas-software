@@ -69,16 +69,32 @@ def main():
     # Debe quedar fuera del workspace que borra deleteDir().
     subprocess.run(COMPOSE + ["cp", str(archive), "agent:/home/jenkins/agent/mira-source.tar"], check=True)
 
+    # Sin checkout SCM, Jenkins no define rama ni commit: se informan para la trazabilidad.
+    def git(*args):
+        return subprocess.check_output(["git", *args], text=True).strip()
+
+    def groovy(value):
+        return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
+
+    branch = git("rev-parse", "--abbrev-ref", "HEAD")
+    if git("status", "--porcelain"):
+        branch += " (local, con cambios sin commit)"
+    commit = git("rev-parse", "HEAD")
+
     # Solo el job de comprobación recibe una etapa de copia; mira-ci sigue usando SCM.
     pipeline = pipeline.replace("options {", "options {\n        skipDefaultCheckout()", 1)
-    pipeline = pipeline.replace("stages {", '''stages {
-        stage('Checkout local para validacion') {
-            steps {
-                sh 'test -r /home/jenkins/agent/mira-source.tar || { echo "Falta la copia local del codigo. Ejecuta make jenkins-verify desde WSL en el repositorio." >&2; exit 1; }'
+    pipeline = pipeline.replace("stages {", f'''stages {{
+        stage('Checkout local para validacion') {{
+            steps {{
+                script {{
+                    env.BRANCH_NAME = {groovy(branch)}
+                    env.GIT_COMMIT = {groovy(commit)}
+                }}
+                sh 'test -r /home/jenkins/agent/mira-source.tar || {{ echo "Falta la copia local del codigo. Ejecuta make jenkins-verify desde WSL en el repositorio." >&2; exit 1; }}'
                 deleteDir()
                 sh 'tar --no-same-owner -xf /home/jenkins/agent/mira-source.tar -C "$WORKSPACE"'
-            }
-        }
+            }}
+        }}
     ''', 1)
     xml = f'''<flow-definition plugin="workflow-job">
       <description>Validación local del checkout, incluidos cambios sin commit. No usa el webhook.</description>
@@ -129,9 +145,11 @@ def main():
                     raise RuntimeError("Los reportes archivados contienen fallos")
                 result["tests_passed"] = unit["numPassedTests"] + integration["numPassedTests"] + junit["passCount"]
                 project = f"jenkins-jenkins-{job}-{number}"
-                for command in (["ps", "-aq"], ["volume", "ls", "-q"]):
+                for command, selector in ((["ps", "-aq"], f"label=com.docker.compose.project={project}"),
+                                          (["volume", "ls", "-q"], f"label=com.docker.compose.project={project}"),
+                                          (["images", "-q"], f"reference={project}-*")):
                     remaining = subprocess.check_output(COMPOSE + ["exec", "-T", "agent", "docker"] + command +
-                        ["--filter", f"label=com.docker.compose.project={project}"]).strip()
+                        ["--filter", selector]).strip()
                     if remaining:
                         raise RuntimeError("Quedaron recursos Docker del build después de la limpieza")
                 result["cleanup_verified"] = True
