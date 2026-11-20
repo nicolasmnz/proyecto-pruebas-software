@@ -44,7 +44,9 @@ dinámicos, así que no choca con otros builds ni con la aplicación de desarrol
 ### Credenciales
 
 Sin credenciales, la API de GitHub limita a 60 peticiones por hora, y eso puede
-quedarse corto al escanear muchas ramas y PRs. Para evitarlo, crea en Jenkins una
+quedarse corto al escanear muchas ramas y PRs. Jenkins está configurado para
+esperar solo cuando la cuota se agota (`ThrottleOnOver`), así que si el escaneo
+se detiene con *Sleeping until reset*, es por esa cuota. Para evitarlo, crea en Jenkins una
 credencial *Username with password* (usuario de GitHub y un token con permiso de lectura
 del repositorio) y define su ID en `JENKINS_SCM_CREDENTIALS_ID`.
 

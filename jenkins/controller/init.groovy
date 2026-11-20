@@ -8,8 +8,10 @@ import com.cloudbees.hudson.plugins.folder.computed.PeriodicFolderTrigger
 import jenkins.branch.BranchSource
 import jenkins.model.Jenkins
 import jenkins.model.JenkinsLocationConfiguration
+import org.jenkinsci.plugins.github_branch_source.ApiRateLimitChecker
 import org.jenkinsci.plugins.github_branch_source.BranchDiscoveryTrait
 import org.jenkinsci.plugins.github_branch_source.ForkPullRequestDiscoveryTrait
+import org.jenkinsci.plugins.github_branch_source.GitHubConfiguration
 import org.jenkinsci.plugins.github_branch_source.GitHubSCMSource
 import org.jenkinsci.plugins.github_branch_source.OriginPullRequestDiscoveryTrait
 import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject
@@ -55,6 +57,10 @@ if (!repository.find()) {
 }
 def owner = repository.group(1)
 def repo = repository.group(2)
+
+// Sin credenciales la cuota es de 60 peticiones/hora: solo esperar al agotarla,
+// en vez de repartir las peticiones y pausar escaneos con cuota disponible.
+GitHubConfiguration.get().setApiRateLimitChecker(ApiRateLimitChecker.ThrottleOnOver)
 
 def jobName = 'mira-ci'
 def existing = instance.getItem(jobName)
