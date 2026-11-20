@@ -76,7 +76,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 | Frontend      | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library               |
 | Backend       | Node 24, Express 5, TypeScript           | Jest (unitarias) + Supertest (integración)   |
 | Base de datos | PostgreSQL 18                            | Base de pruebas aislada (`compose.test.yml`) |
-| E2E           | —                                        | Playwright                                   |
+| E2E           | Playwright (Chromium)                    | Flujos de usuario en el navegador            |
 | CI            | GitHub Actions + Jenkins                 | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
@@ -265,9 +265,12 @@ la cobertura por funcionalidad y los criterios de aprobación para GitHub Action
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 651 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 47 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 55 | `npm run test:e2e` |
+| **Total** | | **926** | |
+
+Cifras de la ejecución del 20-11-2026 sobre `develop` (commit `6a302cf`), con todas las suites en verde. Los 55 casos E2E son 54 escenarios de usuario más la preparación de sesión (`auth.setup.ts`). Esta tabla es la referencia del total de pruebas: al agregar o quitar pruebas, actualízala aquí.
 
 ### Unitarias, calidad y build
 
@@ -424,9 +427,8 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
    seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
    **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
-   unitarias, de frontend, integración y E2E (908 casos: 34 de API, 650 de web, 186 de integración y 38 de
-   Playwright, incluido un caso de preparación de sesión). El resultado
-   esperado es **SUCCESS**.
+   unitarias, de frontend, integración y E2E (las cantidades están en la tabla de
+   [Pruebas](#pruebas)). El resultado esperado es **SUCCESS**.
 
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
 automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
