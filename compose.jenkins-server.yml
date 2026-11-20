@@ -11,7 +11,6 @@ services:
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false
       JENKINS_PUBLIC_URL: ${JENKINS_PUBLIC_URL:-http://localhost:8080/}
       JENKINS_REPOSITORY_URL: ${JENKINS_REPOSITORY_URL:-https://github.com/nicolasmnz/proyecto-pruebas-software.git}
-      JENKINS_BRANCH: ${JENKINS_BRANCH:-PPDS-18-integracion-con-jenkins}
       JENKINS_SCM_CREDENTIALS_ID: ${JENKINS_SCM_CREDENTIALS_ID:-}
     secrets:
       - jenkins_admin_password

@@ -395,10 +395,13 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    esperado es **SUCCESS**.
 
 El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
-automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
-automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
-descrito en la [guía de Jenkins](docs/jenkins.md). El webhook no es necesario para
-las ejecuciones manuales ni para `jenkins-verify`.
+automáticamente el job multibranch `mira-ci` desde GitHub. Este job descubre `main`,
+`develop`, las ramas de funcionalidades y los PRs, y construye el commit exacto de
+cada uno, sin fijar una rama. En el log de cada build quedan la rama, el commit,
+el PR con su rama de destino y la ejecución. Para que los push y los PRs disparen
+builds al momento, configurar una URL HTTPS accesible desde GitHub y el webhook
+descrito en la [guía de Jenkins](docs/jenkins.md). Sin webhook, el repositorio se
+escanea cada hora. El webhook no es necesario para `jenkins-verify`.
 
 #### Administrar Jenkins
 
