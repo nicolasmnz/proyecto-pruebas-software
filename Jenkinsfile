@@ -155,8 +155,41 @@ pipeline {
             echo "Resultado: FAILURE - ${currentBuild.description ?: env.BUILD_TAG}"
         }
         cleanup {
-            // Elimina el workspace temporal del agente; los reportes ya quedaron archivados.
-            deleteDir()
+                script {
+                    try {
+                        // Elimina el workspace temporal del agente.
+                        deleteDir()
+                    } catch (Exception e) {
+                        currentBuild.result = 'FAILURE'
+                        throw e
+                    } finally {
+                        def result = currentBuild.currentResult
+
+                        def colors = [
+                            SUCCESS: 'good',
+                            FAILURE: 'danger',
+                            UNSTABLE: 'warning',
+                            ABORTED: '#808080'
+                        ]
+
+                        slackSend(
+                            color: colors[result] ?: '#808080',
+                            failOnError: false,
+                            message: """*Mira CI - ${result}*
+
+                            *Trabajo:* ${env.JOB_NAME}
+                            *Build:* #${env.BUILD_NUMBER}
+                            *Rama:* ${env.BRANCH_NAME}
+                            *PR:* ${env.CHANGE_ID ?: 'No aplica'}
+                            *Origen:* ${env.CHANGE_BRANCH ?: env.BRANCH_NAME}
+                            *Destino:* ${env.CHANGE_TARGET ?: 'No aplica'}
+                            *Commit:* ${env.GIT_COMMIT?.take(12) ?: 'N/A'}
+                            *Duración:* ${currentBuild.durationString}
+
+                            <${env.BUILD_URL}|Ver ejecución en Jenkins>"""
+                                    )
+                                }
+                    }
         }
     }
 }
