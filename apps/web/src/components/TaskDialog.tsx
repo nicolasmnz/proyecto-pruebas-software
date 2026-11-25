@@ -217,6 +217,7 @@ function TaskDialog({
         <div
           ref={dialogRef}
           className="dialog task-dialog"
+          data-testid="task-dialog"
           role="dialog"
           aria-modal="true"
           aria-labelledby={item ? titleId : undefined}
@@ -267,6 +268,7 @@ function TaskDialog({
                 <button
                   type="button"
                   className="task-dialog-close"
+                  data-testid="task-dialog-close"
                   aria-label="Cerrar"
                   onClick={onClose}
                 >
@@ -304,7 +306,9 @@ function TaskDialog({
                   <dl className="task-dialog-meta">
                     <div>
                       <dt>Estado</dt>
-                      <dd>{STATUS_LABELS[item.status]}</dd>
+                      <dd data-testid="task-dialog-status">
+                        {STATUS_LABELS[item.status]}
+                      </dd>
                     </div>
                     <div>
                       <dt>Tipo</dt>
@@ -320,7 +324,7 @@ function TaskDialog({
                     </div>
                     <div>
                       <dt>Épica</dt>
-                      <dd>
+                      <dd data-testid="task-dialog-epic">
                         {currentEpic?.title ??
                           (epicId ? "Épica archivada" : "Sin épica")}
                         {storyLabel && (
@@ -332,7 +336,9 @@ function TaskDialog({
                     </div>
                     <div>
                       <dt>Responsable</dt>
-                      <dd>{item.assignee_name ?? "Sin asignar"}</dd>
+                      <dd data-testid="task-dialog-assignee">
+                        {item.assignee_name ?? "Sin asignar"}
+                      </dd>
                     </div>
                     <div>
                       <dt>Fecha límite</dt>
@@ -396,6 +402,7 @@ function TaskDialog({
                           <button
                             type="button"
                             className="btn-secondary"
+                            data-testid="task-dialog-roulette"
                             onClick={() => setIsRouletteOpen(true)}
                           >
                             <Dices size={16} aria-hidden="true" />
@@ -405,6 +412,7 @@ function TaskDialog({
                       <button
                         type="button"
                         className="btn-secondary"
+                        data-testid="task-dialog-edit"
                         onClick={() => setIsEditing(true)}
                       >
                         <Pencil size={16} aria-hidden="true" />
@@ -413,6 +421,7 @@ function TaskDialog({
                       <button
                         type="button"
                         className="btn-secondary"
+                        data-testid="task-dialog-delete"
                         onClick={() => {
                           setDeleteError(null);
                           setIsDeleteOpen(true);

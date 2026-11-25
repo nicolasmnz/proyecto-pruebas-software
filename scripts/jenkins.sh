@@ -13,7 +13,8 @@ case "${1:-up}" in
       (umask 077; openssl rand -hex 32 > .jenkins/secrets/admin_password)
     fi
     "${compose[@]}" up -d --build --wait --wait-timeout 600
-    echo 'Jenkins iniciado. Consulta jenkins/server.env para la URL y jenkins.md en la Wiki para más info.'
+    port="${JENKINS_PORT:-$(sed -n 's/^JENKINS_PORT=//p' jenkins/server.env)}"
+    echo "Jenkins iniciado en http://localhost:${port:-9090}/ (usuario admin; contraseña en .jenkins/secrets/admin_password)."
     ;;
   down) "${compose[@]}" down ;;
   logs) "${compose[@]}" logs --tail=100 -f ;;

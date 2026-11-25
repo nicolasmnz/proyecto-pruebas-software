@@ -8,7 +8,9 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 > - 🏷️ Release Entrega 1: [v1.0-entrega1](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v1.0-entrega1)
 > - 🎥 Video Entrega 2: [Link a video](https://youtu.be/K3cVZb4wGzo)
 > - 🏷️ Release Entrega 2: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v2.0-entrega2)
-> - 📚 [Wiki del proyecto](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki)
+> - 🎥 Video Entrega 3: [Link a video](https://youtu.be/1CwaC0xZItw)
+> - 🏷️ Release Entrega 3: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v2.0-entrega2)
+> - 📚 [Wiki del proyecto]()
 ## Funcionalidades
 
 **Sesión** (`/login`) — ver [Inicio de sesión](#inicio-de-sesión)
@@ -76,7 +78,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 | Frontend      | React 19, Vite, React Router, TypeScript | Vitest + React Testing Library               |
 | Backend       | Node 24, Express 5, TypeScript           | Jest (unitarias) + Supertest (integración)   |
 | Base de datos | PostgreSQL 18                            | Base de pruebas aislada (`compose.test.yml`) |
-| E2E           | —                                        | Playwright                                   |
+| E2E           | Playwright (Chromium)                    | Flujos de usuario en el navegador            |
 | CI            | GitHub Actions + Jenkins                 | lint, typecheck, unitarias, integración, E2E |
 
 ## Estructura
@@ -258,16 +260,19 @@ Los colores están definidos como variables en `apps/web/src/themes.css`: `:root
 
 ## Pruebas
 
-La [estrategia de pruebas de la entrega](docs/estrategia-pruebas.md) define el alcance,
+La [estrategia de pruebas de la entrega](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Estrategia-de-pruebas) define el alcance,
 la cobertura por funcionalidad y los criterios de aprobación para GitHub Actions y Jenkins.
 
 | Nivel | Herramienta | Cantidad | Comando |
 | ----- | ----------- | -------- | ------- |
 | Calidad | ESLint + TypeScript | — | `npm run lint` · `npm run typecheck` |
 | Unitarias API | Jest | 34 | `npm run test:unit` |
-| Componentes y utilidades web | Vitest + React Testing Library | 650 | `npm run test:unit` |
+| Componentes y utilidades web | Vitest + React Testing Library | 651 | `npm run test:unit` |
 | Integración API | Jest + Supertest + PostgreSQL | 186 | `npm run test:integration` |
-| E2E | Playwright (Chromium) | 38 | `npm run test:e2e` |
+| E2E | Playwright (Chromium) | 55 | `npm run test:e2e` |
+| **Total** | | **926** | |
+
+Cifras de la ejecución del 20-11-2026 sobre `develop` (commit `6a302cf`), con todas las suites en verde. Los 55 casos E2E son 54 escenarios de usuario más la preparación de sesión (`auth.setup.ts`). Esta tabla es la referencia del total de pruebas: al agregar o quitar pruebas, actualízala aquí.
 
 ### Unitarias, calidad y build
 
@@ -327,6 +332,14 @@ npm run test:e2e           # terminal 3
 
 Antes de los specs, `tests/e2e/auth.setup.ts` inicia sesión con `ana@pruebas.cl` y guarda la sesión en `playwright/.auth/user.json` (ignorado por git); los demás specs la reutilizan. `login.spec.ts` parte sin sesión.
 
+`project-lifecycle.spec.ts` recorre en un solo flujo el CRUD de un proyecto: crear, verlo en el listado, abrir su detalle, editarlo y archivarlo. La interfaz no elimina proyectos; archivar cumple ese papel, porque el proyecto sale del listado de activos y queda en Archivados, desde donde se puede restaurar.
+
+`create-project-validation.spec.ts` prueba las validaciones del nombre al crear un proyecto: vacío (lo bloquea el `required` del navegador), solo espacios (lo rechaza el formulario con su mensaje), más de 150 caracteres (el campo no los admite) y más de 150 saltándose el límite del navegador (lo rechaza la API con 400 y el formulario muestra su mensaje). En los casos rechazados comprueba además que no se envió ni se creó el proyecto.
+
+`create-task-validation.spec.ts` hace lo mismo con el título de una tarea en el tablero: vacío (lo bloquea el `required` del navegador) y solo espacios (el formulario muestra «El título es obligatorio.» y devuelve el foco al título). En ambos casos no se envía nada y la columna no cambia; al corregir el título, la tarea se crea en esa columna.
+
+`view-projects.spec.ts` cubre la búsqueda de proyectos: con coincidencias abre el detalle y, sin coincidencias, muestra «No hay proyectos que coincidan con…», conserva la búsqueda al recargar (vive en la URL como `?q=`) y «Limpiar búsqueda» vuelve a mostrar todos los proyectos.
+
 ```bash
 npx playwright test tests/e2e/view-kanban-board.spec.ts --headed   # ver el navegador
 npx playwright show-report                                         # informe de la última ejecución
@@ -334,52 +347,82 @@ npx playwright show-report                                         # informe de 
 
 `npm run test:all` ejecuta unitarias + integración + E2E.
 
+#### Selectores estables (`data-testid`)
+
+Los elementos críticos de la interfaz tienen un `data-testid` para que las pruebas E2E no dependan de textos, posiciones ni clases CSS. Se usan con `page.getByTestId(...)`; cuando un rol o una etiqueta ya identifican el elemento sin ambigüedad (`getByRole`, `getByLabel`), se prefieren esos.
+
+Convención: `kebab-case` con el área como prefijo. Los que dependen del estado terminan en `todo`, `in-progress` o `done` (`statusTestId` en `components/taskLabels.ts`). Los que se repiten, como `task-card`, se acotan dentro de su columna o se filtran por texto.
+
+| Área | `data-testid` |
+| ---- | ------------- |
+| Columnas del tablero | `board-column-todo`, `board-column-in-progress`, `board-column-done`; dentro de cada una: `board-column-count`, `board-column-points`, `board-column-empty`, `board-add-task` |
+| Controles del tablero | `board-search`, `board-clear-filters`, `board-edit-limits`, `board-filter-summary`, `board-progress-summary`, `board-archive-all`, `board-archived-toggle` |
+| Tarjeta de tarea | `task-card`, `task-card-open`, `task-card-move`, `task-card-move-up`, `task-card-move-down`, `task-card-archive`, `task-card-restore` |
+| Formulario de tarea | `task-form`, `task-form-title`, `task-form-error`, `task-form-cancel`, `task-form-submit` |
+| Ficha de la tarea | `task-dialog`, `task-dialog-close`, `task-dialog-status`, `task-dialog-epic`, `task-dialog-assignee`, `task-dialog-edit`, `task-dialog-delete`, `task-dialog-roulette` |
+| Ruleta | `roulette`, `roulette-result`, `roulette-spin`, `roulette-respin`, `roulette-assign` |
+| Confirmación | `confirm-dialog`, `confirm-dialog-error`, `confirm-dialog-cancel`, `confirm-dialog-confirm` |
+| Límites de trabajo | `wip-limits-dialog`, `wip-limits-todo`, `wip-limits-in-progress`, `wip-limits-error`, `wip-limits-cancel`, `wip-limits-save` |
+| Proyectos | `projects-search`, `projects-list`, `projects-no-results`, `project-card`, `project-form`, `project-form-name`, `project-form-description`, `project-form-error`, `project-form-submit` |
+
+Criterio para elegir el selector en un spec:
+
+- **Rol o etiqueta** (`getByRole`, `getByLabel`) para lo que el usuario identifica por su nombre: botones, campos, columnas, diálogos.
+- **`data-testid`** para textos generados o repetidos (contadores, resúmenes, mensajes de columna vacía) y para valores sin un rol propio, como el responsable en la ficha. Se comprueba el texto con `toHaveText` o `toContainText` sobre ese elemento, no con `getByText` en toda la página o la columna.
+- **Sin** posiciones (`nth`), clases CSS ni recorridos del DOM (`locator("+ dd")`).
+
+`view-kanban-board.spec.ts`, `epics.spec.ts`, `roulette.spec.ts`, `project-lifecycle.spec.ts`, `create-project-validation.spec.ts`, `create-task-validation.spec.ts` y `view-projects.spec.ts` usan estos identificadores. Al renombrar o quitar uno, hay que actualizar los specs que lo usan. `BoardPage.test.tsx` comprueba los del tablero.
+
 ### Jenkins
 
-El [Jenkinsfile](Jenkinsfile) ejecuta calidad, unitarias de API, componentes y
-utilidades web, build, integración con PostgreSQL y E2E con Chromium. Usa
-[compose.jenkins.yml](compose.jenkins.yml) con bases y puertos aislados, publica
-reportes y elimina los recursos al terminar. GitHub Actions continúa funcionando;
-si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
+El [Jenkinsfile](Jenkinsfile) ejecuta las mismas validaciones que GitHub Actions:
+calidad (ESLint y TypeScript), pruebas unitarias de la API, pruebas de componentes y
+utilidades web, compilación, integración con PostgreSQL y E2E con Chromium. Cada
+ejecución crea sus propias bases de datos y contenedores con puertos dinámicos,
+publica los reportes y elimina todos sus recursos al finalizar.
 
-Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
-en la [guía de Jenkins](docs/jenkins.md).
+El mismo pipeline se utiliza en el servidor Jenkins desplegado en AWS (EC2). Esta
+sección describe únicamente su ejecución en un equipo local.
 
-**No es necesario levantar la aplicación previamente.** Jenkins crea una base
-PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
-y el frontend, ejecuta las pruebas y elimina los contenedores y volúmenes de ese
-build al terminar. El entorno está aislado y usa puertos dinámicos, por lo que
-puede funcionar aunque la aplicación de desarrollo ya esté levantada.
+#### Requisitos
 
-#### Pasos para ejecutar Jenkins
+- Docker y Docker Compose. En Windows, se debe trabajar desde **Ubuntu/WSL**, con
+  **Docker Desktop** en ejecución y la integración con WSL habilitada.
+- Git, Bash, OpenSSL, Python 3 y Make.
+- El puerto `9090` disponible (ver [Puerto de Jenkins](#puerto-de-jenkins)).
 
-En Windows, ejecutar desde **Ubuntu/WSL**, con **Docker Desktop abierto** y su
-integración con WSL habilitada. Para la verificación local se necesitan Git,
-Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
+No es necesario levantar la aplicación ni crear el archivo `.env`: el pipeline prepara
+la API, el frontend y las bases de datos de forma aislada, por lo que puede ejecutarse
+aunque el entorno de desarrollo esté en uso.
 
-1. Entrar al repositorio:
+#### Ejecución de las pruebas
+
+1. Clonar el repositorio y acceder a su carpeta. En Windows, el repositorio debe
+   ubicarse dentro del sistema de archivos de WSL (por ejemplo, en `~`) y no en
+   `/mnt/c/...`.
 
    ```bash
-   cd /home/dr_nickname/proyecto-pruebas-software
+   git clone https://github.com/nicolasmnz/proyecto-pruebas-software.git
+   cd proyecto-pruebas-software
    ```
 
-2. Levantar Jenkins, su agente y el motor Docker dedicado:
+2. Iniciar Jenkins, su agente y el motor Docker dedicado:
 
    ```bash
    bash scripts/jenkins.sh up
    ```
 
-   La primera ejecución puede tardar varios minutos por la descarga y construcción
-   de imágenes; las siguientes reutilizan la caché.
+   La primera ejecución puede demorar varios minutos debido a la descarga y
+   construcción de las imágenes; las siguientes reutilizan la caché.
 
-3. Abrir [Jenkins local](http://localhost:8080) e iniciar sesión con el usuario
-   `admin`. Consultar la contraseña localmente en la terminal:
+3. Ingresar a <http://localhost:9090> con el usuario `admin`. La contraseña se
+   genera en la primera ejecución y se consulta con:
 
    ```bash
    cat .jenkins/secrets/admin_password
    ```
 
-4. Ejecutar las pruebas con los archivos actuales del repositorio, incluidos los
+4. Ejecutar el pipeline sobre los archivos actuales del repositorio, incluidos los
    cambios sin commit:
 
    ```bash
@@ -387,30 +430,44 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    # Alternativa sin Make: python3 scripts/jenkins-verify.py
    ```
 
-   Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
-   seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
-   **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
-   unitarias, de frontend, integración y E2E (908 casos: 34 de API, 650 de web, 186 de integración y 38 de
-   Playwright, incluido un caso de preparación de sesión). El resultado
-   esperado es **SUCCESS**.
+   El comando valida el `Jenkinsfile`, ejecuta el job **mira-ci-local** y espera su
+   resultado. El avance puede seguirse en Jenkins, en ese job, desde **Console
+   Output**. El resultado esperado es **SUCCESS**, con la cantidad de pruebas
+   indicada en la tabla de [Pruebas](#pruebas). El resumen queda en
+   `reports/jenkins-validation.json` y el log completo en
+   `reports/jenkins-console.log`.
 
-El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
-automáticamente el job `mira-ci` desde GitHub. Para que los push disparen builds
-automáticos, configurar una URL HTTPS accesible desde GitHub y el webhook
-descrito en la [guía de Jenkins](docs/jenkins.md). El webhook no es necesario para
-las ejecuciones manuales ni para `jenkins-verify`.
+La notificación a Slack incluida en el pipeline corresponde al servidor de AWS. En
+local no requiere configuración y no altera el resultado del build.
 
-#### Administrar Jenkins
+#### Puerto de Jenkins
+
+Jenkins local utiliza el puerto `9090` para no entrar en conflicto con el `8080`,
+habitualmente ocupado por el túnel SSH hacia el servidor de AWS. Para usar otro
+puerto, se debe modificar `JENKINS_PORT` y `JENKINS_PUBLIC_URL` en
+[jenkins/server.env](jenkins/server.env), o definirlos solo para la sesión actual de
+la terminal (`make jenkins-verify` utiliza el mismo valor):
 
 ```bash
-bash scripts/jenkins.sh status  # Ver el estado de los servicios
-bash scripts/jenkins.sh logs    # Ver logs; Ctrl+C para salir de la vista
-bash scripts/jenkins.sh down    # Detener conservando datos, historial y reportes
+export JENKINS_PORT=9091 JENKINS_PUBLIC_URL=http://localhost:9091/
+bash scripts/jenkins.sh up
 ```
 
-Para volver a iniciarlo, ejecutar `bash scripts/jenkins.sh up`. La limpieza del
-pipeline solo elimina los recursos de las pruebas; Jenkins y su agente siguen
-levantados hasta detener el stack.
+Una instalación existente que utilizaba el puerto `8080` se actualiza al ejecutar
+nuevamente `bash scripts/jenkins.sh up`: el contenedor se recrea en el nuevo puerto y
+conserva sus datos.
+
+#### Administración
+
+```bash
+bash scripts/jenkins.sh status  # Estado de los servicios
+bash scripts/jenkins.sh logs    # Logs en vivo (Ctrl+C para salir)
+bash scripts/jenkins.sh down    # Detener, conservando datos, historial y reportes
+bash scripts/jenkins.sh up      # Volver a iniciar
+```
+
+La limpieza del pipeline elimina solo los recursos de cada ejecución; Jenkins y su
+agente permanecen activos hasta detenerlos con `down`.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 
@@ -477,6 +534,10 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 | Casi todas las pruebas de integración fallan                                | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
 | Un E2E del tablero falla esperando datos de ejemplo                         | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`.                    |
 | Playwright indica que falta el navegador                                    | `npx playwright install chromium`.                                                                                   |
+| `bash scripts/jenkins.sh up` falla con *port is already allocated*          | El puerto de Jenkins está ocupado: modificar `JENKINS_PORT` (ver [Puerto de Jenkins](#puerto-de-jenkins)). |
+| `make jenkins-verify`: *El agente node24-docker no está conectado*          | El agente no se registró en el controlador: revisar `bash scripts/jenkins.sh logs` y reiniciar con `down` y `up`. |
+| `make jenkins-verify`: *No such file or directory* con `admin_password`     | Jenkins no se ha iniciado en este clon: ejecutar previamente `bash scripts/jenkins.sh up`. |
+| `bash scripts/jenkins.sh up` falla con *Failed to download Chrome for Testing … timed out* | Los contenedores tardan en resolver nombres porque el primer DNS de la red no responde (el host no lo nota). Comprobarlo con `docker run --rm node:24-bookworm-slim getent hosts cdn.playwright.dev`: si tarda más de 1 s, corregir el DNS que entrega el router o fijarlo para Docker en `/etc/docker/daemon.json` (por ejemplo, `{"dns": ["1.1.1.1", "8.8.8.8"], "dns-opts": ["single-request"]}`), reiniciar Docker y volver a ejecutar `up`. |
 
 ## Alcance actual
 
@@ -487,3 +548,18 @@ Fuera del alcance por ahora: historial de actividad (`activity_logs`), comentari
 - GitFlow: `main` (estable), `develop` (integración) y ramas `feature/PPDS-XX-descripcion`.
 - Cada rama y PR referencia su ítem de Jira.
 - Los PR siguen la plantilla de `.github/PULL_REQUEST_TEMPLATE.md` y deben pasar el CI.
+
+## Uso de IA
+
+El equipo usó **Claude** (Anthropic) como única herramienta de IA del proyecto.
+
+| Área | Uso |
+| ---- | --- |
+| Código | Implementación de funcionalidades y corrección de errores |
+| Pruebas | Generación de pruebas unitarias, de componentes, de integración y E2E |
+| Documentación | README y documentación técnica; en la Wiki se usó poco |
+| Planificación | Redacción del backlog de Jira: historias, tareas, pruebas y criterios de aceptación |
+
+**Backend.** La mayor parte de la base inicial del backend se escribió sin IA. Después se usó Claude para auditarlo y encontrar fallas de seguridad y errores, sobre todo en la interacción entre el frontend y el backend.
+
+**Revisión.** Todo lo generado con IA siguió el mismo flujo que el resto del código: PR hacia `develop`, CI en verde y revisión de otro integrante antes de fusionar. Los commits generados con Claude aparecen en el historial con ese autor.

@@ -4,3 +4,6 @@ github
 junit
 credentials-binding
 pipeline-stage-view
+github-branch-source
+timestamper
+slack

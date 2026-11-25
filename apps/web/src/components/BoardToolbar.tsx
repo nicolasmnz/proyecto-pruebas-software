@@ -55,6 +55,7 @@ function BoardToolbar({
         <input
           id={searchId}
           type="search"
+          data-testid="board-search"
           placeholder="Buscar por título o #número"
           value={filters.query}
           onChange={(event) => set({ query: event.target.value })}
@@ -128,6 +129,7 @@ function BoardToolbar({
         <button
           type="button"
           className="btn-secondary"
+          data-testid="board-clear-filters"
           onClick={() => onChange(EMPTY_FILTERS)}
         >
           <X size={16} aria-hidden="true" />
@@ -139,6 +141,7 @@ function BoardToolbar({
         <button
           type="button"
           className="btn-secondary board-toolbar-limits"
+          data-testid="board-edit-limits"
           onClick={onEditLimits}
         >
           <Gauge size={16} aria-hidden="true" />
@@ -146,7 +149,11 @@ function BoardToolbar({
         </button>
       )}
 
-      <p className="board-toolbar-summary" aria-live="polite">
+      <p
+        className="board-toolbar-summary"
+        data-testid="board-filter-summary"
+        aria-live="polite"
+      >
         {isFiltering
           ? `Mostrando ${shown} de ${total} ${total === 1 ? "tarea" : "tareas"}`
           : ""}

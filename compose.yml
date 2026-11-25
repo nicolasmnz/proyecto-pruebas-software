@@ -40,7 +40,7 @@ services:
 
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
 
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
 
     ports:
       - "3000:3000"
@@ -57,7 +57,7 @@ services:
     container_name: proyecto-pruebas-web
 
     environment:
-      VITE_API_URL: http://localhost:3000/api
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/api}
 
     ports:
       - "5173:5173"
