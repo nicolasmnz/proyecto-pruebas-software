@@ -9,7 +9,7 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 > - 🎥 Video Entrega 2: [Link a video](https://youtu.be/K3cVZb4wGzo)
 > - 🏷️ Release Entrega 2: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v2.0-entrega2)
 > - 🎥 Video Entrega 3: [Link a video](https://youtu.be/1CwaC0xZItw)
-> - 🏷️ Release Entrega 3: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v2.0-entrega2)
+> - 🏷️ Release Entrega 3: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v3.0-entrega3)
 > - 📚 [Wiki del proyecto]()
 ## Funcionalidades
 
