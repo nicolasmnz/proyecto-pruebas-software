@@ -38,8 +38,9 @@ automatizada de pruebas y la validación de Pull Requests.
 
 Las credenciales de acceso académico se proporcionan de forma privada.
 
-Para más información sobre el acceso a la plataforma, consultar
-[Acceso a los ambientes de Mira](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki).
+Para más información sobre los perfiles de acceso, horarios de
+disponibilidad y condiciones de uso, consultar
+[Acceso a los ambientes de Mira](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Acceso-a-los-ambientes-de-Mira).
 
 ## Funcionalidades
 
