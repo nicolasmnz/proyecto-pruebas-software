@@ -2,7 +2,7 @@
 
 Plataforma web para crear proyectos, organizar equipos y administrar el trabajo mediante tableros Scrum y Kanban. Proyecto del curso de Pruebas de Software (Tema 2).
 
-> **Enlaces**
+> **Enlaces de interés**
 >
 > - 🎥 Video Entrega 1: [Link a video](https://youtu.be/ZF97tzQkB-w)
 > - 🏷️ Release Entrega 1: [v1.0-entrega1](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v1.0-entrega1)
