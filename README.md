@@ -9,8 +9,38 @@ Plataforma web para crear proyectos, organizar equipos y administrar el trabajo 
 > - 🎥 Video Entrega 2: [Link a video](https://youtu.be/K3cVZb4wGzo)
 > - 🏷️ Release Entrega 2: [v2.0-entrega2](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v2.0-entrega2)
 > - 🎥 Video Entrega 3: [Link a video](https://youtu.be/1CwaC0xZItw)
-> - 🏷️ Release Entrega 3: [v2.0-entrega3](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v3.0-entrega3)
-> - 📚 [Wiki del proyecto]()
+> - 🏷️ Release Entrega 3: [v3.0-entrega3](https://github.com/nicolasmnz/proyecto-pruebas-software/releases/tag/v3.0-entrega3)
+> - 📚 [Wiki del proyecto](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki)
+
+---
+
+## Acceso a la plataforma
+
+### Ambiente de producción
+
+La plataforma Mira se encuentra desplegada en una instancia Amazon EC2
+(AWS), con actualizaciones automatizadas mediante GitHub Actions cada vez
+que se incorporan cambios a la rama `main`.
+
+- **URL:** [mira-usm.duckdns.org](https://mira-usm.duckdns.org/)
+
+### Ambiente de integración continua
+
+El servidor Jenkins se encuentra alojado en una instancia Amazon EC2
+independiente del ambiente de producción, destinada a la ejecución
+automatizada de pruebas y la validación de Pull Requests.
+
+- **URL:** [mira-jenkins.duckdns.org](https://mira-jenkins.duckdns.org/)
+- **Horario de disponibilidad:** 18:30 a 03:30 del día siguiente
+  (hora de Chile continental).
+- **Acceso:** mediante cuentas individuales con permisos diferenciados
+  según el perfil de usuario (administrador, profesor y ayudante).
+
+Las credenciales de acceso académico se proporcionan de forma privada.
+
+Para más información sobre el acceso a la plataforma, consultar
+[Acceso a los ambientes de Mira](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki).
+
 ## Funcionalidades
 
 **Sesión** (`/login`) — ver [Inicio de sesión](#inicio-de-sesión)
