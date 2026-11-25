@@ -373,50 +373,54 @@ Criterio para elegir el selector en un spec:
 
 ### Jenkins
 
-El [Jenkinsfile](Jenkinsfile) ejecuta calidad, unitarias de API, componentes y
-utilidades web, build, integración con PostgreSQL y E2E con Chromium. Usa
-[compose.jenkins.yml](compose.jenkins.yml) con bases y puertos aislados, publica
-reportes y elimina los recursos al terminar. GitHub Actions continúa funcionando;
-si se activan ambos sistemas para el mismo commit, ambos ejecutan las suites.
+El [Jenkinsfile](Jenkinsfile) ejecuta las mismas validaciones que GitHub Actions:
+calidad (ESLint y TypeScript), pruebas unitarias de la API, pruebas de componentes y
+utilidades web, compilación, integración con PostgreSQL y E2E con Chromium. Cada
+ejecución crea sus propias bases de datos y contenedores con puertos dinámicos,
+publica los reportes y elimina todos sus recursos al finalizar.
 
-Los requisitos del agente, la configuración del job, los disparadores y el detalle de reportes están
-en la [guía de Jenkins](https://github.com/nicolasmnz/proyecto-pruebas-software/wiki/Jenkins).
+El mismo pipeline se utiliza en el servidor Jenkins desplegado en AWS (EC2). Esta
+sección describe únicamente su ejecución en un equipo local.
 
-**No es necesario levantar la aplicación previamente.** Jenkins crea una base
-PostgreSQL para integración y otra con datos de ejemplo para E2E, levanta la API
-y el frontend, ejecuta las pruebas y elimina los contenedores y volúmenes de ese
-build al terminar. El entorno está aislado y usa puertos dinámicos, por lo que
-puede funcionar aunque la aplicación de desarrollo ya esté levantada.
+#### Requisitos
 
-#### Pasos para ejecutar Jenkins
+- Docker y Docker Compose. En Windows, se debe trabajar desde **Ubuntu/WSL**, con
+  **Docker Desktop** en ejecución y la integración con WSL habilitada.
+- Git, Bash, OpenSSL, Python 3 y Make.
+- El puerto `9090` disponible (ver [Puerto de Jenkins](#puerto-de-jenkins)).
 
-En Windows, ejecutar desde **Ubuntu/WSL**, con **Docker Desktop abierto** y su
-integración con WSL habilitada. Para la verificación local se necesitan Git,
-Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
+No es necesario levantar la aplicación ni crear el archivo `.env`: el pipeline prepara
+la API, el frontend y las bases de datos de forma aislada, por lo que puede ejecutarse
+aunque el entorno de desarrollo esté en uso.
 
-1. Entrar al repositorio:
+#### Ejecución de las pruebas
+
+1. Clonar el repositorio y acceder a su carpeta. En Windows, el repositorio debe
+   ubicarse dentro del sistema de archivos de WSL (por ejemplo, en `~`) y no en
+   `/mnt/c/...`.
 
    ```bash
-   cd /home/dr_nickname/proyecto-pruebas-software
+   git clone https://github.com/nicolasmnz/proyecto-pruebas-software.git
+   cd proyecto-pruebas-software
    ```
 
-2. Levantar Jenkins, su agente y el motor Docker dedicado:
+2. Iniciar Jenkins, su agente y el motor Docker dedicado:
 
    ```bash
    bash scripts/jenkins.sh up
    ```
 
-   La primera ejecución puede tardar varios minutos por la descarga y construcción
-   de imágenes; las siguientes reutilizan la caché.
+   La primera ejecución puede demorar varios minutos debido a la descarga y
+   construcción de las imágenes; las siguientes reutilizan la caché.
 
-3. Abrir [Jenkins local](http://localhost:8080) e iniciar sesión con el usuario
-   `admin`. Consultar la contraseña localmente en la terminal:
+3. Ingresar a <http://localhost:9090> con el usuario `admin`. La contraseña se
+   genera en la primera ejecución y se consulta con:
 
    ```bash
    cat .jenkins/secrets/admin_password
    ```
 
-4. Ejecutar las pruebas con los archivos actuales del repositorio, incluidos los
+4. Ejecutar el pipeline sobre los archivos actuales del repositorio, incluidos los
    cambios sin commit:
 
    ```bash
@@ -424,32 +428,44 @@ Python 3 y Make; el script de arranque también requiere Bash y OpenSSL.
    # Alternativa sin Make: python3 scripts/jenkins-verify.py
    ```
 
-   Este comando valida el `Jenkinsfile` y ejecuta el job **mira-ci-local**. Para
-   seguirlo desde la interfaz, abrir ese job, seleccionar el build y entrar a
-   **Console Output**. Ejecuta ESLint, TypeScript, compilación y las suites
-   unitarias, de frontend, integración y E2E (las cantidades están en la tabla de
-   [Pruebas](#pruebas)). El resultado esperado es **SUCCESS**.
+   El comando valida el `Jenkinsfile`, ejecuta el job **mira-ci-local** y espera su
+   resultado. El avance puede seguirse en Jenkins, en ese job, desde **Console
+   Output**. El resultado esperado es **SUCCESS**, con la cantidad de pruebas
+   indicada en la tabla de [Pruebas](#pruebas). El resumen queda en
+   `reports/jenkins-validation.json` y el log completo en
+   `reports/jenkins-console.log`.
 
-El stack [compose.jenkins-server.yml](compose.jenkins-server.yml) crea
-automáticamente el job multibranch `mira-ci` desde GitHub. Este job descubre `main`,
-`develop`, las ramas de funcionalidades y los PRs, y construye el commit exacto de
-cada uno, sin fijar una rama. En el log de cada build quedan la rama, el commit,
-el PR con su rama de destino y la ejecución. Para que los push y los PRs disparen
-builds al momento, configurar una URL HTTPS accesible desde GitHub y el webhook
-descrito en la [guía de Jenkins](docs/jenkins.md). Sin webhook, el repositorio se
-escanea cada hora. El webhook no es necesario para `jenkins-verify`.
+La notificación a Slack incluida en el pipeline corresponde al servidor de AWS. En
+local no requiere configuración y no altera el resultado del build.
 
-#### Administrar Jenkins
+#### Puerto de Jenkins
+
+Jenkins local utiliza el puerto `9090` para no entrar en conflicto con el `8080`,
+habitualmente ocupado por el túnel SSH hacia el servidor de AWS. Para usar otro
+puerto, se debe modificar `JENKINS_PORT` y `JENKINS_PUBLIC_URL` en
+[jenkins/server.env](jenkins/server.env), o definirlos solo para la sesión actual de
+la terminal (`make jenkins-verify` utiliza el mismo valor):
 
 ```bash
-bash scripts/jenkins.sh status  # Ver el estado de los servicios
-bash scripts/jenkins.sh logs    # Ver logs; Ctrl+C para salir de la vista
-bash scripts/jenkins.sh down    # Detener conservando datos, historial y reportes
+export JENKINS_PORT=9091 JENKINS_PUBLIC_URL=http://localhost:9091/
+bash scripts/jenkins.sh up
 ```
 
-Para volver a iniciarlo, ejecutar `bash scripts/jenkins.sh up`. La limpieza del
-pipeline solo elimina los recursos de las pruebas; Jenkins y su agente siguen
-levantados hasta detener el stack.
+Una instalación existente que utilizaba el puerto `8080` se actualiza al ejecutar
+nuevamente `bash scripts/jenkins.sh up`: el contenedor se recrea en el nuevo puerto y
+conserva sus datos.
+
+#### Administración
+
+```bash
+bash scripts/jenkins.sh status  # Estado de los servicios
+bash scripts/jenkins.sh logs    # Logs en vivo (Ctrl+C para salir)
+bash scripts/jenkins.sh down    # Detener, conservando datos, historial y reportes
+bash scripts/jenkins.sh up      # Volver a iniciar
+```
+
+La limpieza del pipeline elimina solo los recursos de cada ejecución; Jenkins y su
+agente permanecen activos hasta detenerlos con `down`.
 
 ### Archivos de prueba de la web (`*.test.tsx`)
 
@@ -516,6 +532,10 @@ Códigos habituales: `400` datos inválidos, `404` recurso inexistente (o id que
 | Casi todas las pruebas de integración fallan                                | El volumen de pruebas conserva el esquema viejo: `docker compose -f compose.test.yml down -v && npm run db:test:up`. |
 | Un E2E del tablero falla esperando datos de ejemplo                         | La base de desarrollo perdió el seed (por ejemplo, se archivaron sus tareas): `npm run db:reset`.                    |
 | Playwright indica que falta el navegador                                    | `npx playwright install chromium`.                                                                                   |
+| `bash scripts/jenkins.sh up` falla con *port is already allocated*          | El puerto de Jenkins está ocupado: modificar `JENKINS_PORT` (ver [Puerto de Jenkins](#puerto-de-jenkins)). |
+| `make jenkins-verify`: *El agente node24-docker no está conectado*          | El agente no se registró en el controlador: revisar `bash scripts/jenkins.sh logs` y reiniciar con `down` y `up`. |
+| `make jenkins-verify`: *No such file or directory* con `admin_password`     | Jenkins no se ha iniciado en este clon: ejecutar previamente `bash scripts/jenkins.sh up`. |
+| `bash scripts/jenkins.sh up` falla con *Failed to download Chrome for Testing … timed out* | Los contenedores tardan en resolver nombres porque el primer DNS de la red no responde (el host no lo nota). Comprobarlo con `docker run --rm node:24-bookworm-slim getent hosts cdn.playwright.dev`: si tarda más de 1 s, corregir el DNS que entrega el router o fijarlo para Docker en `/etc/docker/daemon.json` (por ejemplo, `{"dns": ["1.1.1.1", "8.8.8.8"], "dns-opts": ["single-request"]}`), reiniciar Docker y volver a ejecutar `up`. |
 
 ## Alcance actual
 

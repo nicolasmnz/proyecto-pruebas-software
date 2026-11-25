@@ -6,10 +6,10 @@ services:
       context: ./jenkins/controller
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${JENKINS_PORT:-8080}:8080"
+      - "127.0.0.1:${JENKINS_PORT:-9090}:8080"
     environment:
       JAVA_OPTS: -Djenkins.install.runSetupWizard=false
-      JENKINS_PUBLIC_URL: ${JENKINS_PUBLIC_URL:-http://localhost:8080/}
+      JENKINS_PUBLIC_URL: ${JENKINS_PUBLIC_URL:-http://localhost:9090/}
       JENKINS_REPOSITORY_URL: ${JENKINS_REPOSITORY_URL:-https://github.com/nicolasmnz/proyecto-pruebas-software.git}
       JENKINS_SCM_CREDENTIALS_ID: ${JENKINS_SCM_CREDENTIALS_ID:-}
     secrets:

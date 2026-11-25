@@ -8,6 +8,32 @@ def composePort(String service, int port) {
     return published
 }
 
+// Notifica el resultado en Slack. Es opcional: si Slack no está configurado o el envío
+// falla, solo deja un aviso en el log y el resultado del build no cambia.
+def notifySlack() {
+    def result = currentBuild.currentResult
+    def colors = [SUCCESS: 'good', FAILURE: 'danger', UNSTABLE: 'warning', ABORTED: '#808080']
+    def message = [
+        "*Mira CI - ${result}*",
+        '',
+        "*Trabajo:* ${env.JOB_NAME}",
+        "*Build:* #${env.BUILD_NUMBER}",
+        "*Rama:* ${env.BRANCH_NAME}",
+        "*PR:* ${env.CHANGE_ID ?: 'No aplica'}",
+        "*Origen:* ${env.CHANGE_BRANCH ?: env.BRANCH_NAME}",
+        "*Destino:* ${env.CHANGE_TARGET ?: 'No aplica'}",
+        "*Commit:* ${env.GIT_COMMIT?.take(12) ?: 'N/A'}",
+        "*Duración:* ${currentBuild.durationString}",
+        '',
+        "<${env.BUILD_URL}|Ver ejecución en Jenkins>",
+    ].join('\n')
+    try {
+        slackSend(color: colors[result] ?: '#808080', failOnError: false, message: message)
+    } catch (Exception e) {
+        echo "Aviso: no se pudo notificar en Slack: ${e.message}"
+    }
+}
+
 pipeline {
     agent { label 'node24-docker' }
 
@@ -155,41 +181,17 @@ pipeline {
             echo "Resultado: FAILURE - ${currentBuild.description ?: env.BUILD_TAG}"
         }
         cleanup {
-                script {
-                    try {
-                        // Elimina el workspace temporal del agente.
-                        deleteDir()
-                    } catch (Exception e) {
-                        currentBuild.result = 'FAILURE'
-                        throw e
-                    } finally {
-                        def result = currentBuild.currentResult
-
-                        def colors = [
-                            SUCCESS: 'good',
-                            FAILURE: 'danger',
-                            UNSTABLE: 'warning',
-                            ABORTED: '#808080'
-                        ]
-
-                        slackSend(
-                            color: colors[result] ?: '#808080',
-                            failOnError: false,
-                            message: """*Mira CI - ${result}*
-
-                            *Trabajo:* ${env.JOB_NAME}
-                            *Build:* #${env.BUILD_NUMBER}
-                            *Rama:* ${env.BRANCH_NAME}
-                            *PR:* ${env.CHANGE_ID ?: 'No aplica'}
-                            *Origen:* ${env.CHANGE_BRANCH ?: env.BRANCH_NAME}
-                            *Destino:* ${env.CHANGE_TARGET ?: 'No aplica'}
-                            *Commit:* ${env.GIT_COMMIT?.take(12) ?: 'N/A'}
-                            *Duración:* ${currentBuild.durationString}
-
-                            <${env.BUILD_URL}|Ver ejecución en Jenkins>"""
-                                    )
-                                }
-                    }
+            script {
+                try {
+                    // Elimina el workspace temporal del agente.
+                    deleteDir()
+                } catch (Exception e) {
+                    currentBuild.result = 'FAILURE'
+                    throw e
+                } finally {
+                    notifySlack()
+                }
+            }
         }
     }
 }
